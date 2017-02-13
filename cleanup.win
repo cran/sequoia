@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rm -f src/global.mod src/qsort_c_module.mod
