@@ -49,7 +49,7 @@ SimGeno <- function(Ped = NULL,
                     PropLQ = 0,
                     MisHQ = 0.005,
                     MisLQ = 0.30,
-                    ParMis = 0.2,
+                    ParMis = 0.4,
                     ErHQ = 5e-4,
                     ErLQ = 5e-3,
 					          quiet = FALSE)
@@ -222,11 +222,11 @@ SimGeno <- function(Ped = NULL,
 
 Vcomp <- function(Infrd, Simld, SNPd)
 {
-  total <- length(Simld)
-  both <- length(intersect(Infrd, Simld))
-  err <- length(setdiff(Infrd[Infrd %in% SNPd], Simld))
-  missed <- length(setdiff(Simld, Infrd))
-  c(total=total, both=both, err=err, missed=missed)
+  out <- c("total" = length(Simld),
+           "both" = length(intersect(Infrd, Simld)),
+           "err" = length(setdiff(Infrd[Infrd %in% SNPd], Simld)),
+           "missed" = length(setdiff(Simld, Infrd)))
+  out
 }
 
 
@@ -245,12 +245,16 @@ Vcomp <- function(Infrd, Simld, SNPd)
 SibMatch <- function(SimX, Infrd, SNPd)
 {
   VC <- sapply(Infrd, Vcomp, SimX, SNPd)
-  mtch <- which(VC[2,]>0)
+  mtch <- which(VC["both",]>0)
   if (length(mtch)>1) {
-    mtch <- which.max(VC[2,])[1]  # which inferred sibship has most members of true sibship
+    if (VC["total",1]==2) {
+      mtch <- NULL
+    } else {
+      mtch <- which.max(VC["both",])[1]  # which inferred sibship has most members of true sibship
+    }
   }
   if (length(mtch)==1) {
-    if (VC["err", mtch] > VC["both", mtch]) {
+    if (VC["err", mtch] >= VC["both", mtch]) {
       mtch <- NULL
     }
   }
@@ -281,6 +285,7 @@ all.is.numeric <- function (x, what = c("test", "vector"))
     as.numeric(x)
   else x
 }
+
 
 tdf <- function(M)
 {
@@ -417,6 +422,8 @@ PedCompare <- function(Ped1 = NULL,
   for (i in 1:3) Ped1[, i] <- as.character(Ped1[, i])
   for (i in 1:3) Ped2[, i] <- as.character(Ped2[, i])
   if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
+  Ped1 <- Ped1[!is.na(Ped1$id), ]
+  Ped2 <- Ped2[!is.na(Ped2$id), ]
   Ped1 <- AddParPed(Ped1)
   Ped2 <- AddParPed(Ped2)
   if (is.null(DumPrefix)) {
@@ -426,6 +433,7 @@ PedCompare <- function(Ped1 = NULL,
     SNPd <- Ped2$id[substr(Ped2$id,1,DPnc[1])!=DumPrefix[1] &
                       substr(Ped2$id,1,DPnc[2])!=DumPrefix[2]]
   }
+  SNPd <- stats::na.exclude(SNPd)
   PedX <- merge(Ped1, Ped2[Ped2$id %in% SNPd, ], all.y=TRUE)
   DumPed <- Ped2[!Ped2$id %in% SNPd, ]
   Dummies <- list(DumPed$id[DumPed$id %in% Ped2$dam],
@@ -482,8 +490,8 @@ PedCompare <- function(Ped1 = NULL,
       }
     }
     for (p in 1:2) {
-      PedX <- merge(PedX, stats::setNames(DumReal[[p]], c(Par[p,3], Par[p,2])),
-                    all.x=TRUE)
+      tmp <- stats::setNames(DumReal[[p]], c(Par[p,3], Par[p,2]))
+      PedX <- merge(PedX, tmp, all.x=TRUE)
       DumPed <- merge(DumPed, DumReal[[p]], by.x="id", by.y="dummy", all.x=TRUE,
                       suffixes = c(".x",".y"))
     }
@@ -506,6 +514,19 @@ PedCompare <- function(Ped1 = NULL,
   PedY <- merge(PedX, DumPed, all=TRUE, sort=FALSE)  # NA's for id.r = "nomatch"
   PedY <- merge(PedY, stats::setNames(Ped1, c("id.r", "dam.1", "sire.1" )),
                 all=TRUE, sort=FALSE)
+
+  for (p in 1:2) {
+    PedTmp <- PedY[which(!PedY[,Par[p,2]] %in% SNPd &
+                           !is.na(PedY[,Par[p,2]]) &
+                           PedY[,Par[p,3]]!="nomatch"),]
+    tbl <- table(PedTmp[,Par[p,2]])
+    npar1 <- plyr::daply(PedTmp, Par[p,2],
+                   function(x) length(unique(stats::na.exclude(x[,Par[p,1]]))))
+    unmatch <- names(which(c(tbl)==npar1 & npar1>1))
+    if (length(unmatch)>0) {
+      PedY[which(PedY[,Par[p,2]] %in% unmatch), Par[p,3]] <- "nomatch"
+    }
+  }
 
   Founders <- list()
   NGpar <- list()

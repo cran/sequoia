@@ -4,7 +4,7 @@
 \alias{GenoConvert}
 \title{Convert genotype file}
 \usage{
-GenoConvert(InFile = NULL, InFormat = "raw", OutFile = NULL,
+GenoConvert(InFile = NULL, InFormat = "raw", OutFile = NA,
   OutFormat = "seq", quiet = FALSE)
 }
 \arguments{

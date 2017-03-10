@@ -4,21 +4,16 @@
 \alias{sequoia}
 \title{Pedigree Reconstruction}
 \usage{
-sequoia(GenoM = NULL, GenoFile = NULL, LifeHistData = NULL,
-  SeqList = NULL, MaxSibIter = 10, Err = 1e-04, MaxMismatch = 3,
-  Tfilter = -2, Tassign = 1, MaxSibshipSize = 100, DummyPrefix = c("F",
-  "M"), Complex = "full", quiet = FALSE)
+sequoia(GenoM = NULL, LifeHistData = NULL, SeqList = NULL,
+  MaxSibIter = 10, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
+  Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
+  Complex = "full", FindMaybeRel = TRUE, quiet = FALSE)
 }
 \arguments{
 \item{GenoM}{numeric matrix with genotype data: One row per individual, and
 one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
 \code{\link{GenoConvert}} to convert genotype files created in PLINK using
 --recodeA or in Colony's 2-column format to this format.}
-
-\item{GenoFile}{character string with name of genotype file, with no header.
-Assumed to be in current working directory unless complete path is
-provided, which may not contain any spaces and must be less than 255
-characters long.}
 
 \item{LifeHistData}{Dataframe with 3 columns:
 \itemize{
@@ -67,6 +62,9 @@ dams (mothers) and sires (fathers); maximum 20 characters each.}
 consideration of inbred relationships; not fully implemented yet) or
 "mono" (monogamous).}
 
+\item{FindMaybeRel}{Identify pairs of non-assigned likely relatives after
+pedigree reconstruction. Can be time-consuming in large datasets.}
+
 \item{quiet}{suppress messages}
 }
 \value{
@@ -81,7 +79,7 @@ A list with some or all of the following components:
   identical IDs). The specified number of maximum mismatches is allowed,
   and this dataframe may include pairs of closely related individuals.}
 \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-  history file}
+  history dataframe}
 \item{LifeHist}{Provided dataframe with sex and birth year data}
 \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
   parent-offspring than unrelated, but which could not be phased due to
@@ -90,7 +88,7 @@ A list with some or all of the following components:
 \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
   to be first or second degree relatives than unrelated, but which could not
   be assigned.}
-\item{NoLH}{Vector, IDs (in genotype file) for which no life history data is
+\item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
  provided}
 \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
   Sibship step; entries for dummy individuals are added at the bottom.}
@@ -117,9 +115,9 @@ In addition, PedigreePar has the columns
  \item{OH_dam}{Number of loci at which the offspring and mother are
    opposite homozygotes}
  \item{OH_sire}{idem, for male parent}
- \item{rowID}{Row number in genotype file for id}
- \item{rowDam}{Row number in genotype file for dam}
- \item{rowSire}{Row number in genotype file for sire}
+ \item{rowID}{Row number in genoM for id}
+ \item{rowDam}{Row number in genoM for dam}
+ \item{rowSire}{Row number in genoM for sire}
 }
 \description{
 Perform pedigree reconstruction based on SNP data, including parentage
@@ -132,11 +130,6 @@ For each pair of candidate relatives, the likelihoods are calculated of them
  FA), half avuncular/great-grandparental/cousins (HA), or unrelated (U).
  Assignments are made if the likelihood ratio (LLR) between the focal
  relationship and the most likely alternative exceed the threshold Tassign.
-
-When calling with GenoFormat="raw" or GenoFormat="col", the genotype file is
-converted and written to a temporary directory. For large files, this may be
- time consuming; please consider calling \code{\link{GenoConvert}} directly
- before pedigree reconstruction.
 
 Further explanation of the various options and interpretation of the output
  is provided in the vignette.
@@ -159,7 +152,7 @@ Jisca Huisman, \email{jisca.huisman@gmail.com}
 }
 \references{
 Huisman, J. Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. (under review) Molecular
+  assignment, sibship clustering, and beyond. (accepted manuscript) Molecular
   Ecology Resources
 }
 \seealso{

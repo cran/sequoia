@@ -6,7 +6,7 @@
 \usage{
 SimGeno(Ped = NULL, PedFile = NULL, MafFile = NULL, OutFile = NA,
   nSnp = 400, nGen = 10, PropLQ = 0, MisHQ = 0.005, MisLQ = 0.3,
-  ParMis = 0.2, ErHQ = 5e-04, ErLQ = 0.005, quiet = FALSE)
+  ParMis = 0.4, ErHQ = 5e-04, ErLQ = 0.005, quiet = FALSE)
 }
 \arguments{
 \item{Ped}{Dataframe, pedigree with columns ID - dam - sire; additional

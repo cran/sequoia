@@ -2,18 +2,11 @@
 #============================================================================
 # preparations
 
-#' Convert genotype file if needed, and save parameter values.
+#' Check parameter values and save as named vector.
 #'
-#' Writes the user-specified parameter values to the (temporary) file
-#' `SequoiaSpecs.txt'. If GenoFormat="raw" or "col", calls
-#'  \code{\link{GenoConvert}}.
+#'  Please do not increasing the number of SNPs or individuals beyond the
+#'  numbers present in the datasets, as this may cause R to crash.
 #'
-#'  Please do not add or delete rows in the SequoiaSpecs text file. Changing
-#'  values is possible, but increasing the number of SNPs or individuals beyond
-#'  the numbers present in the files, or refering to non-existing files, will
-#'  cause errors and may cause R to crash.
-#'
-#' @param GenoFile character string with name of genotype file
 #' @param GenoM matrix with genotype data, size nInd x nSnp
 #' @param LifeHistData Dataframe with 3 columns:
 #'  \itemize{
@@ -21,6 +14,7 @@
 #'  \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
 #'  \item{Birth Year: }{(or hatching year) Zero and negative numbers are
 #'    interpreted as missing values.}}
+#' @param nAgeClasses Number of age classes (= no. rows in AgePriors)
 #' @param MaxSibIter Maximum number of iterations of sibship clustering
 #'   (up to 42).
 #' @param Err Estimated genotyping error rate.
@@ -40,12 +34,13 @@
 #'   dams (mothers) and sires (fathers); maximum 20 characters each.
 #' @param Complexity Either "full" (default), "simp" (no explicit consideration
 #'   of inbred relationships) or "mono" (monogamous breeding system)
-#'
+#' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
+#'   pedigree reconstruction. Can be time-consuming in large datasets.
 #' @return A named vector with parameter values
 
-SeqPrep <- function(GenoFile = NULL,
-                    GenoM = NULL,
+SeqPrep <- function(GenoM = NULL,
                      LifeHistData = NULL,
+                     nAgeClasses = 1,
                      MaxSibIter = 5,
                      Err = 0.0001,
                      MaxMismatch = 3,
@@ -53,58 +48,40 @@ SeqPrep <- function(GenoFile = NULL,
                      Tassign = 0.5,
             				 MaxSibshipSize = 100,
             				 DummyPrefix = c("F", "M"),
-            				 Complexity = "full")
+            				 Complexity = "full",
+            				 FindMaybeRel = TRUE)
 
 {
-  if (is.null(GenoM)) {
-    if (is.null(GenoFile))  stop("please provide genotype file or matrix")
-    if (GenoFile=="USEMATRIX")  stop("please provide genotype file or matrix")
-    if (nchar(GenoFile)>=255)  stop("'GenoFile' longer than 255 characters")
-    if (length(grep(" ", GenoFile))>0)  stop("'GenoFile' may not contain spaces")
-  }
-  if (!is.null(GenoM)) {
-    if (!all(GenoM %in% c(0,1,2,-9))) stop("'GenoM' not in <seq> format, please use GenoConvert")
-    nIndG <- nrow(GenoM)
-    IDs_geno <- rownames(GenoM)
-    nSnp <- ncol(GenoM)
-    GenoFile <- "USEMATRIX"
-  } else {
-    if (!file.exists(GenoFile)) stop("cannot find 'GenoFile'")
-    # check if genotype file is in valid format
-    tmp <- strsplit(readLines(GenoFile, n=1), split=" ")
-    if (!all(tmp[[1]][-1] %in% c(0,1,2,-9))) stop("'GenoM' not in <seq> format, please use GenoConvert")
+  if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
+  if (!all(GenoM %in% c(0,1,2,-9))) stop("'GenoM' not in <seq> format, please use GenoConvert")
+  nIndG <- nrow(GenoM)
+  IDs_geno <- rownames(GenoM)
+  nSnp <- ncol(GenoM)
 
-    # count number of individuals & number of SNPs in genotype file
-    IDs_geno <- scan(GenoFile, what = "character", flush = TRUE, quiet = TRUE)
-    nIndG <- length(IDs_geno)
-    nSnp <- length(scan(GenoFile, what = "character", nlines = 1, quiet = TRUE)) - 1
-    if (any(sapply(IDs_geno, nchar)>=29)) {
-      stop("IDs of one or more individuals too long (max 29 characters)")
-    }
+  if (Err<0 || Err>1 || !is.double(Err)) stop("invalid value for 'Err'")
+  if (MaxMismatch<0 || !is.wholenumber(MaxMismatch))  stop("invalid value for 'MaxMismatch'")
+  if (!is.double(Tfilter))  stop("invalid value for 'Tfilter'")
+  if (!is.double(Tassign) || Tassign<0)  stop("invalid value for 'Tassign'")
+  if (MaxSibshipSize<0 || !is.wholenumber(MaxSibshipSize)) {
+    stop("invalid value for MaxSibshipSize")
   }
+  if (!Complexity %in% c("full", "simp", "mono")) stop("invalid value for 'Complexity'")
+  if (!FindMaybeRel %in% c(TRUE, FALSE)) stop("invalid value for 'FindMaybeRel'")
+  if (MaxSibIter<0 || !is.wholenumber(MaxSibIter))  stop("invalid value for 'MaxSibIter'")
 
   if (!is.null(LifeHistData)) {
     names(LifeHistData) <- c("ID", "Sex", "BY")
     nIndLH <- nrow(LifeHistData)
-    if (nIndLH >1) {
-      if (all(LifeHistData$BY < 0)) {
-        nAgeClasses <- 1
-      } else {
-        nAgeClasses <- with(LifeHistData, diff(range(BY[BY >= 0 & ID %in% IDs_geno],
-                                                   na.rm = TRUE))) + 1
-      }
-    } else {
-      nAgeClasses <- 1
+    if (nIndLH >1 & any(LifeHistData$BY >= 0)) {
+      nAgeClasses <- with(LifeHistData, diff(range(BY[BY >= 0 & ID %in% IDs_geno],
+                                                 na.rm = TRUE))) + 1
     }
     if (nAgeClasses > 100) {
       nAgeClasses <- length(table(LifeHistData$BY[LifeHistData$BY >= 0]))
     }
-  } else {
-    nAgeClasses <- 1
   }
 
-  Specs <- c(GenotypeFilename = GenoFile,
-             NumberIndivGenotyped = nIndG,
+  Specs <- c(NumberIndivGenotyped = nIndG,
              NumberSnps = nSnp,
              GenotypingErrorRate = Err,
              MaxMismatch = MaxMismatch,
@@ -115,7 +92,8 @@ SeqPrep <- function(GenoFile = NULL,
       			 MaxSibIter = MaxSibIter,
              DummyPrefixFemale = DummyPrefix[1],
              DummyPrefixMale = DummyPrefix[2],
-             Complexity = Complexity)
+             Complexity = Complexity,
+      			 FindMaybeRel = FindMaybeRel)
   Specs
 }
 
@@ -125,60 +103,45 @@ SeqPrep <- function(GenoFile = NULL,
 
 #' Check data for duplicates.
 #'
-#' Check the genotype and life history files for duplicate IDs (not permitted)
+#' Check the genotype and life history data for duplicate IDs (not permitted)
 #' and duplicated genotypes (not advised), and count how many individuals in
-#' the genotype file are included in the life history file (permitted).
-#'
-#' The filenames are taken from the SequioiaSpecs text file, generated by
-#' \code{\link{SeqPrep}}. The order of IDs in the genotype and life history file
-#' is not required to be identical, and not all individuals in the genotype file
-#' are required to be in the life history file.
+#' the genotype data are not included in the life history data (permitted). The
+#' order of IDs in the genotype and life history data is not required to be
+#' identical.
 #'
 #' @param Specs The named vector with parameter values
-#' @param GenoM matrix with genotype data, size nInd x nSnp, used if
-#'   Specs["GenotypeFilename"]=="USEMATRIX".
+#' @param GenoM matrix with genotype data, size nInd x nSnp
 #' @param LhIN  life history data
 #' @param quiet suppress messages
 #'
 #' @return A list with one or more of the following elements:
-#' \item{DupGenoID}{Dataframe, rownumbers of duplicated IDs in genotype file.
+#' \item{DupGenoID}{Dataframe, rownumbers of duplicated IDs in genotype data.
 #'   Please do remove or relabel these to avoid downstream confusion.}
 #' \item{DupGenotype}{Dataframe, duplicated genotypes (with or without
 #'   identical IDs). The specified number of maximum mismatches is allowed,
 #'   and this dataframe may include pairs of closely related individuals.}
 #' \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-#'   history file}
-#' \item{NoLH}{Vector, IDs (in genotype file) for which no life history data is
+#'   history data}
+#' \item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
 #'  provided}
 #'
-#' dataframe with the numbers of duplicated genotypes, duplicated IDs in the genotype file, number of duplicated IDs in the life history file, and number of individuals with unknown sex.
+#' dataframe with the numbers of duplicated genotypes, duplicated IDs in the
+#' genotype data, number of duplicated IDs in the life history data, and number
+#'  of individuals with unknown sex.
 #'
 #' @useDynLib sequoia, .registration = TRUE
 
 SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 {
   Ng <- FacToNum(Specs["NumberIndivGenotyped"])
-  GenoKind <- ifelse(Specs["GenotypeFilename"]=="USEMATRIX", 0, 1)
   SpecsInt <- c(nSnp = FacToNum(Specs["NumberSnps"]),
-                MaxMis = FacToNum(Specs["MaxMismatch"]),
-                GenoKind = FacToNum(GenoKind))
-  GenoFile <- Specs["GenotypeFilename"]
-  if (nchar(GenoFile)>=255)  stop("'GenoFile' longer than 255 characters")
-  if (length(grep(" ", GenoFile))>0)  stop("'GenoFile' may not contain spaces")
-
-  if (Specs["GenotypeFilename"]=="USEMATRIX") {
-    gID <- rownames(GenoM)
-    GenoV <- as.integer(GenoM)
-  } else {
-    gID <- scan(Specs["GenotypeFilename"],
-                what = "character", flush = TRUE, quiet = TRUE)
-    GenoV <- rep(0, Ng*FacToNum(Specs["NumberSnps"]))
-  }
+                MaxMis = FacToNum(Specs["MaxMismatch"]))
+  gID <- rownames(GenoM)
+  GenoV <- as.integer(GenoM)
 
   DUP <- .Fortran("duplicates",
                   Ng = as.integer(Ng),
                   SpecsInt = as.integer(SpecsInt),
-                  GenoFile = sprintf("%-255s", GenoFile),
                   GenoV = as.integer(GenoV),
                   nDupGenos = integer(1),
                   DupGenosFR = integer(2*Ng),  # N x 2 matrix
@@ -221,8 +184,8 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 
   # print warnings
   if (!quiet) {
-    if (any(duplicated(gID))) message("duplicate IDs found in genotype file, please remove to avoid confusion")
-    if (DUP$nDupGenos>0 & DUP$nDupGenos > sum(duplicated(gID))) {
+    if (any(duplicated(gID))) message("duplicate IDs found in genotype data, please remove to avoid confusion")
+    if (DUP$nDupGenos>0 && DUP$nDupGenos > sum(duplicated(gID))) {
       message("likely duplicate genotypes found, consider removing")
     }
     if (any(duplicated(LhIN[,1]))) message("duplicate IDs found in lifehistory data, first entry will be used")
@@ -243,8 +206,7 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 #'   the rest of the algorithm.
 #' @param Specs a named vector with parameter values, as generated by
 #'   \code{\link{SeqPrep}}.
-#' @param GenoM matrix with genotype data, size nInd x nSnp, used if
-#'   Specs["GenotypeFilename"]=="USEMATRIX".
+#' @param GenoM matrix with genotype data, size nInd x nSnp
 #' @param LhIN  life history data: ID - sex - birth year
 #' @param AgePriors matrix with agepriors, size Specs["nAgeClasses"] by 8.
 #' @param Parents  matrix with rownumbers of assigned parents, size nInd by 2
@@ -268,43 +230,35 @@ SeqParSib <- function(ParSib = "par",
                       Parents = NULL,
                       quiet = FALSE)
 {
-  on.exit(.Fortran("DeAllocAll", PACKAGE = "sequoia"))
+  on.exit(.Fortran("deallocall", PACKAGE = "sequoia"))
 
   Ng <- FacToNum(Specs["NumberIndivGenotyped"])
   SMax <- FacToNum(Specs["MaxSibshipSize"])
-  GenoFile <- Specs["GenotypeFilename"]
-  if (nchar(GenoFile)>=255)  stop("'GenoFile' longer than 255 characters")
-  if (length(grep(" ", GenoFile))>0)  stop("'GenoFile' may not contain spaces")
-  if (GenoFile=="USEMATRIX") {
-    gID <- rownames(GenoM)
-    GenoV <- as.integer(GenoM)
-  } else {
-    gID <- scan(GenoFile, what = "character", flush = TRUE, quiet = TRUE)
-    GenoV <- rep(0, Ng*FacToNum(Specs["NumberSnps"]))
-  }
+  gID <- rownames(GenoM)
+  GenoV <- as.integer(GenoM)
   LHL <- orderLH(LhIN, gID)
   if (!is.null(Parents)) {
     PedPar <- c(as.matrix(Parents))
-    if (length(PedPar)!=Ng*2) stop("'PedPar' wrong length")
+    if (length(PedPar) != Ng*2) stop("'PedPar' wrong length")
   } else {
     PedPar <- rep(0, Ng*2)
   }
   Complex <- switch(Specs["Complexity"], full = 2, simp = 1, mono = 0)
   PrSb <- switch(ParSib, par = 1, sib = 2)
-  GenoKind <- ifelse(Specs["GenotypeFilename"]=="USEMATRIX", 0, 1)
+
   SpecsInt <- c(ParSib = as.integer(PrSb),        # 1
-                GenoKind = GenoKind,              # 2
-                MaxSibIter = FacToNum(Specs["MaxSibIter"]), # 3
-                nSnp = FacToNum(Specs["NumberSnps"]),       # 4
-                MaxMis = FacToNum(Specs["MaxMismatch"]),    # 5
-                SMax = SMax,                      # 6
-                nAgeCl = FacToNum(Specs["nAgeClasses"]),    # 7
-                Complx = Complex,                 # 8
+                MaxSibIter = FacToNum(Specs["MaxSibIter"]), # 2
+                nSnp = FacToNum(Specs["NumberSnps"]),       # 3
+                MaxMis = FacToNum(Specs["MaxMismatch"]),    # 4
+                SMax = SMax,                      # 5
+                nAgeCl = FacToNum(Specs["nAgeClasses"]),    # 6
+                Complx = as.integer(Complex),               # 7
+                FindMaybe = as.integer((as.logical(Specs["FindMaybeRel"]))),  # 8
                 quiet = as.integer(quiet))        # 9
   SpecsDbl <- c(Er = FacToNum(Specs["GenotypingErrorRate"]),
                 TF = FacToNum(Specs["Tfilter"]),
                 TA = FacToNum(Specs["Tassign"]))
-  if (length(as.integer(AgePriors)) != 8*as.numeric(Specs["nAgeClasses"])) {
+  if (length(as.integer(AgePriors)) != 8*FacToNum(Specs["nAgeClasses"])) {
     stop("'AgePriors' matrix should have size nAgeClasses * 8")
   }
 
@@ -312,7 +266,6 @@ SeqParSib <- function(ParSib = "par",
                   Ng = as.integer(Ng),
                   SpecsInt = as.integer(SpecsInt),
                   SpecsDbl = as.double(SpecsDbl),
-                  GenoFile = sprintf("%-255s", GenoFile),
                   GenoV = as.integer(GenoV),
                   Sex = as.integer(LHL$Sex),
                   BY = as.integer(LHL$BY),
@@ -358,7 +311,7 @@ SeqParSib <- function(ParSib = "par",
   names(Pedigree) <- c("id", "dam", "sire", "LLRdam", "LLRsire", "LLRpair")
   for (k in 1:2) Pedigree[, k+1] <- NumToID(Pedigree[, k+1], k, gID, dID)
 
-  if (ParSib == "par") {
+  if (grepl("par", ParSib)) {
     Pedigree <- cbind(Pedigree,
                       VtoM(TMP$OhRF),
                       rowId = 1:Ng,
@@ -390,7 +343,7 @@ SeqParSib <- function(ParSib = "par",
         MaybeRel[i,] <- tmp[,c(2,1,4,3,5:9)]
       }
     }
-    if (ParSib == "par") {
+    if (grepl("par", ParSib)) {
       MaybeRel$OH <-  TMP$AmbigOH[1:Na]
     }
     MaybeRel <- MaybeRel[order(ordered(MaybeRel$TopRel, levels=RelName),
@@ -398,8 +351,8 @@ SeqParSib <- function(ParSib = "par",
                                c(1:6, 8, 7, 9:ncol(MaybeRel))]
   } else  MaybeRel <- NULL
 
-  if (ParSib == "par" & sum(TMP$AmbigTopRel==1)>0) {
-     message("there are  ", sum(TMP$AmbigTopRel==1),
+  if (!quiet && grepl("par", ParSib) && sum(TMP$AmbigRel==1)>0) {
+     message("there are  ", sum(TMP$AmbigRel==1),
              "  likely parent-offspring pairs which are not assigned, ",
     "possibly due to unknown birth year(s), ",
              "please see 'MaybeParent'")
@@ -407,10 +360,10 @@ SeqParSib <- function(ParSib = "par",
 
   #=========================
   # dummies
-  if (ParSib=="sib" & any(TMP$Nd>0)) {
+  if (grepl("sib", ParSib) && any(TMP$Nd>0)) {
     nd <- TMP$Nd
     NgOdd <- Ng%%2==1
-    for (k in 1:2) if (nd[k]==0)  nd[k] <- 1  # easier; remove later
+    for (k in 1:2) if (nd[k]==0)  nd[k] <- 1  # easier; remove below
     mso <- max(TMP$DumNoff)
     TMP$DumOff <- NumToID(TMP$DumOff, 0, gID, dID)  # contains no dummies currently
 
@@ -435,11 +388,11 @@ SeqParSib <- function(ParSib = "par",
 
   #=========================
   # output
-  if (ParSib == "par") {
+  if (grepl("par", ParSib)) {
     return(list(PedigreePar = Pedigree,
         MaybeParent = MaybeRel,
         TotLikParents = TMP$TotLik[1:sum(TMP$TotLik!=0)]))
-  } else if (ParSib == "sib") {
+  } else if (grepl("sib", ParSib)) {
     return(list(Pedigree = Pedigree,
                 DummyIDs = DummyIDs,
                 MaybeRel = MaybeRel,
@@ -455,7 +408,7 @@ SeqParSib <- function(ParSib = "par",
 #===============================
 #' Order lifehistory data
 #'
-#' Order lifehistory data to match order of IDs in genotype file,
+#' Order lifehistory data to match order of IDs in genotype data,
 #' filling in gaps with missing values
 #'
 #' @param LH dataframe with lifehistory information:
@@ -464,7 +417,7 @@ SeqParSib <- function(ParSib = "par",
 #'  \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
 #'  \item{Birth Year: }{(or hatching year) Use negative numbers to denote
 #'  missing values.}}
-#' @param gID character vector with IDs in genotype file, in order of occurence
+#' @param gID character vector with IDs in genotype data, in order of occurence
 #'
 #' @return
 #' \item{BY}{Numeric vector with birth years, of same length as gID}
@@ -494,12 +447,12 @@ orderLH <- function(LH=NULL, gID=NULL) {
 #===============================
 #' replace numbers by names
 #'
-#' Replace the rownumbers by IDs, as in the genotype file, and replace negative
+#' Replace the rownumbers by IDs, as in the genotype data, and replace negative
 #' numbers by dummy IDs
 #'
 #' @param x vector with numbers
 #' @param k  1=maternal, 2=paternal (for dummies only)
-#' @param realID vector with IDs, order as in genotype file
+#' @param realID vector with IDs, order as in genotype data
 #' @param dumID  2-column matrix with dummy IDs
 #'
 #' @return character vector with IDs
@@ -514,8 +467,12 @@ NumToID <- function(x, k=NULL, realID=NULL, dumID=NULL) {
 
 #################################################################
 
+#.onLoad <- function (libname, pkgname) {
+#  library.dynam("sequoia", pkgname, libname)
+#}
 
 .onUnload <- function (libpath) {
+  .Fortran("deallocall", PACKAGE = "sequoia")
   library.dynam.unload("sequoia", libpath)
 }
 

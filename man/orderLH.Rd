@@ -14,14 +14,14 @@ orderLH(LH = NULL, gID = NULL)
  \item{Birth Year: }{(or hatching year) Use negative numbers to denote
  missing values.}}}
 
-\item{gID}{character vector with IDs in genotype file, in order of occurence}
+\item{gID}{character vector with IDs in genotype data, in order of occurence}
 }
 \value{
 \item{BY}{Numeric vector with birth years, of same length as gID}
 \item{Sex}{Numeric vector with genders, of same length as gID}
 }
 \description{
-Order lifehistory data to match order of IDs in genotype file,
+Order lifehistory data to match order of IDs in genotype data,
 filling in gaps with missing values
 }
 

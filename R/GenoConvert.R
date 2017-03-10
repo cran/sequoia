@@ -43,16 +43,18 @@
 
 GenoConvert <- function(InFile = NULL,
                         InFormat = "raw",
-                        OutFile = NULL,
+                        OutFile = NA,
                         OutFormat = "seq",
                         quiet = FALSE) {
   if (OutFormat == "seq" & is.null(OutFile)) {
     OutFile <- "GenoForSequoia.txt"
   } else if (is.null(OutFile)) {
-    stop("Please provide 'OutFile'")
+    stop("please provide 'OutFile'")
   }
+  if (is.null(InFile)) stop("please provide 'InFile'")
+  if (!file.exists(InFile)) stop("cannot find 'InFile'")
 
-  if (interactive() & !quiet) {
+  if (interactive() & !quiet & !is.na(OutFile)) {
     if (file.exists(OutFile)) {
       ANS <- readline(prompt = paste("WARNING: ", OutFile, " will be overwritten.",
                                      "Press <N> to abort, or any other key to continue."))
@@ -63,19 +65,21 @@ GenoConvert <- function(InFile = NULL,
     if (substr(ANS, 1, 1) %in% c("N", "n")) stop()
   }
 
-
   GenoTmp <- readLines(InFile)
 
-  if (OutFormat == "seq") {  # TODO: shell:  sed -i 's/\bNA\b/-9/g' test.raw
+  if (OutFormat == "seq") {
     if (InFormat == "raw") {
       TmpL    <- strsplit(GenoTmp[-1], split = " ")  # skip row w marker names
       GenoOUT <- plyr::ldply(TmpL, function(x) x[-c(1, 3:6)])
-      GenoTmp2 <- cbind(GenoOUT[, 1],
-                        apply(GenoOUT[, -1], 2, function(x) gsub("NA", "-9", x)))
+      GenoTmp2 <- apply(GenoOUT[, -1], 2,
+                        function(x) as.numeric(gsub("NA", "-9", x)))
+      rownames(GenoTmp2) <- GenoOUT[, 1]
       if (!is.na(OutFile)) {
         utils::write.table(GenoTmp2, file = OutFile,
                   row.names = FALSE, col.names = FALSE, quote = FALSE)
-      } else return(GenoTmp2)
+      } else {
+       return(GenoTmp2)
+      }
 
     } else if (InFormat == "col") {
       TmpL    <- strsplit(GenoTmp, split = " ")
@@ -101,6 +105,7 @@ GenoConvert <- function(InFile = NULL,
     } else {
       stop("not implemented")
     }
+
   } else if (InFormat == "seq") {
       if (OutFormat == "col") {
         dc <- list("0" = c(1,1), "1" = c(1,2), "2" = c(2,2), "-9" = c(0,0))

@@ -2,16 +2,14 @@
 % Please edit documentation in R/Sequoia_F90wrappers.R
 \name{SeqPrep}
 \alias{SeqPrep}
-\title{Convert genotype file if needed, and save parameter values.}
+\title{Check parameter values and save as named vector.}
 \usage{
-SeqPrep(GenoFile = NULL, GenoM = NULL, LifeHistData = NULL,
+SeqPrep(GenoM = NULL, LifeHistData = NULL, nAgeClasses = 1,
   MaxSibIter = 5, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
   Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complexity = "full")
+  Complexity = "full", FindMaybeRel = TRUE)
 }
 \arguments{
-\item{GenoFile}{character string with name of genotype file}
-
 \item{GenoM}{matrix with genotype data, size nInd x nSnp}
 
 \item{LifeHistData}{Dataframe with 3 columns:
@@ -20,6 +18,8 @@ SeqPrep(GenoFile = NULL, GenoM = NULL, LifeHistData = NULL,
 \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
 \item{Birth Year: }{(or hatching year) Zero and negative numbers are
   interpreted as missing values.}}}
+
+\item{nAgeClasses}{Number of age classes (= no. rows in AgePriors)}
 
 \item{MaxSibIter}{Maximum number of iterations of sibship clustering
 (up to 42).}
@@ -47,19 +47,15 @@ dams (mothers) and sires (fathers); maximum 20 characters each.}
 
 \item{Complexity}{Either "full" (default), "simp" (no explicit consideration
 of inbred relationships) or "mono" (monogamous breeding system)}
+
+\item{FindMaybeRel}{Identify pairs of non-assigned likely relatives after
+pedigree reconstruction. Can be time-consuming in large datasets.}
 }
 \value{
 A named vector with parameter values
 }
 \description{
-Writes the user-specified parameter values to the (temporary) file
-`SequoiaSpecs.txt'. If GenoFormat="raw" or "col", calls
- \code{\link{GenoConvert}}.
-}
-\details{
-Please do not add or delete rows in the SequoiaSpecs text file. Changing
- values is possible, but increasing the number of SNPs or individuals beyond
- the numbers present in the files, or refering to non-existing files, will
- cause errors and may cause R to crash.
+Please do not increasing the number of SNPs or individuals beyond the
+ numbers present in the datasets, as this may cause R to crash.
 }
 

@@ -10,11 +10,6 @@
 #'  Assignments are made if the likelihood ratio (LLR) between the focal
 #'  relationship and the most likely alternative exceed the threshold Tassign.
 #'
-#' When calling with GenoFormat="raw" or GenoFormat="col", the genotype file is
-#' converted and written to a temporary directory. For large files, this may be
-#'  time consuming; please consider calling \code{\link{GenoConvert}} directly
-#'  before pedigree reconstruction.
-#'
 #' Further explanation of the various options and interpretation of the output
 #'  is provided in the vignette.
 #'
@@ -22,10 +17,6 @@
 #'   one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
 #'   \code{\link{GenoConvert}} to convert genotype files created in PLINK using
 #'   --recodeA or in Colony's 2-column format to this format.
-#' @param GenoFile character string with name of genotype file, with no header.
-#'   Assumed to be in current working directory unless complete path is
-#'   provided, which may not contain any spaces and must be less than 255
-#'   characters long.
 #' @param LifeHistData Dataframe with 3 columns:
 #'  \itemize{
 #'  \item{ID: }{max. 30 characters long,}
@@ -63,6 +54,8 @@
 #' @param Complex  Either "full" (default), "simp" (simplified, no explicit
 #'  consideration of inbred relationships; not fully implemented yet) or
 #'  "mono" (monogamous).
+#' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
+#'   pedigree reconstruction. Can be time-consuming in large datasets.
 #' @param quiet suppress messages
 #'
 #' @return A list with some or all of the following components:
@@ -76,7 +69,7 @@
 #'   identical IDs). The specified number of maximum mismatches is allowed,
 #'   and this dataframe may include pairs of closely related individuals.}
 #' \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-#'   history file}
+#'   history dataframe}
 #' \item{LifeHist}{Provided dataframe with sex and birth year data}
 #' \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
 #'   parent-offspring than unrelated, but which could not be phased due to
@@ -85,7 +78,7 @@
 #' \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
 #'   to be first or second degree relatives than unrelated, but which could not
 #'   be assigned.}
-#' \item{NoLH}{Vector, IDs (in genotype file) for which no life history data is
+#' \item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
 #'  provided}
 #' \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
 #'   Sibship step; entries for dummy individuals are added at the bottom.}
@@ -112,14 +105,14 @@
 #'  \item{OH_dam}{Number of loci at which the offspring and mother are
 #'    opposite homozygotes}
 #'  \item{OH_sire}{idem, for male parent}
-#'  \item{rowID}{Row number in genotype file for id}
-#'  \item{rowDam}{Row number in genotype file for dam}
-#'  \item{rowSire}{Row number in genotype file for sire}
+#'  \item{rowID}{Row number in genoM for id}
+#'  \item{rowDam}{Row number in genoM for dam}
+#'  \item{rowSire}{Row number in genoM for sire}
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
 #' @references Huisman, J. Pedigree reconstruction from SNP data: Parentage
-#'   assignment, sibship clustering, and beyond. (under review) Molecular
+#'   assignment, sibship clustering, and beyond. (accepted manuscript) Molecular
 #'   Ecology Resources
 #'
 #' @seealso \code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}
@@ -139,57 +132,47 @@
 #' @export
 
 sequoia <- function(GenoM = NULL,
-                    GenoFile = NULL,
                     LifeHistData = NULL,
                     SeqList = NULL,
                     MaxSibIter = 10,
                     Err = 0.0001,
                     MaxMismatch = 3,
                     Tfilter = -2.0,
-                    Tassign = 1.0,
+                    Tassign = 0.5,
                     MaxSibshipSize = 100,
                     DummyPrefix = c("F", "M"),
                     Complex = "full",
+                    FindMaybeRel = TRUE,
                     quiet = FALSE)
 {
+  if (is.null(GenoM)) stop("please provide 'GenoM'")
+  if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
   if (!"Specs" %in% names(SeqList)) {
-    if (is.null(GenoM) & is.null(GenoFile)) stop("please provide 'GenoM' or 'GenoFile'")
-    if (!is.null(GenoM) & !is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
-    if (length(GenoFile)>1) stop("Provide single name for 'GenoFile'")
     if (is.null(LifeHistData)) warning("no lifehistory data provided; assuming single cohort")
-    if (Err<0 | Err>1 | !is.double(Err)) stop("invalid value for 'Err'")
-    if (MaxMismatch<0 | !is.wholenumber(MaxMismatch))  stop("invalid value for 'MaxMismatch'")
-    if (!is.double(Tfilter))  stop("invalid value for 'Tfilter'")
-    if (!is.double(Tassign) | Tassign<0)  stop("invalid value for 'Tassign'")
-    if (MaxSibshipSize<0 | !is.wholenumber(MaxSibshipSize)) {
-      stop("invalid value for MaxSibshipSize")
-    }
-    if (!Complex %in% c("full", "simp", "mono")) stop("invalid value for 'Complex'")
   }
-  if (MaxSibIter<0 | !is.wholenumber(MaxSibIter))  stop("invalid value for 'MaxSibIter'")
   if (!is.logical(quiet)) stop("`quiet' must be TRUE/FALSE")
-
 
   if ("Specs" %in% names(SeqList)) {
     if(!quiet)  message("settings in SeqList will overrule other settings")
-    # TODO: check if values are valid
-    Specs <- SeqList$Specs
-    Specs["MaxSibIter"] <- MaxSibIter
-    if (Specs["GenotypeFilename"] != "USEMATRIX" | !is.null(GenoM)) {
-      GenoFile <- Specs["GenotypeFilename"]
-      if (nchar(GenoFile)>=255)  stop("'GenoFile' longer than 255 characters")
-      if (length(grep(" ", GenoFile))>0)  stop("'GenoFile' may not contain spaces")
-    } else {
-      stop("please provide 'GenoM' or 'GenoFile'")
-    }
-    if (GenoFile != "USEMATRIX") {
-      if (!file.exists(GenoFile)) stop("cannot find GenoFile")
-    }
+    Specs <- SeqPrep(GenoM = GenoM,
+                     LifeHistData = LifeHistData,
+                     nAgeClasses = FacToNum(SeqList$Specs["nAgeClasses"]),
+                     MaxSibIter = MaxSibIter,   # take novel value
+                     Err = FacToNum(SeqList$Specs["GenotypingErrorRate"]),
+                     MaxMismatch = FacToNum(SeqList$Specs["MaxMismatch"]),
+                     Tfilter = FacToNum(SeqList$Specs["Tfilter"]),
+                     Tassign = FacToNum(SeqList$Specs["Tassign"]),
+                     MaxSibshipSize = FacToNum(SeqList$Specs["MaxSibshipSize"]),
+                     DummyPrefix = as.character(SeqList$Specs[c("DummyPrefixFemale",
+                                                   "DummyPrefixMale")]),
+                     Complexity = as.character(SeqList$Specs["Complexity"]),
+                     FindMaybeRel = as.logical(SeqList$Specs["FindMaybeRel"]))
   } else {
-    Specs <- SeqPrep(GenoFile, GenoM, LifeHistData,
+    Specs <- SeqPrep(GenoM, LifeHistData, nAgeClasses=1,
                      MaxSibIter, Err, MaxMismatch, Tfilter, Tassign,
-                     MaxSibshipSize, DummyPrefix, Complex)
+                     MaxSibshipSize, DummyPrefix, Complex, FindMaybeRel)
   }
+
 
   if ("LifeHist" %in% names(SeqList)) {
     if(!quiet)  message("using LifeHistData in SeqList")
@@ -219,7 +202,7 @@ sequoia <- function(GenoM = NULL,
     if (MaxSibIter>0) {
       if(!quiet) message("using parents in SeqList")
 
-      if (!"AgePriors" %in% names(SeqList) & !is.null(LifeHistData)) {
+      if (!"AgePriors" %in% names(SeqList) && !is.null(LifeHistData)) {
         AgePriors <- MakeAgeprior(UseParents = TRUE,
                                   FacToNum(Specs["nAgeClasses"]),
                                   Parents = SeqList$PedigreePar[,1:3],
@@ -239,7 +222,6 @@ sequoia <- function(GenoM = NULL,
     }
   }
 
-
   if (MaxSibIter>0) {
     if ("PedigreePar" %in% names(SeqList)) {
       if (any(SeqList$PedigreePar$rowID != seq(1,nrow(SeqList$PedigreePar)))) {
@@ -249,10 +231,9 @@ sequoia <- function(GenoM = NULL,
     } else {
       PedPar <- ParList$PedigreePar[, c("rowDam", "rowSire")]
     }
-    SibList <- SeqParSib("sib", Specs, GenoM, LifeHistData,
-                         AgePriors, PedPar, quiet)
+    SibList <- SeqParSib(ParSib="sib", Specs=Specs, GenoM=GenoM, LhIN=LifeHistData,
+                         AgePriors=AgePriors, Parents=PedPar, quiet=quiet)
   } else SibList <- NULL
-
 
   #=====================
   OUT <- list()

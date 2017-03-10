@@ -35,27 +35,27 @@
 
 
 ###################################################
-### code chunk number 2: sequoia.Rnw:104-106 (eval = FALSE)
+### code chunk number 2: sequoia.Rnw:106-108 (eval = FALSE)
 ###################################################
 ## system("cmd", input = "plink --file mydata --extract plink.prune.in
 ##   --recodeA --out inputfile_for_sequoia")
 
 
 ###################################################
-### code chunk number 3: sequoia.Rnw:109-111 (eval = FALSE)
+### code chunk number 3: sequoia.Rnw:111-113 (eval = FALSE)
 ###################################################
 ## GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw",
 ##                      OutFile = NA)
 
 
 ###################################################
-### code chunk number 4: sequoia.Rnw:165-166 (eval = FALSE)
+### code chunk number 4: sequoia.Rnw:167-168 (eval = FALSE)
 ###################################################
 ## GenoM <- as.matrix(read.table("SimGeno.txt", row.names=1))
 
 
 ###################################################
-### code chunk number 5: sequoia.Rnw:172-176 (eval = FALSE)
+### code chunk number 5: sequoia.Rnw:174-178 (eval = FALSE)
 ###################################################
 ## ParOUT <- sequoia(GenoM = GenoM,
 ##                   LifeHistData = read.table("LifeHistFile.txt",
@@ -64,20 +64,20 @@
 
 
 ###################################################
-### code chunk number 6: sequoia.Rnw:204-206 (eval = FALSE)
+### code chunk number 6: sequoia.Rnw:206-208 (eval = FALSE)
 ###################################################
 ## load("Sequoia_output_date.RData")  # if it was saved to disk
 ## SeqOUT2 <- sequoia(SeqList = list(Specs = SeqOUT1$Specs))
 
 
 ###################################################
-### code chunk number 7: sequoia.Rnw:212-213 (eval = FALSE)
+### code chunk number 7: sequoia.Rnw:214-215 (eval = FALSE)
 ###################################################
 ## SeqOUT2 <- sequoia(SeqList = SeqOUT1)
 
 
 ###################################################
-### code chunk number 8: sequoia.Rnw:286-293 (eval = FALSE)
+### code chunk number 8: sequoia.Rnw:288-295 (eval = FALSE)
 ###################################################
 ## AP <- as.matrix(SeqOUT$AgePriors)
 ## AP[AP>0] <- 0
@@ -89,7 +89,7 @@
 
 
 ###################################################
-### code chunk number 9: sequoia.Rnw:346-351 (eval = FALSE)
+### code chunk number 9: sequoia.Rnw:348-353 (eval = FALSE)
 ###################################################
 ## TLL <- c(SeqOUT$TotLikParents, NA, SeqOUT$TotLikSib)
 ## xv <- c(paste0("p", 1:length(SeqOUT$TotLikParents)-1), " ",
@@ -99,13 +99,13 @@
 
 
 ###################################################
-### code chunk number 10: sequoia.Rnw:359-360 (eval = FALSE)
+### code chunk number 10: sequoia.Rnw:361-362 (eval = FALSE)
 ###################################################
 ## compareOUT <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
 
 
 ###################################################
-### code chunk number 11: sequoia.Rnw:393-410 (eval = FALSE)
+### code chunk number 11: sequoia.Rnw:395-412 (eval = FALSE)
 ###################################################
 ## data(SimGeno_example, LH_HSg5, Ped_HSg5)
 ## SeqOUTX <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5)
@@ -127,7 +127,7 @@
 
 
 ###################################################
-### code chunk number 12: sequoia.Rnw:416-436 (eval = FALSE)
+### code chunk number 12: sequoia.Rnw:418-438 (eval = FALSE)
 ###################################################
 ## with(compare$MergedPed,
 ##      compare$MergedPed[which(dam.1!=dam.2 & dam.1!=dam.r), ])
@@ -152,7 +152,7 @@
 
 
 ###################################################
-### code chunk number 13: sequoia.Rnw:442-445 (eval = FALSE)
+### code chunk number 13: sequoia.Rnw:444-447 (eval = FALSE)
 ###################################################
 ## SeqOUTX$Pedigree[SeqOUTX$Pedigree$id=="a01063", ]
 ## #        id   dam   sire LLRdam LLRsire LLRpair
@@ -160,7 +160,7 @@
 
 
 ###################################################
-### code chunk number 14: sequoia.Rnw:453-457 (eval = FALSE)
+### code chunk number 14: sequoia.Rnw:455-459 (eval = FALSE)
 ###################################################
 ## BestConfig <- read.table("Colony/file/file.BestConfig",
 ##                          header=T, sep="", comment.char="")
@@ -169,7 +169,7 @@
 
 
 ###################################################
-### code chunk number 15: sequoia.Rnw:473-488 (eval = FALSE)
+### code chunk number 15: sequoia.Rnw:475-490 (eval = FALSE)
 ###################################################
 ## data(LH_HSg5, Ped_HSg5)
 ## ARER <- array(dim=c(10,7,2))
@@ -189,7 +189,7 @@
 
 
 ###################################################
-### code chunk number 16: sequoia.Rnw:492-512 (eval = FALSE)
+### code chunk number 16: sequoia.Rnw:494-514 (eval = FALSE)
 ###################################################
 ## ConfProb <- 1 - round(colMeans(ARER[, , "ER"]),3)
 ## #
@@ -214,7 +214,7 @@
 
 
 ###################################################
-### code chunk number 17: sequoia.Rnw:521-550 (eval = FALSE)
+### code chunk number 17: sequoia.Rnw:523-552 (eval = FALSE)
 ###################################################
 ## Rel.snp <- read.table("GT.grm.gz")
 ## Rel.id <- read.table("GT.grm.id", stringsAsFactors=FALSE)

@@ -1,5 +1,5 @@
 \documentclass[a4paper, 12pt, onecolumn]{article}
-\usepackage{multirow, amsmath, graphicx, xfrac, amssymb}
+\usepackage{multirow, amsmath, graphicx, amssymb}
 \usepackage[margin=2.7cm]{geometry}
 \usepackage[colorlinks=false, pdfborder={0 0 0}]{hyperref}
 
@@ -80,7 +80,9 @@ The life history data (\verb+LifeHistData+) should be provided as a dataframe wi
 Ideally this basic life history information is provided for all genotyped individuals, but this is not strictly necessary. This dataframe may include many more individuals than the genotype data, or in a different order.
 
 \subsection{Genotype data}
-The SNP data should be coded with one line per individual, and one column per SNP, with each SNP is coded as 0, 1, 2 copies of the reference allele, or missing (-9). This matrix can be provided as \verb+GenoM+, with individual IDs as the rownames. Alternatively a text file \verb+GenoFile+ can be specified with one column for IDs followed by one column per SNP, and no header row. Then, the genotype data is never loaded into R, as this can take up a lot of memory for very large datasets. The necessary file format can for example be obtained using PLINK \cite{Purcell07} in combination with \verb+sequoia+'s \verb+GenoConvert+, as described below. \verb+GenoConvert+ can also convert Colony input files.
+The SNP data should be coded with one line per individual, and one column per SNP, with each SNP is coded as 0, 1, 2 copies of the reference allele, or missing (-9). This matrix can be provided as \verb+GenoM+, with individual IDs as the rownames. The necessary file format can for example be obtained using PLINK \cite{Purcell07} in combination with \verb+sequoia+'s \verb+GenoConvert+, as described below. \verb+GenoConvert+ can also convert Colony input files.
+
+For the stand-alone Fortran version, a text file \verb+GenoFile+ can be specified with one column for IDs followed by one column per SNP, and no header row. Then, the genotype data is never loaded into R, as this can take up a lot of memory for very large datasets. The source code is available from \url{https://github.com/JiscaH}.
 
 
 \subsubsection{Real data - Selection of SNP markers}
@@ -157,8 +159,8 @@ The genotyping error rate assumed, typically probably around 1E-4 to 1E-3. The e
 \end{table}
 
 
-\paragraph{GenoFile}
-The name of the genotype file. When not in the current working directory (\verb+getwd()+), provide the full path (with forward slashes).
+%\paragraph{GenoFile}
+%The name of the genotype file. When not in the current working directory (\verb+getwd()+), provide the full path (with forward slashes).
 
 \paragraph{GenoM}
 The genotype matrix. Can be read in from a genotype file in the prescribed format using
@@ -558,7 +560,7 @@ hexbinplot(Rel.gt$R.SNP~Rel.gt$R.ped, xbins=100, aspect=1, maxcnt=10^6.5,
 J~Huisman.
 \newblock Pedigree reconstruction using snp data: parentage assignment, sibship
   clustering, and beyond.
-\newblock {\em Molecular Ecology Resources}, under review.
+\newblock {\em Molecular Ecology Resources}, accepted. DOI: 10.1111/1755-0998.12665
 
 \bibitem{Marshall98}
 T~C Marshall, J~B K~E Slate, L~E~B Kruuk, and J~M Pemberton.

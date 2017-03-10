@@ -11,7 +11,7 @@ NumToID(x, k = NULL, realID = NULL, dumID = NULL)
 
 \item{k}{1=maternal, 2=paternal (for dummies only)}
 
-\item{realID}{vector with IDs, order as in genotype file}
+\item{realID}{vector with IDs, order as in genotype data}
 
 \item{dumID}{2-column matrix with dummy IDs}
 }
@@ -19,7 +19,7 @@ NumToID(x, k = NULL, realID = NULL, dumID = NULL)
 character vector with IDs
 }
 \description{
-Replace the rownumbers by IDs, as in the genotype file, and replace negative
+Replace the rownumbers by IDs, as in the genotype data, and replace negative
 numbers by dummy IDs
 }
 
