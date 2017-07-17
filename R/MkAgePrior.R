@@ -57,7 +57,7 @@ MakeAgeprior <- function(UseParents = FALSE,
                          Parents = NULL,
                          LifeHistData = NULL)
 {
-  if (UseParents) {
+  if (UseParents & !is.null(Parents)) {
     PropAss <- with(Parents, sum(!is.na(dam)) + sum(!is.na(sire))) / (2*nrow(Parents))
   } else {
     PropAss <- 0

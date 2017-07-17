@@ -5,7 +5,7 @@
 \title{Compare two Pedigrees}
 \usage{
 PedCompare(Ped1 = NULL, PedFile1 = NULL, Ped2 = NULL, sep1 = "\\t",
-  DumPrefix = c("F0", "M0"))
+  DumPrefix = c("F0", "M0"), SNPd = NULL)
 }
 \arguments{
 \item{Ped1}{original pedigree, dataframe with columns id-dam-sire; only the
@@ -19,10 +19,11 @@ id-dam-sire.}
 
 \item{sep1}{the field separator character in 'PedFile1'.}
 
-\item{DumPrefix}{the dummy prefix used. If NULL, the intersect between
-the IDs in Pedigrees 1 and 2 is taken as the list of genotyped
-individuals. Otherwise, all individuals in Pedigree 2 with IDs
-not starting with the Dummy prefix are taken as genotyped.}
+\item{DumPrefix}{character vector of length 2 with the dummy prefices in
+Pedigree 2; all IDs not starting with the Dummy prefix are taken as
+genotyped.}
+
+\item{SNPd}{character vector with IDs of genotyped individuals.}
 }
 \value{
 A list with
@@ -95,6 +96,9 @@ including comparison of sibship clusters and sibship grandparents.
 Provide either a dataframe of the pedigree, or the filename of a text file.
 Both pedigrees are assumed to have as first three columns id, dam and sire,
 in that order.
+
+If both DumPrefix and SNPd are NULL (the default), the intersect between
+the IDs in Pedigrees 1 and 2 is taken as the genotyped individuals.
 }
 \examples{
 \dontrun{

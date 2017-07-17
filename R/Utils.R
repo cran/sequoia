@@ -1,27 +1,12 @@
 # Various miscelaneous functions
 
 #======================================================================
-#' Convert factor to numeric
-#'
-#' Converts factors to their numeric values, via \code{as.character}.
-#'
-#' @param x a factor
-#' @return A numeric vector of the same length as x.
+# Convert factor to numeric
 FacToNum <- function(x) as.numeric(as.character(x))
 
 
 #======================================================================
-#' transform vector to matrix
-#'
-#'
-#' @param V a vector
-#' @param nr number of non-empty rows in matrix
-#' @param nc number of columns in matrix
-#' @param Ng_odd boolean, apply correction when number of genotyped individuals
-#'   is odd
-#'
-#' @return A n x ncol matrix
-#'
+# transform vector to matrix
 VtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
   if(Ng_odd) {
     V <- V[1:((length(V)/nc-1)*nc)]
@@ -33,12 +18,7 @@ VtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
 
 
 #======================================================================
-#' Data input
-#'
-#' Read data with header row.
-#'
-#' @param ... parameters for read.table
-#' @param sep column seperator
+# Data input
 ReadTable <- function(..., sep="\t") utils::read.table(...,
                                                 header=TRUE,
                                                 stringsAsFactors=FALSE,
@@ -58,88 +38,48 @@ Table <- function(...) table(..., useNA="ifany")
 
 
 #======================================================================
-#' Value Matching
-#'
-#' Like \code{\%in\%}, returns a logical vector indicating if there is a match
-#'  or not for its left operand, but returns NA for NA's in the left operand.
-#'
-#' @param x vector: the values to be matched
-#' @param y vector: the values to be matched against
-#'
-#' @return A logical vector of the same length as x.
-#'
-# #' @examples
-# #' X <- c(1:5, NA, NA)
-# #' Y <- c(3:10)
-# #' X %in% Y
-# #' table(X %in% Y, useNA="ifany")
-# #' X %ina% Y
-# #' table(X %ina% Y, useNA="ifany")
+# Value Matching
 "%ina%" <- function(x, y) ifelse(!is.na(x), match(x, y, nomatch = 0) > 0, NA)
 
 
 #======================================================================
-#' paste directory and file name
-#'
-#' @param folder foldername
-#' @param fileName filename
-
+# paste directory and file name
 pasteD <- function(folder, fileName) paste(folder, fileName, sep="/")
 
 
 #======================================================================
-#' create a table, and ensure that the levels TRUE, FALSE and NA are always all
-#'  represented
-#'
-#' @param x  a logical vector
-
+# create a table, and ensure that the levels TRUE, FALSE and NA are always all
 tbl.logic <- function(x) table(factor(x, levels=c(TRUE, FALSE, NA)),
                                useNA="always")
 
 
 #======================================================================
-#' Comparison
-#'
-#' Test which elements in a vector are equal to x, returning FALSE at missing
-#' values in V
-#'
-#' @param x  a value
-#' @param V  a vector of the same type as x
-#'
-#' @return a logical vector of the same length as v
-#'
-eqv <- function(x, V) {
-  if (!is.na(x)) {
-    y <- ifelse(!is.na(V), x==V, FALSE)
+# Comparison
+eqv <- function(x, V, xNA=FALSE) {
+  if (length(x)==1) {
+    if (!is.na(x)) {
+      y <- ifelse(!is.na(V), x==V, FALSE)
+    } else {
+      y <- rep(xNA, length(V))
+    }
+  } else if (length(x)==length(V)) {
+    y <- ifelse(!is.na(x) & !is.na(V), x==V,
+              ifelse(is.na(x) & is.na(V), xNA, FALSE))
   } else {
-    y <- logical(length=length(V))
+    stop("unequal lengths")
   }
   y
 }
 
 
 #======================================================================
-#' function in Examples from integer {base}
-#'
-#' @param x a number
-#' @param tol tolerance
+# function in Examples from integer {base}
 is.wholenumber <-
   function(x, tol = .Machine$double.eps^0.5)  abs(x - round(x)) < tol
 
 
-
 #======================================================================
-#' Partial pedigree fix
-#'
-#' Add rows for all parents in pedigree who are not yet represented in the
-#' first column
-#'
-#' @param PedIN  A dataframe with IDs in the first column and parents in the
-#'   second and third columns
-#'
-#' @return A dataframe with one row per individual occuring in the pedigree
-
-
+# Partial pedigree fix
 AddParPed <- function(PedIN) {
   Ped <- unique(PedIN)
   UID <- unique(c(as.character(Ped[,1]),
@@ -151,8 +91,40 @@ AddParPed <- function(PedIN) {
                          dam=NA,
                          sire=NA,
                          stringsAsFactors=FALSE)
-    names(AddPed) <- names(PedIN)[1:3]
-    Ped <- rbind(AddPed, PedIN[,1:3])  # presume ancestors
+    Ped <- merge(AddPed, PedIN, all=TRUE)  # presume ancestors
   }
   Ped
 }
+
+
+#===============================
+# replace numbers by names
+NumToID <- function(x, k=NULL, GenoNames=NULL, dumID=NULL) {
+  type <- ifelse(x>0, "r", ifelse(x<0, "d", "n"))
+  ID <- rep(NA, length(x))
+  ID[type=="r"] <- GenoNames[x[type=="r"]]
+  ID[type=="d"] <- dumID[-x[type=="d"], k]
+  ID
+}
+
+
+IDToNum <- function(NamePed, GenoNames) {  # GenoNames = rownames(GenoM)
+  names(NamePed) <- c("id", "dam", "sire")
+  if (!all(GenoNames %in% NamePed$id)) {
+    NamePed <- rbind(NamePed, data.frame(id = GenoNames[!GenoNames %in% NamePed$id],
+                                         dam = NA, sire = NA))
+  }
+  rownames(NamePed) <- NamePed$id
+  NamePed <- NamePed[GenoNames, ]
+  GenoNums <- 1:length(GenoNames)
+  names(GenoNums) <- GenoNames
+  NumPed <- data.frame(id = GenoNums,
+                       dam = GenoNums[NamePed$dam],
+                       sire = GenoNums[NamePed$sire])
+  for(i in 2:3) NumPed[is.na(NumPed[,i]), i] <- 0
+  NumPed
+}
+
+
+
+

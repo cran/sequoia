@@ -1,0 +1,92 @@
+herm_clone_LH <- function(LH, herm.suf=c("f", "m")) {
+  hermLH.1 <- LH[which(LH$Sex==4), ]
+  hermLH.1$ID <- paste(hermLH.1$ID, herm.suf[1], sep="_")
+  hermLH.1$Sex = 1
+  hermLH.2 <- LH[which(LH$Sex==4), ]
+  hermLH.2$ID <- paste(hermLH.2$ID, herm.suf[2], sep="_")
+  hermLH.2$Sex = 2
+  unique(rbind(LH, hermLH.1, hermLH.2))
+}
+
+
+#=============================================================
+herm_clone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
+  hermID <- LH$ID[which(LH$Sex==4 & LH$ID %in% rownames(Geno))]
+  if (length(hermID)>0) {  # 0: no genotyped hermaprhodites / already duplicated
+    herm.Geno.2 <- Geno[hermID, ]
+    rownames(herm.Geno.2) <- paste(hermID, herm.suf[2], sep="_")
+    these <- which(rownames(Geno) %in% hermID)
+    rownames(Geno)[these] <- paste(rownames(Geno)[these], herm.suf[1], sep="_")
+    Geno <- rbind(Geno, herm.Geno.2)
+  }
+  Geno
+}
+
+
+
+#=============================================================
+herm_clone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
+  Ped <- AddParPed(Ped)
+  hermID <- as.character(LH$ID[which(LH$Sex==4 & LH$ID %in% Ped$id)])
+  these <- which(Ped$id %in% hermID)
+  Ped.herm2 <- Ped[these, ]
+  Ped$id[these] <- paste(Ped$id[these], herm.suf[1], sep="_")
+  Ped.herm2$id <- paste(Ped.herm2$id, herm.suf[2], sep="_")
+  Ped <- rbind(Ped, Ped.herm2)
+  these.dams <- which(Ped$dam %in% hermID)
+  Ped$dam[these.dams] <- paste(Ped$dam[these.dams], herm.suf[1], sep="_")
+  these.sires <- which(Ped$sire %in% hermID)
+  Ped$sire[these.sires] <- paste(Ped$sire[these.sires], herm.suf[2], sep="_")
+  Ped
+}
+
+
+#=============================================================
+herm_unclone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
+  hermID <- as.character(LH$ID[which(LH$Sex==4)])
+  hermPed.1 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_f" &
+                           chop(Ped$id, herm.suf[1]) %in% hermID), ]
+  hermPed.2 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_m" &
+                           chop(Ped$id, herm.suf[2]) %in% hermID), ]
+  hermPed.1$id.orig <- chop(hermPed.1$id, herm.suf[1])
+  hermPed.2$id.orig <- chop(hermPed.2$id, herm.suf[2])
+  hermPed.b <- merge(hermPed.1, hermPed.2, by="id.orig", all=TRUE)
+  if(any(!eqv(hermPed.b$dam.x, hermPed.b$dam.y, xNA=TRUE)) |
+      any(!eqv(hermPed.b$sire.x, hermPed.b$sire.y, xNA=TRUE))) {
+    warning("Different parents assigned to hermaphrodite in-silico clones")
+    PedOUT <- Ped
+  } else {
+    Hped <- hermPed.1
+    Hped <- Hped[, names(Hped)!="id"]
+    names(Hped)[names(Hped)=="id.orig"] <- "id"
+    Hped <- Hped[, names(Ped)]
+    PedOUT <- rbind(Ped[!Ped$id %in% hermPed.1$id & !Ped$id %in% hermPed.2$id, ],
+                    Hped)
+    PedOUT$dam <- chop(PedOUT$dam, herm.suf[1])
+    PedOUT$sire <- chop(PedOUT$sire, herm.suf[2])
+  }
+  PedOUT
+}
+
+
+#=============================================================
+# remove duplicates (e.g. after simulating)
+herm_unclone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
+  hermID <- as.character(LH$ID[which(LH$Sex==4)])
+  Geno <- Geno[!rownames(Geno) %in% paste(hermID, herm.suf[2], sep="_"), ]
+  these <- which(rownames(Geno) %in% paste(hermID, herm.suf[1], sep="_"))
+  rownames(Geno)[these] <- chop(rownames(Geno)[these], herm.suf[1])
+  Geno
+}
+
+#=============================================================
+# chop suffix from end of character string
+chop <- function(x, suf, sep="_") {
+   suf <- paste0(sep, suf)
+   ifelse(substr(x, start=nchar(x)-nchar(suf)+1, stop=nchar(x)) == suf,
+          substr(x, start=1, stop=nchar(x)-nchar(suf)), x)
+}
+
+
+#=============================================================
+# unique rows, taking rownames into consideration

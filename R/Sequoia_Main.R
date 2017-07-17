@@ -20,8 +20,8 @@
 #' @param LifeHistData Dataframe with 3 columns:
 #'  \itemize{
 #'  \item{ID: }{max. 30 characters long,}
-#'  \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
-#'  \item{Birth Year: }{(or hatching year) Negative numbers are
+#'  \item{Sex: }{1 = females, 2 = males, other = unkown, except 4 = hermaphrodite,}
+#'  \item{BY: }{(birth or hatching year) Negative numbers are
 #'    interpreted as missing values.}}
 #'  If the species has multiple generations per year, use an integer coding
 #'   such that the candidate parents' `Birth year' is at least one larger than
@@ -56,10 +56,12 @@
 #'  "mono" (monogamous).
 #' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
 #'   pedigree reconstruction. Can be time-consuming in large datasets.
-#' @param quiet suppress messages
+#' @param CalcLLR  Calculate log-likelihood ratios for all assignments. Can be
+#'  time-consuming in large datasets.
+#' @param quiet suppress messages.
 #'
 #' @return A list with some or all of the following components:
-#' \item{AgePriors}{Matrix with age-difference based prior probabilities}
+#' \item{AgePriors}{Matrix with age-difference based prior probabilities.}
 #' \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
 #'   their sex, estimated birth year (point estimate, upper and lower bound of
 #'   95\% confidence interval), number of offspring, and offspring IDs.}
@@ -69,21 +71,21 @@
 #'   identical IDs). The specified number of maximum mismatches is allowed,
 #'   and this dataframe may include pairs of closely related individuals.}
 #' \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-#'   history dataframe}
-#' \item{LifeHist}{Provided dataframe with sex and birth year data}
+#'   history dataframe.}
+#' \item{LifeHist}{Provided dataframe with sex and birth year data.}
 #' \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
 #'   parent-offspring than unrelated, but which could not be phased due to
 #'   unknown age difference (coded as 999) or sex, or for whom LLR did not pass
-#'   Tassign}
+#'   Tassign.}
 #' \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
 #'   to be first or second degree relatives than unrelated, but which could not
 #'   be assigned.}
-#' \item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
-#'  provided}
+#' \item{NoLH}{Vector, IDs in genotype data for which no life history data is
+#'  provided.}
 #' \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
 #'   Sibship step; entries for dummy individuals are added at the bottom.}
-#' \item{PedigreePar}{Dataframe with assigned parents from Parentage step}
-#' \item{Specs}{Named vector with parameter values}
+#' \item{PedigreePar}{Dataframe with assigned parents from Parentage step.}
+#' \item{Specs}{Named vector with parameter values.}
 #' \item{TotLikParents}{Numeric vector, Total likelihood of the genotype data
 #'   at initiation and after each iteration during Parentage.}
 #' \item{TotLikSib}{Numeric vector, Total likelihood of the genotype data
@@ -94,20 +96,17 @@
 #'  \item{id}{Individual ID}
 #'  \item{dam}{Assigned mother, or NA}
 #'  \item{sire}{Assigned father, or NA}
-#'  \item{LLR_dam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
+#'  \item{LLRdam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
 #'    versus the next most likely relationship between the focal individual and
 #'    this female (see Details for relationships considered)}
-#'  \item{LLR_sire}{idem, for male parent}
-#'  \item{LLR_pair}{LLR for the parental pair, versus the next most likely
+#'  \item{LLRsire}{idem, for male parent}
+#'  \item{LLRpair}{LLR for the parental pair, versus the next most likely
 #'   configuration between the three individuals (with one or neither parent
 #'   assigned)}
 #' In addition, PedigreePar has the columns
-#'  \item{OH_dam}{Number of loci at which the offspring and mother are
+#'  \item{OHdam}{Number of loci at which the offspring and mother are
 #'    opposite homozygotes}
-#'  \item{OH_sire}{idem, for male parent}
-#'  \item{rowID}{Row number in genoM for id}
-#'  \item{rowDam}{Row number in genoM for dam}
-#'  \item{rowSire}{Row number in genoM for sire}
+#'  \item{OHsire}{idem, for father}
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
@@ -115,11 +114,12 @@
 #'   assignment, sibship clustering, and beyond. (accepted manuscript) Molecular
 #'   Ecology Resources
 #'
-#' @seealso \code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}
+#' @seealso \code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}, vignette("sequoia")
 #'
 #' @examples
 #' data(SimGeno_example, LH_HSg5, package="sequoia")
-#'
+#' head(SimGeno_example[,1:10])
+#' head(LH_HSg5)
 #' SeqOUT <- sequoia(GenoM = SimGeno_example,
 #'                   LifeHistData = LH_HSg5, MaxSibIter = 0)
 #' names(SeqOUT)
@@ -128,6 +128,11 @@
 #' SeqOUT2 <- sequoia(GenoM = SimGeno_example,
 #'                   LifeHistData = LH_HSg5, MaxSibIter = 10)
 #' SeqOUT2$Pedigree[34:42, ]
+#'
+#' # reading in data from text files:
+#' GenoM <- as.matrix(read.table("MyGenoData.txt", row.names=1, header=FALSE))
+#' LH <- read.table("MyLifeHistData.txt", header=TRUE)
+#' MySeqOUT <- sequoia(GenoM = GenoM, LifeHistData = LH)
 #' }
 #' @export
 
@@ -143,6 +148,7 @@ sequoia <- function(GenoM = NULL,
                     DummyPrefix = c("F", "M"),
                     Complex = "full",
                     FindMaybeRel = TRUE,
+                    CalcLLR = TRUE,
                     quiet = FALSE)
 {
   if (is.null(GenoM)) stop("please provide 'GenoM'")
@@ -151,6 +157,24 @@ sequoia <- function(GenoM = NULL,
     if (is.null(LifeHistData)) warning("no lifehistory data provided; assuming single cohort")
   }
   if (!is.logical(quiet)) stop("`quiet' must be TRUE/FALSE")
+
+  if ("LifeHist" %in% names(SeqList)) {
+    if(!quiet)  message("using LifeHistData in SeqList")
+    LifeHistData <- SeqList$LifeHist
+  }
+  if (!is.null(LifeHistData)) {
+    names(LifeHistData) <- c("ID", "Sex", "BY")
+    LifeHistData$ID <- as.character(LifeHistData$ID)
+    for (x in c("Sex", "BY")) LifeHistData[, x] <- as.integer(LifeHistData[, x])
+    LifeHistData$BY[is.na(LifeHistData$BY)] <- -999
+    LifeHistData$Sex[is.na(LifeHistData$Sex)] <- 3
+    LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
+  }
+
+  if (any(LifeHistData$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
+    GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
+    LifeHistData <- herm_clone_LH(LifeHistData, herm.suf=c("f", "m"))
+  }
 
   if ("Specs" %in% names(SeqList)) {
     if(!quiet)  message("settings in SeqList will overrule other settings")
@@ -166,30 +190,32 @@ sequoia <- function(GenoM = NULL,
                      DummyPrefix = as.character(SeqList$Specs[c("DummyPrefixFemale",
                                                    "DummyPrefixMale")]),
                      Complexity = as.character(SeqList$Specs["Complexity"]),
-                     FindMaybeRel = as.logical(SeqList$Specs["FindMaybeRel"]))
+                     FindMaybeRel = as.logical(SeqList$Specs["FindMaybeRel"]),
+                     CalcLLR = as.logical(SeqList$Specs["CalcLLR"]))
   } else {
-    Specs <- SeqPrep(GenoM, LifeHistData, nAgeClasses=1,
-                     MaxSibIter, Err, MaxMismatch, Tfilter, Tassign,
-                     MaxSibshipSize, DummyPrefix, Complex, FindMaybeRel)
+    Specs <- SeqPrep(GenoM = GenoM,
+                     LifeHistData = LifeHistData,
+                     nAgeClasses = 1,
+                     MaxSibIter = as.numeric(MaxSibIter),
+                     Err =Err,
+                     MaxMismatch = MaxMismatch,
+                     Tfilter = Tfilter,
+                     Tassign = Tassign,
+            				 MaxSibshipSize = MaxSibshipSize,
+            				 DummyPrefix = DummyPrefix,
+            				 Complexity = Complex,
+            				 FindMaybeRel = FindMaybeRel,
+            				 CalcLLR = CalcLLR)
   }
 
 
-  if ("LifeHist" %in% names(SeqList)) {
-    if(!quiet)  message("using LifeHistData in SeqList")
-    LifeHistData <- SeqList$LifeHist
-  }
-  if (!is.null(LifeHistData)) {
-    LifeHistData[, 1] <- as.character(LifeHistData[, 1])
-    for (x in 2:3) LifeHistData[, x] <- as.numeric(LifeHistData[, x])
-    names(LifeHistData) <- c("ID", "Sex", "BY")
-  }
 
   if ("AgePriors" %in% names(SeqList)) {
     if(!quiet)  message("using ageprior in SeqList")
     AgePriors <- SeqList$AgePriors
   } else {
     AgePriors <- MakeAgeprior(UseParents = FALSE,
-                              FacToNum(Specs["nAgeClasses"]))
+                              FacToNum(Specs[,"nAgeClasses"]))
   }
 
   DupList <- SeqDup(Specs, GenoM, LifeHistData, quiet)
@@ -197,43 +223,46 @@ sequoia <- function(GenoM = NULL,
     return(DupList)
   }
 
-
   if ("PedigreePar" %in% names(SeqList)) {
+    PedParents <- SeqList$PedigreePar  #[, c("id", "dam", "sire")]
+    for (x in 1:3)  PedParents[, x] <- as.character(PedParents[, x])
+    if (any(LifeHistData$Sex==4)) {  # hermaphrodites
+      PedParents <- herm_clone_Ped(PedParents, LifeHistData, herm.suf=c("f", "m"))
+    }
     if (MaxSibIter>0) {
       if(!quiet) message("using parents in SeqList")
-
       if (!"AgePriors" %in% names(SeqList) && !is.null(LifeHistData)) {
         AgePriors <- MakeAgeprior(UseParents = TRUE,
-                                  FacToNum(Specs["nAgeClasses"]),
-                                  Parents = SeqList$PedigreePar[,1:3],
-                                  LifeHistData)
+                                  nAgeClasses = FacToNum(Specs[,"nAgeClasses"]),
+                                  Parents = PedParents[,1:3],
+                                  LifeHistData = LifeHistData)
       }
-    }
-    ParList <- NULL
+      ParList <- list(PedigreePar = PedParents)
+      if ("TotLikParents" %in% names(SeqList)) {
+        ParList <- c(ParList, SeqList[c("MaybeParent", "TotLikParents")])
+      }
+    } else {  # 'hidden' for now: re-run parentage with pedigree-prior
+      ParList <- SeqParSib("par", Specs, GenoM, LifeHistData,
+                         AgePriors, Parents=PedParents[,1:3], quiet)
 
+    }
   } else {
     ParList <- SeqParSib("par", Specs, GenoM, LifeHistData,
                          AgePriors, Parents=NULL, quiet)
     if (!is.null(LifeHistData)) {
       AgePriors <- MakeAgeprior(UseParents = TRUE,
-                                FacToNum(Specs["nAgeClasses"]),
+                                nAgeClasses = FacToNum(Specs[,"nAgeClasses"]),
                                 Parents = ParList$PedigreePar[,1:3],
-                                LifeHistData)  # update agepriors
+                                LifeHistData = LifeHistData)  # update agepriors
     }
   }
 
   if (MaxSibIter>0) {
-    if ("PedigreePar" %in% names(SeqList)) {
-      if (any(SeqList$PedigreePar$rowID != seq(1,nrow(SeqList$PedigreePar)))) {
-        stop("rows in SeqList$PedigreePar changed, cannot use for sibship inference")
-      }
-      PedPar <- SeqList$PedigreePar[, c("rowDam", "rowSire")]
-    } else {
-      PedPar <- ParList$PedigreePar[, c("rowDam", "rowSire")]
-    }
-    SibList <- SeqParSib(ParSib="sib", Specs=Specs, GenoM=GenoM, LhIN=LifeHistData,
-                         AgePriors=AgePriors, Parents=PedPar, quiet=quiet)
+    SibList <- SeqParSib(ParSib = "sib", Specs = Specs, GenoM = GenoM,
+                         LhIN = LifeHistData, AgePriors = AgePriors,
+                         Parents = ParList$PedigreePar[, 1:3], quiet = quiet)
   } else SibList <- NULL
+
 
   #=====================
   OUT <- list()

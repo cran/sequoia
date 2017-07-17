@@ -7,7 +7,7 @@
 SeqPrep(GenoM = NULL, LifeHistData = NULL, nAgeClasses = 1,
   MaxSibIter = 5, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
   Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complexity = "full", FindMaybeRel = TRUE)
+  Complexity = "full", FindMaybeRel = TRUE, CalcLLR = TRUE)
 }
 \arguments{
 \item{GenoM}{matrix with genotype data, size nInd x nSnp}
@@ -50,9 +50,12 @@ of inbred relationships) or "mono" (monogamous breeding system)}
 
 \item{FindMaybeRel}{Identify pairs of non-assigned likely relatives after
 pedigree reconstruction. Can be time-consuming in large datasets.}
+
+\item{CalcLLR}{Calculate log-likelihood ratios for all assignments. Can be
+time-consuming in large datasets.}
 }
 \value{
-A named vector with parameter values
+A 1-row dataframe with parameter values
 }
 \description{
 Please do not increasing the number of SNPs or individuals beyond the

@@ -1,43 +1,35 @@
 \documentclass[a4paper, 12pt, onecolumn]{article}
-\usepackage{multirow, amsmath, graphicx, amssymb}
-\usepackage[margin=2.7cm]{geometry}
-\usepackage[colorlinks=false, pdfborder={0 0 0}]{hyperref}
-
-
-\newcommand{\ft}{\frac{1}{2}}
-\newcommand{\bm}[1]{\ifmmode \text{\boldmath$#1$} \else {\boldmath$#1$}\fi}
-\newcommand{\Lik}{\relax \ifmmode {\mathcal{L}} \else {$\mathcal{L}$} \fi}
-\newcommand{\LikX}[1]{\relax \ifmmode {\mathcal{L(\text{#1})}} \else {$\mathcal{L}$(#1)} \fi}
-\setlength{\parskip}{1em}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage[colorlinks=false, pdfborder={0 0 0}, linktoc=all]{hyperref}
 
 \begin{document}
 \SweaveOpts{concordance=TRUE}
 % \VignetteIndexEntry{Using sequoia}
 % \VignetteKeyword{pedigree}
-
 \setcounter{tocdepth}{2}
-\title{\vspace{-0.5cm}sequoia}
-\author{Jisca Huisman \\ jisca.huisman@gmail.com}
+
+
+\title{sequoia \\
+ \large  Reconstruction of multi-generational pedigrees from SNP data}
+\author{Jisca Huisman ( jisca.huisman@gmail.com )}
 \date{\today}
 
 
 \maketitle
 
-\noindent \verb+Sequoia+ provides a method to reconstruct multi-generational pedigrees based on SNP data, as described in \cite{Huisman17}. The bulk of the algorithm is written in Fortran, to minimise computation times. An example R script is shown, followed by detailed description of each step.
+\paragraph{Background} \verb+Sequoia+ provides a conservative hill-climbing algorithm to construct a high-likelihood pedigree from data on hundreds of single nucleotide polymorphisms (SNPs), described in \cite{huisman17}. Explicit consideration of the likelihoods of alternative relationships before making an assignment reduces the number of false positives, compared to parentage assignment methods relying on the likelihood ratio parent-offspring versus unrelated only \cite{thompson87}. When genetic information is abundant, the heuristic, sequential approach used is considerably quicker than most alternative approaches, with little or no loss in accuracy. Typical computation times are a few minutes for parentage assignment, and a few hours for full pedigree reconstruction when not all individuals are genotyped.
 
-
-\subsection*{Background}
-Data on hundreds of SNPs provides detailed information on the relationships between individuals, but with such large amounts of data pedigree reconstruction using MCMC or other approaches with many thousands of iterations are extremely time consuming. Instead, \verb+Sequoia+ is a conservative hill-climbing algorithm, asymptoting to a high-likelihood pedigree in a handful of iterations. Explicit consideration of the likelihoods of alternative configurations between pairs or groups of individuals before making an assignment reduces the number of false positives compared to methods relying on the likelihood ratio parent-offspring/unrelated (LLR(PO/U)) only \cite{Thompson87}.
 
 \parskip=0em
-\tableofcontents
+{\small \tableofcontents}
 \parskip=1em
+\newpage
 
-\subsection*{Example}
-An example pedigree and associated life history data are provided with the package, which can be used to try out the steps detailed in this vignette. This pedigree consists of 5 generations with interconnected half-sib clusters (Pedigree II in \cite{Huisman17}).
+
+\subsection{Example}
+An example pedigree and associated life history data are provided with the package, which can be used to try out the steps detailed here. This fictional pedigree consists of 5 generations with interconnected half-sib clusters (Pedigree II in \cite{huisman17}).
 <<eval=FALSE, echo=TRUE>>=
 install.packages("sequoia")  # only required first time
-setwd("E:/Sequoia/test")     # set the working directory
 library(sequoia)             # load the package
 #
 # get the example pedigree and life history data
@@ -48,101 +40,106 @@ tail(Ped_HSg5)
 Geno <- SimGeno(Ped = Ped_HSg5, nSnp = 200)
 #
 # run sequoia - duplicate check & parentage assignment only
+# (maximum number of sibship-clustering iterations = 0)
 ParOUT <- sequoia(GenoM = Geno,
                   LifeHistData = LH_HSg5,
                   MaxSibIter = 0)
+names(ParOUT)
+# [1] "Specs"  "AgePriors"  "LifeHist"  "PedigreePar"  "MaybeParent"
+# "TotLikParents"
 #
 # run sequoia - sibship clustering & grandparent assignment
+# use parents assigned above (in 'ParOUT$PedigreePar')
 SeqOUT <- sequoia(GenoM = Geno,
                   SeqList = ParOUT,
                   MaxSibIter = 5)
 #
 # compare the assigned real and dummy parents to the true pedigree
-PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
+chk <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
+chk$Counts
 #
 # save results
 save(SeqOUT, file="Sequoia_output_date.RData")
-write.table(SeqOUT$Pedigree, file="Pedigree_date.txt",
+write.table(SeqOUT$Pedigree, file="Pedigree.txt",
             sep="\t", row.names=FALSE, quote=FALSE)
 
 @
 
+\newpage
 \section{Input}
 
 \subsection{Life history data}
-The life history data (\verb+LifeHistData+) should be provided as a dataframe with three columns:
+The life history data (\verb+LifeHistData+) should be a dataframe with three columns:
+\vspace{-0.5\topsep}
 \begin{itemize}
-\setlength{\itemsep}{0em}
-  \item ID: up to 30 characters long, no spaces
-  \item Sex: 1 = female, 2 = male, other numbers = unknown
-  \item Year of birth (or hatching). In species with more than one generation per year, a finer time scale than year of birth ought to be used, ensuring that parents are never born within the same time unit as their putative offspring.
+  \setlength{\itemsep}{0em}
+  \item ID: It is probably safest to stick to R's `syntactically valid names', defined as ``consists of letters, numbers and the dot or underline characters and starts with a letter, or the dot not followed by a number'' in \verb+?make.names+.
+  \item Sex: 1 = female, 2 = male, other numbers or NA = unknown (except 4 = hermaphrodites [under development, for now possible in parentage assignment only])
+  \item BY: Year of birth/hatching/germination. In species with more than one generation per year, a finer time scale than year of birth ought to be used (in round numbers!), ensuring that parents are born prior to their putative offspring (e.g. parent's BY=2001 and offspring BY=2005, or BY=1 and BY=5 respectively). Negative numbers and NA's are interpreted as unknown.
 \end{itemize}
-Ideally this basic life history information is provided for all genotyped individuals, but this is not strictly necessary. This dataframe may include many more individuals than the genotype data, or in a different order.
+The column names are ignored, and therefore the order of the columns is critical.
+Ideally this basic life history information is provided for all genotyped individuals, but this is not necessary. This dataframe may include many more individuals than the genotype data, or in a different order.
+
 
 \subsection{Genotype data}
-The SNP data should be coded with one line per individual, and one column per SNP, with each SNP is coded as 0, 1, 2 copies of the reference allele, or missing (-9). This matrix can be provided as \verb+GenoM+, with individual IDs as the rownames. The necessary file format can for example be obtained using PLINK \cite{Purcell07} in combination with \verb+sequoia+'s \verb+GenoConvert+, as described below. \verb+GenoConvert+ can also convert Colony input files.
+The SNP data should be provided as a numeric matrix \verb+GenoM+ with one line per individual, and one column per SNP, with each SNP is coded as 0, 1, 2 copies of the reference allele, or missing (-9). The rownames should be the individual IDs, and column names are ignored.
+<<eval=FALSE, echo=TRUE>>=
+GenoM <- as.matrix(read.table("MyGenoData.txt",
+                              row.names=1, header=FALSE))
+@
 
-For the stand-alone Fortran version, a text file \verb+GenoFile+ can be specified with one column for IDs followed by one column per SNP, and no header row. Then, the genotype data is never loaded into R, as this can take up a lot of memory for very large datasets. The source code is available from \url{https://github.com/JiscaH}.
+The 0/1/2 format can for example be obtained using PLINK (\url{https://www.cog-genomics.org/plink2}) \cite{purcell07} in combination with \verb+sequoia+'s \verb+GenoConvert()+, as described below. \verb+GenoConvert+ can also convert Colony input files.
 
 
 \subsubsection{Real data - Selection of SNP markers}
-Using tens of thousands of SNP markers for pedigree reconstruction is unnecessary, will slow down computation, and may even hamper inferences by their non-independence. Rather, a subset of SNPs in low linkage disequilibrium (LD) with each other, and with high minor allele frequencies (MAF $> 0.3$),  ought to be selected first if more than a few hundred SNPs are available. The calculations assume independence of markers, and While low (background) levels of LD are unlikely to interfere with pedigree reconstruction, high levels may give spurious results. Markers with a high MAF provide the most information, as although rare allele provide strong evidence when they are inherited, this does not balance out the rarity of such events.
+Using tens of thousands of SNP markers for pedigree reconstruction is unnecessary, will slow down computation, and may even hamper inferences by their non-independence. Rather, a subset of SNPs in low linkage disequilibrium (LD) with each other, and with high minor allele frequencies (MAF $> 0.3$),  ought to be selected first if more than a few hundred SNPs are available. The calculations assume independence of markers, and while low (background) levels of LD are unlikely to interfere with pedigree reconstruction, high levels may give spurious results. Markers with a high MAF provide the most information, as although rare allele provide strong evidence when they are inherited, this does not balance out the rarity of such events.
 
-Creating a subset of SNPs can be done conveniently using PLINK (\url{https://www.cog-genomics.org/plink2}), using for example the command
+Creating a subset of SNPs can be done conveniently using PLINK, using for example in command prompt (or linux terminal) the command
 \vspace{-.3cm}
 \begin{verbatim}
 plink --file mydata --maf 0.4 --indep 50 5 2
 \end{verbatim}
-which will create a list of SNPs with a minor allele frequency of at least 0.4, and which in a window of 50 SNPs, sliding by 5 SNPs per step, have a VIF of maximum 2. VIF, or variance inflation factor, is $1/(1-r^2)$. It is advised to `tweak' the parameter values until a set with a few hundred SNPs (300-700) is created. For further details, see \url{https://www.cog-genomics.org/plink2/ld#indep}.
+which on a windows machine is equivalent to running inside R
+<<eval=FALSE, echo=TRUE>>=
+system("cmd", input = "plink --file mydata --maf 0.4 --indep 50 5 2")
+@
 
-%\paragraph{Real genotype file}
+This will create a list of SNPs with a minor allele frequency of at least 0.4, and which in a window of 50 SNPs, sliding by 5 SNPs per step, have a VIF of maximum 2. VIF, or variance inflation factor, is $1/(1-r^2)$. It is advised to `tweak' the parameter values until a set with a few hundred SNPs (300--700) is created. For further details, see \url{https://www.cog-genomics.org/plink2/ld#indep}.
+
 The resulting list (`plink.prune.in') can be used to create the genotype file used as input for Sequoia, with SNPs codes as 0, 1, 2, or NA, with the command
 \vspace{-.3cm}
 \begin{verbatim}
 plink --file mydata --extract plink.prune.in --recodeA --out
  inputfile_for_sequoia
 \end{verbatim}
-in command prompt, which is on a windows machine equivalent to
+This will create a file with the extension .RAW, which can be converted to the required input format using
 <<eval=FALSE, echo=TRUE>>=
-system("cmd", input = "plink --file mydata --extract plink.prune.in
-  --recodeA --out inputfile_for_sequoia")
-@
-in R. This will create a file with the extension .RAW, which can be converted to the required input format using
-<<eval=FALSE, echo=TRUE>>=
-GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw",
-                     OutFile = NA)
+GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw")
 @
 This function can also convert from files in two-columns-per-SNP format, as used by e.g. Colony.
 
 
+\subsubsection{Very large datasets}
+When the number of individuals is very large, loading the genotype data into R will take up a lot of memory, and may even exceed R's memory limit and be impossible. A stand-alone version of the algorithm underlying this R package does not suffer from this limitation, and is available as Fortran source code from \url{https://github.com/JiscaH}. This can be compiled under linux, or under windows using Cygwin; it has not been tested on Mac. The input consists of three text files: the lifehistory data; the genotype data with one column for IDs followed by one column per SNP (0/1/2/-9), and no header row; and the parameter settings, for which an example file is included with the code.
+
+
 \subsubsection{Simulating SNP data}
-When SNP data is not (yet) available, but an approximate pedigree is, it is possible to test \verb+sequoia+ on a simulated dataset. This may be useful to for example explore the number of markers required to reliably infer a pedigree of that particular structure. Alternatively, this can be used to estimated the pedigree-wide error rate of an inferred pedigree.
+When SNP data is not (yet) available, but an approximate pedigree is, it is possible to test \verb+sequoia+ on a simulated dataset. This may be useful to for example explore the number of markers required to reliably infer a particular pedigree structure. Alternatively, this can be used to estimated the pedigree-wide error rate of an inferred pedigree (see section \ref{confidence}).
 
 The function \verb+SimGeno()+ lets the user specify the average proportion of missing genotypes per individual (\verb+MisHQ+), the genotyping error rate (\verb+ErHQ+), and the fraction of known parents (in the supposed `true' pedigree) which have not been genotyped (\verb+ParMis+). Moreover, the data can be made to contain a fraction of low-quality samples (\verb+PropLQ+, with associated \verb+MisLQ+ and \verb+ErLQ+), to assess whether inclusion of samples which did not pass stringent quality control would improve or hamper pedigree reconstruction.
 
 
-\section{Running Sequoia}
-Under the hood, \verb+sequoia+ consists of four sub-programs:
-\begin{enumerate}
-  \item{\bfseries Duplicates:} Check for duplicate entries in the genotype and life history data
-  \item{\bfseries Agepriors:} Initiation or calculation of age-difference based priors
-  \item{\bfseries Parentage:} Parentage assignment (assign genotyped parents to genotyped focal individuals)
-  \item{\bfseries Sibships:} Clustering of half- and full-siblings, grandparent-assignment to singletons and sibships, and identification of avuncular relationships between sibships (jointly referred to as `Sibships' for brevity)
-\end{enumerate}
-which all return their output to a single list, with the elements as listed in Table \ref{tbl:ListElements}.
-
-\setcounter{subsection}{-1}
-\subsection{Input parameters}
-The parameter values that can be changed are as follows:
+%\setcounter{subsection}{-1}
+\subsection{Parameters}
+%A range of parameter values can be changed to best suit the dataset one is working with.
 
 
-\paragraph{DummyPrefix}
-The prefixes for dummy individuals (parents assigned to sibship clusters) can be altered to avoid confusion with IDs of real individuals.
+\paragraph{DummyPrefix}\label{dum-pref}
+The prefixes for dummy individuals (sham parental IDs assigned to sibship clusters) can be altered to avoid confusion with IDs of real individuals. Defaults to `F' for females (`F0001', `F0002', \ldots) and `M' for males (`M0001', `M0002', \ldots).
 
 
 \paragraph{Err}
 The genotyping error rate assumed, typically probably around 1E-4 to 1E-3. The error model is given in Table \ref{tbl:GenoErrors}; other error structures could easily be implemented but are currently not user-settable.
-
 \begin{table}[htb]
 	\caption{\footnotesize Default probabilities used of observing genotype $X$, conditional on actual genotype $x$.}
 	\centering
@@ -159,66 +156,168 @@ The genotyping error rate assumed, typically probably around 1E-4 to 1E-3. The e
 \end{table}
 
 
-%\paragraph{GenoFile}
-%The name of the genotype file. When not in the current working directory (\verb+getwd()+), provide the full path (with forward slashes).
-
-\paragraph{GenoM}
-The genotype matrix. Can be read in from a genotype file in the prescribed format using
-<<eval=FALSE, echo=TRUE>>=
-GenoM <- as.matrix(read.table("SimGeno.txt", row.names=1))
-@
-
-
-\paragraph{LifeHistData}
-The dataframe with IDs, Sex and Birth or hatching year, in that order. The column names are ignored. It is possible to read this in directly from a text file:
-<<eval=FALSE, echo=TRUE>>=
-ParOUT <- sequoia(GenoM = GenoM,
-                  LifeHistData = read.table("LifeHistFile.txt",
-                                            header=TRUE),
-                  MaxSibIter=0)
-@
-
-
 \paragraph{MaxMismatch}
-The maximum number of loci at which candidate parent and offspring are allowed to be opposite homozygotes, used to filter out highly unlikely pairs. Note that the actual upper limit used is MaxOH = MaxMismatch + ceiling(Err * nSnp).
+The maximum number of loci at which candidate parent and offspring are allowed to be opposite homozygotes, used to filter out highly unlikely pairs. Note that the actual upper limit used is \verb&MaxOH = MaxMismatch + ceiling(Err * nSnp)&.
 
 
 \paragraph{MaxSibIter}
-The number of iterations of sibship clustering. As this is by far the most time consuming step, and may take several hours for large datasets, it would be wise to first run with \verb+MaxSibIter=0+ so that only the much faster parentage assignment is performed, and inspect the output. If the total likelihood asymptotes before \verb+MaxSibIter+ is reached, the algorithm is terminated and the results returned.
+The number of iterations of sibship clustering. As this is by far the most time consuming step, and may take several hours for large datasets, it would be wise to first run with \verb+MaxSibIter=0+ so that only the much faster parentage assignment is performed, and inspect the output. If during sibship clustering the total likelihood asymptotes before \verb+MaxSibIter+ is reached, the algorithm is terminated and the results returned.
 
 \paragraph{MaxSibshipSize}
 Maximum number of offspring for a single individual. A generous safety margin is advised of at least twice the biologically plausible maximum.
 
 \paragraph{Tassign}
-Threshold log10-likelihood ratio (LLR) required for acceptance of proposed relationship, relative to next most likely relationship. Must be zero or positive, with higher values resulting in more conservative assignments.
+Threshold log10-likelihood ratio (LLR) required for acceptance of a proposed relationship, relative to next most likely relationship. Must be zero or positive, with higher values resulting in more conservative assignments.
 
 \paragraph{Tfilter}
-Threshold LLR between a proposed relationship versus unrelated, to select candidate relatives. For the filtering step, the LLR is calculated without conditioning on currently assigned parents ($\Lambda^*_{R/U}$ in \cite{Huisman17}), to speed up computation. \verb+Tfilter+ is typically a negative value, and more negative values may decrease non-assignment (preventing filtering out of true relatives), but will increase computational time.
+Threshold LLR between a proposed relationship versus unrelated, to select candidate relatives. Typically negative, and more negative values may prevent filtering out of true relatives, but will increase computational time.
+% For the filtering step, the LLR is calculated without conditioning on currently assigned parents ($\Lambda^*_{R/U}$ in \cite{huisman17}), to speed up computation.
 
 \paragraph{Complexity}
-When it is known that the dataset contains only monogamous matings, the assignment rate can be improved by using the option \verb+Complexity="mono"+.
-<under development \ldots >
+When it is known that the dataset contains only monogamous matings, the assignment rate can be improved by using the option \verb+Complexity='mono'+.
+[under development \ldots]
+
 
 
 \subsubsection{Re-use of previous output}
 
-The parameter values used as arguments when calling \verb+sequoia+ will be returned in the list element \verb+Specs+. These settings can be re-used in a subsequent run using
+The parameter values used as arguments when calling \verb+sequoia+ will be returned in the list element \verb+Specs+. These settings can be re-used in a subsequent run, optionally afer changing them
 <<eval=FALSE, echo=TRUE>>=
 load("Sequoia_output_date.RData")  # if it was saved to disk
-SeqOUT2 <- sequoia(SeqList = list(Specs = SeqOUT1$Specs))
+ParOUT$Specs
+#   NumberIndivGenotyped NumberSnps GenotypingErrorRate MaxMismatch
+# 1                  920        200               1e-04           3
+#   Tfilter Tassign nAgeClasses MaxSibshipSize MaxSibIter
+# 1      -2     0.5           6            100          0
+#   DummyPrefixFemale DummyPrefixMale Complexity FindMaybeRel CalcLLR
+# 1                 F               M       full         TRUE    TRUE
+ParOUT$Specs$DummyPrefixFemale <- "D-FEM"
+ParOUT$Specs$DummyPrefixMale <- "D-MALE"
+SeqOUTX <- sequoia(GenoM = Geno,
+                  SeqList = list(Specs = ParOUT$Specs),
+                  MaxSibIter = 10)
 @
-which will then not use any of the other parameter values provided, \emph{except} \verb+MaxSibIter+. One may change the values in \verb+Specs+, ensuring to not alter the names of the components.
 
-
-It is also possible to re-use the entire output list,
+When \verb+SeqList+ is provided and contains an element named \verb+Specs+, all other (default) parameter values are ignored, \emph{except} \verb+MaxSibIter+. It is also possible to re-use the entire output list,
 <<eval=FALSE, echo=TRUE>>=
-SeqOUT2 <- sequoia(SeqList = SeqOUT1)
+SeqOUT <- sequoia(SeqList = ParOUT)
 @
-which will use \verb+AgePriors+ in SeqOUT1, as well as \verb+PedigreePar+ (and thus parentage assignment will not be run).
+which will use both \verb+AgePriors+ and \verb+PedigreePar+ in 'ParOUT', as detailed below.
+
+%If \verb+PedigreePar+ is provided and \verb+maxSibIter+$>0$, parentage assignment will not be re-run but taken from the provided pedigree. If verb+maxSibIter+$=0$ and \verb+PedigreePar+ is provided, it is taken as a 'pedigree prior' during parentage assignment, to resolve cases where two parents of the same sex are equally likely, specifically in the case of hermaphrodites [under development \ldots]
+
+
+\section{Running Sequoia}
+Under the hood, \verb+sequoia+ consists of four sub-programs:
+\begin{enumerate} \setlength\itemsep{0em}
+  \item{\bfseries Duplicates:} Check for duplicate entries in the genotype and life history data
+  \item{\bfseries Agepriors:} Calculation of age-difference based prior probability ratios
+  \item{\bfseries Parentage:} Parentage assignment (assign genotyped parents to genotyped focal individuals)
+  \item{\bfseries Sibships:} Clustering of half- and full-siblings, grandparent assignment to singletons and sibships, and identification of avuncular relationships between sibships (jointly referred to as `Sibships' for brevity)
+\end{enumerate}
+these all return their output to a single list, with the elements listed in Table \ref{tbl:ListElements} and detailed in section \ref{output}.
+
+
+\subsection{Check for duplicates}
+The data may contain positive controls, as well as other intentional and unintentional duplicated samples, with or without life-history information. Sequoia searches the data for (near) identical genotypes, allowing for a \verb+MaxMismatch+ mismatches between the genotypes, which may or may not have the same individual ID. Note that very inbred individuals may be nearly indistinguishable from their parent(s), especially when the number of SNPs is limited. Additionally, the genotype and life-history files are checked for duplicate IDs.
+
+It will also return a vector of individuals included in the genotype data, but not in the life history data (\verb+NoLH+). This is merely a service to the user; individuals without life history information can often be successfully included in the pedigree (but not always, see section \ref{maybepar}).
+
+
+\subsection{Age difference based prior}
+Based on the species' age at first and last reproduction, some age differences between parent and offspring or between siblings are more likely than others, and some downright impossible. The age differences calculated from the birth years provided in \verb+LifeHistData+ are used as a secondary source of information, amongst others to help distinguish between half-siblings, grandparent--grand-offspring and full avuncular pairs.
+
+The list element \verb+AgePriors+ contains 8 columns, and as many rows as the birth year range detected in the life history data. It initially only indicates whether a given relationship is biologically possible (1) or not (0) for a given age difference between individuals, for any species (e.g. parents and their offspring can never be exactly the same age). The first row is for individuals born in the same year, the second row for individuals born one year apart, etc. The columns are labelled for various relationship categories, with M = mother, P = father, MS = maternal sibling, PS = paternal sibling, MGM = maternal grandmother, PGF = paternal grandfather, MGF = maternal grandfather and paternal grandmother, and AU = avuncular (niece/nephew -- aunt/uncle).
+
+For example, the first value in the column `MS' can be interpreted as `if I were to pick two individuals born in the same year, and two individuals from my sample at random, how much more likely are the first pair to be maternal siblings, compared to the second pair?' Or to phrase it differently: 'Now that I learned that these individuals are born in the same year, does that make them more likely or less likely to be maternal siblings than before I knew this?' Values below 1 indicate less likely, and values above 1 more likely. For MS, PS and AU absolute age differences are used (with overlapping generations, nephews may be older than their aunts), while parents and grandparents are necessarily older than their (grand-)offspring (categories M, P, MGM, PGF and MGF).
+
+These age-difference based priors are by default automatically updated after parentage assignment, based on the empirical distribution of age differences between individuals and their assigned fathers and mothers. This update is prevented when \verb+SeqList+ is provided and contains an element \verb+AgePriors+ (see Table \ref{tbl:AP}).
+
+\begin{table}[hbt]  \small
+\caption{\small Behaviour when `AgePriors' and/or `PedigreePar' are provided in `SeqList'. --: not provided / not run; age prior categories are `user'= user-provided, `basic' = minimal restrictions, `parents' = based on assigned parents}
+\begin{tabular}{cccc}
+\hline
+\multicolumn{2}{c}{in SeqList} & \multicolumn{2}{c}{Age prior used} \\
+AgePriors & PedigreePar & Parentage & Sibships \\
+\hline
+-- & -- & basic & parents \\
+user & -- & user & parents  \\
+-- & Y & -- & parents \\
+user & Y & -- & user \\
+\hline
+\end{tabular}
+\label{tbl:AP}
+\end{table}
+
+\verb+AgePriors+ can be altered to match the biological characteristics of the species, but the number of rows must not be decreased, and the column order kept as it is. If the number of rows is increased, \verb+Specs['nAgeClasses']+ should be updated to match the new number of rows.
+
+\begin{table}[tbh]  \small
+\caption{\small Example age-difference prior, for non-overlapping generations}
+\begin{tabular}{rrrrrrrr}
+\hline
+MS & PS & MGM & PGF & MGF & UA & M & P \\
+\hline
+1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 1 & 1 & 1 \\
+0 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+\hline
+\end{tabular}
+\label{tbl:AP-example}
+\end{table}
+
+For example, for a species with strictly non-overlapping generations, one may wish to alter \verb+AgePriors+ to the matrix in Table \ref{tbl:AP-example}, which can be done as follows
+<<eval=FALSE, echo=TRUE>>=
+AP <- as.matrix(SeqOUT1$AgePriors)
+AP[AP>0] <- 0
+AP[1,c("MS", "PS")] <- 1
+AP[2,c("M", "P", "UA")] <- 1
+AP[3,c("MGM", "PGF", "MGF")] <- 1
+SeqOUT2 <- sequoia(SeqList=list(Specs=SeqOUT1$Specs, AgePriors=AP),
+                   MaxSibIter = 0)
+@
+Note that any identified parent-offspring pairs which are not exactly 1 year / time unit apart will be returned in \verb+MaybeParent+ (section \ref{maybepar}). It is possible to enforce the same age-difference prior on the sisbhip clustering as well, but only if parentage assignment and sibship clustering are run separately (see Table \ref{tbl:AP})
+
+
+\subsection{Parentage assignment}  % TODO: move some stuff here
+Assignment of genotyped parents to genotyped offspring is performed by default, unless earlier-assigned parents are provided in \verb+SeqList$PedigreePar+.
+
+The number of pairs to be checked if they are parent and offspring is very large for even moderate numbers of individuals, e.g. 5\,000 pairs for 100 individuals, and 2 million for 2\,000 individuals. Therefore, three 'sieves' are applied sequentially to find candidate parent-offspring pairs, with decreasing 'mesh size'
+\vspace{-0.5\topsep}
+\begin{itemize}\setlength\itemsep{0em}
+  \item The number of SNPs at which the pair are opposing homozygotes must be less than or equal to the per-SNP genotyping error rate \verb+Err+ times the number of SNPs (rounded up to nearest whole number), plus the safety margin \verb+MaxMismatch+,
+  \item The likelihood ratio between being parent and offspring versus unrelated, not conditioning on any already assigned parents, must be equal to or greater than \verb+Tfilter+,
+  \item The likelihood ratio between the pair being parent and offspring versus being otherwise related must be equal to or greater than \verb+Tassign+, to filters out siblings, grandparents and aunts/uncles,
+\end{itemize}
+and the older of the pair is assigned as parent of the younger. If it is unclear which is the older, or if it is unclear whether the parent is the mother or the father, the pair is returned in \verb+MaybeParent+ (section \ref{maybepar}). If there are multiple candidate parents of the same sex, or some of unknown sex, the parent pair or single parent resulting in the highest likelihood is assigned. This heuristic sequential filtering approach makes parentage assignment quick, and for example takes less than a minute for an empirical dataset with 2\,500 genotyped individuals on a laptop with an intel i7 2.3 GHz CPU and 8GB RAM
 
 
 
-\begin{table}[btp]
+\subsection{Sibship clustering \& the rest}
+Full pedigree reconstruction, including sibship clustering amongst those individuals which have not been assigned two genotyped parents, is performed when \verb+MaxSibIter+$>0$. This may take from a few seconds to several hours, depending on the number of individuals without a parent, the number of sibships that is being clustered, and their degree of interconnection. During this phase, all first and second degree links between individuals are attempted to be assigned, using the following steps in each iteration
+\vspace{-0.5\topsep}
+\begin{itemize}
+  \setlength\itemsep{0em}
+  \item Find pairs of full- and half-siblings
+  \item Cluster sibling pairs into sibships
+  \item Merge existing sibships
+  \item Replace dummy parents by genotyped individuals (round 2+)
+  \item Add lone individuals to sibships (round 2+)
+  \item Assign genotyped parents to genotyped individuals
+  \item Find grandparent -- grandoffspring pairs (round 3+)
+  \item Assign grandparents to sibships (round 2+; grandparents may be dummy individuals as well as genotyped individuals)
+\end{itemize}
+
+The total likelihood (section \ref{totlik}) typically asymptotes within five to ten iterations, even for complex pedigrees. When an asymptote is reached before \verb+MaxSibIter+, a final iteration with stronger dependence on the age prior is ran, parental likelihoods are calculated, a check is done for non-assigned potential relatives, and the algorithm is terminated. These last steps may take considerable time, and either or both can be skipped by specifying \verb+CalcLLR+ = FALSE and/or \verb+FindMaybeRel+ = FALSE.
+
+
+
+\section{Output}\label{output}
+Beside the inferred pedigree (section \ref{ped}), \verb+sequoia+ also returns summary information of the dummy parents (section \ref{dum}), any pairs of individuals which are likely to be relatives but could not be assigned as such (section \ref{maybepar}), the total likelihood of the data after each iteration (section \ref{totlik}), and the input data and parameters (except the large genotype data) (full overview in Table \ref{tbl:ListElements}).
+
+
+\begin{table}[tbp]
 \caption{\small Output from Sequoia, returned within a named list.}
 \begin{tabular}{ll}
 \hline
@@ -243,235 +342,225 @@ TotLikSib & Total likelihood during sib clustering \\
 \label{tbl:ListElements}
 \end{table}
 
-\subsection{Check for duplicates}
-The data may contain positive controls, as well as other intentional and unintentional duplicated samples. Sequoia quickly searches the data for identical genotypes and IDs, which ought to be removed prior to parentage assignment. It allows a few mismatches between the genotypes (\verb+MaxMismatch+), with or without the same individual ID. Note that when the number of SNPs is limited, very inbred individuals may be nearly indistinguishable from their parent(s); such individuals should not be excluded.
-
-This function additionally searches the life history data for duplicated entries, and will also return a vector of individuals included in the genotype data, but not in the life history data (\verb+NoLH+). The latter is merely a service to the user; individuals without life history information can often be successfully included in the pedigree.
-
-
-\subsection{Age difference based prior}
-The list element \verb+AgePriors+ contains 8 columns, and as many rows as the birth year range detected in the life history data. It initially only indicates whether a given relationship is biologically possible (1) or not (0) for a given age difference between individuals. The first row is for individuals born in the same year, the second row for individuals born one year apart, etc. The columns are labelled for various relationship categories, with M = mother, P = father, MS = maternal sibling, PS = paternal sibling, MGM = maternal grandmother, PGF = paternal grandfather, MGF = maternal grandfather and paternal grandmother, and AU = avuncular (niece/nephew -- aunt/uncle).
-
-For example, the first value in the column `MS' can be interpreted as `if I were to pick two individuals born in the same year, and two individuals from my sample at random, how much more likely are the first pair to be maternal siblings, compared to the second pair?' Values below 1 indicate less likely, and values above 1 more likely. For MS, PS and AU absolute age differences are used (with overlapping generations, nephews may be older than their aunts), while parents and grandparents are necessarily older than their (grand-)offspring (categories M, P, MGM, PGF and MGF).
-
-These age-difference based priors are by default automatically updated after parentage assignment, based on the empirical distribution of age differences between individuals and their assigned fathers and mothers. This update is prevented when \verb+SeqList+ is provided and contains an element `AgePriors'.
-
-
-\begin{table}[hbt]  \small
-\caption{\small Behaviour when `AgePriors' and/or `PedigreePar' are provided in `SeqList'. --: not provided / not run, AP1 = simple age prior, AP2 = parents-based age prior}
-\begin{tabular}{cccc}
-\hline
-\multicolumn{2}{c}{in SeqList} & \multicolumn{2}{c}{Use \ldots} \\
-AgePriors & PedigreePar & Parentage & Sibships \\
-\hline
--- & -- & AP1 & AP2 \\
-AP$^*$ & -- & AP$^*$ & AP2 \\
--- & Y & -- & AP2 \\
-AP$^*$ & Y & -- & AP$^*$ \\
-\hline
-\end{tabular}
-\end{table}
-
-
-As with the parameter specifications, feel free to alter the values to match the biological characteristics of the species. The number of rows may be increased (but not decreased below the age range amongst the genotyped individuals according to the provided life history data), in which case \verb+Specs["nAgeClasses"]+ should be updated to match the new number of rows. For example, for a species with strictly non-overlapping generations, one may wish to alter the AgePriors to
-
-\begin{tabular}{rrrrrrrr} \small
-MS & PS & MGM & PGF & MGF & UA & M & P \\
-1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 1 & 1 & 1 \\
-0 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-\end{tabular} \\
-
-and express the `birth years' in the life history data as generation numbers. This can be done as follows {\small
-<<eval=FALSE, echo=TRUE>>=
-AP <- as.matrix(SeqOUT$AgePriors)
-AP[AP>0] <- 0
-AP[1,c("MS", "PS")] <- 1
-AP[2,c("M", "P", "UA")] <- 1
-AP[3,c("MGM", "PGF", "MGF")] <- 1
-SeqOUT2 <- sequoia(SeqList=list(Specs=SeqOUT$Specs, AgePriors=AP),
-                   MaxSibIter = 0)
-@
-}Note that any identified parent-offspring pairs which are not a single generation apart will be flagged (see `Non-assigned parent-offspring pairs' below).
-
-
-\subsection{Parentage assignment}
-Parentage assignment is quick, and for example takes less than a minute for an empirical dataset with 2,500 genotyped individuals on a laptop with an intel i7 2.3 GHz CPU and 8GB RAM.
-
-
-\subsubsection{PedigreePar}
-This scaffold pedigree contains columns with
-\begin{itemize}
-	\item IDs of the individual, its assigned dam (mother) and sire (father);
-	\item The log10 likelihood ratio (LLR) of the dam, sire and the parent pair; this is the ratio between the likelihood of the assigned parent being the parent, versus the most likely alternative type of relative to the focal individual. The alternative relationships considered are full sibling (FS), half sibling (HS), grandparent (GG), full avuncular (FA), half avuncular / great-grandparental / cousin (HA), or unrelated (U).
-	\item The number of loci at which the offspring and the assigned dam or sire are opposite homozygotes;
-	\item The row number in the genotype matrix of the offspring, dam and sire; used for subsequent sibship clustering.
+\subsection{PedigreePar \& Pedigree}\label{ped}
+\verb+PedigreePar+ is the scaffold pedigree returned after assigning genotyped parents to genotyped offspring. \verb+Pedigree+ additionally includes dummy individuals, assigned to infered groups of half-siblings for which the shared parent is not genotyped. Note that dummy individuals are also assigned as the `in-between' individual of identified grandparent -- grand-offspring pairs. Dummy individuals are appended at the bottom of the pedigree with their assigned parents, i.e. the sibship's assigned grandparents, and by default have IDs `F0001', `F0002', \ldots for dams and `M0001', `M0002', \ldots for sires (sections \ref{dum-pref} and \ref{dum}).
+\filbreak
+The pedigrees columns are
+\vspace{-0.5\topsep}
+\begin{itemize} \setlength\itemsep{0em}
+	\item IDs of the individual, its assigned dam (mother) and sire (father),
+	\item The log10 likelihood ratio (LLR) of the dam, sire and the parent pair; this is the ratio between the likelihood of the assigned parent being the parent, versus the most likely alternative type of being related to the focal individual (see Table \ref{tbl:RelAbbr}),
+	\item The number of loci at which the offspring and the assigned dam or sire are opposite homozygotes (\verb+PedigreePar+ only).
 \end{itemize}
 
-The parental LLRs are calculated after the likelihood has reached an asymptote, and are conditional on all other links in the reconstructed pedigree. They are calculated by removing the parent(s), and re-calculating the likelihoods of the various relationships between the focal individual and the parent. The pair LLR is relative to the most likely assignment of a single parent (or no parent). Note that the reported LLR differs from for example Cervus \cite{Marshall98}, which instead returns the natural log of the ratio between the probability that the assigned parent is the parent, versus that the next most likely candidate is the parent.
+The parental LLRs are calculated at the very end, and are conditional on all other links in the reconstructed pedigree. The parent-pair LLR is relative to the most likely assignment of a single parent (or no parent). Note that this LLR differs from for example Cervus \cite{marshall98}, which returns the natural log of the ratio between the probability that the assigned parent is the parent, versus that the next most likely candidate is the parent.
 
-Some parents may have a very small or even negative single-parent LLR, but the LLR of the parent pair should ideally always be positive. For full sibling pairs and dummy-parents of dummy-individuals this is not always the case, due to some approximations used when calculating the parental LLR (which are not used during the assignment steps). It is however probably worthwhile to compare assignments with low or negative LLRs with a previous pedigree or the genomic relatedness, as described at the end of this document.
+Some parents may have a very small or even negative single-parent LLR, but the LLR of the parent pair should ideally always be positive. For full sibling pairs and dummy-parents of dummy-individuals this is not always the case, due to some approximations used when calculating the parental LLR (which are not used during the assignment steps). It is however probably worthwhile to be cautious about assignments with low or negative LLRs, and for example compare  with a previous pedigree (section \ref{compPed}) or the genomic relatedness (section \ref{compR}).
 
-If some of the LLRs are very large negative or positive numbers, please send a bug report to \url{jisca.huisman@gmail.com} with a short description of your dataset.
+\begin{table}[bth]
+\caption{\footnotesize Pairwise relationships considered.}
+	\centering \small
+		\begin{tabular}{ll}
+			\hline
+			PO & Parent-offspring \\
+			FS & Full siblings \\
+			HS & Half siblings \\
+			GP & Grandparent -- grand-offspring \\
+			FA & Full aunt/uncle -- niece/nephew \\
+			HA & Half aunt/uncle -- niece/nephew, \\
+			  & \phantom{bla} or other 3rd degree relative \\
+			U & Unrelated \\
+			\hline
+		\end{tabular}
+		\label{tbl:RelAbbr}
+\end{table}
 
-\subsubsection{MaybeParent}
-Sometimes probable or definite parent-offspring pairs are identified which could not be assigned as such in the pedigree. This includes both cases where the pair is more likely to be parent-offspring than unrelated (LLR\_Rx\_U $>$ Tfilter), but where it cannot be excluded that they are otherwise related (LLR\_R1\_R2 $<$ Tassign), indicated by FS (full siblings), FA (full avuncular), XX (unclear) etc. in the column "TopRel" (most likely relationship). `2nd' indicates that the pair are most likely to be second degree relatives, but that it is impossible to distinguish between HS, GG and FA (which would require at least 1 parent assigned to each individual, see \cite{Huisman17}). For these cases, LLR\_R1\_R2 gives the LLR between being 2nd degree relatives versus the most likely of PO, FS, HA or U.
-
-
-If PO (parent-offspring) had the highest likelihood, they were non-assigned either because it was not possible to tell which of the two was the parent and which was the offspring, due to either or both individuals having an unknown birth year (coded as AgeDif = 999), or because it was not possible to tell whether the candidate parent was the mother or the father (Sex2 = 3). These situations can be remedied by providing estimated birth years or guessed genders in the life history data for the individuals involved, and re-running \verb+sequoia+.
-
-\subsubsection{TotLikParents}
-A vector with the initial total likelihood of the data, assuming a random draw from a random mating population at Hardy-Weinberg equilibrium, followed by the total likelihood at the end of each iteration.
-
-
-\subsection{Sibship clustering \& the rest}
-Sibship clustering, amongst those individuals which have not been assigned two genotyped parents, is performed when \verb+MaxSibIter+$>0$. Sibship clustering may take from a few seconds to a few hours, depending on the number of individuals without a parent, the number of sibships that is being clustered, and their degree of interconnection. Calculation of the parental likelihoods and the check for non-assigned potential relatives (during `Creating output ...') may take considerable time too.
-
-The total likelihood typically asymptotes within five to ten iterations, even for complex pedigrees. When an asymptote is reached before \verb+MaxSibIter+, a final iteration with stronger dependence on the age prior is ran, (dummy)parental likelihoods are calculated, and the algorithm is terminated. Whether or not the asymptote has been (nearly) reached can be seen from \verb+TotLikSib+.
-
-\subsubsection{Pedigree}
-The main output of the sibship clustering is returned in `Pedigree', which is highly similar to `PedigreePar' (see earlier). It contains all assigned real parents, as well as the dummy parents assigned during sibship clustering. Note that dummy individuals are also assigned as the `in-between' individual of identified grandparent --- grand-offspring pairs. Dummy individuals are appended at the bottom of this pedigree with their assigned parents, i.e. the sibship's assigned grandparents.
-
-
-\subsubsection{DummyIDs}
-To each cluster of half-siblings a ``dummy'' parent is assigned, denoted by increasing numbers, by default with prefix `F' for females and `M' for males. In `DummyIDs', for each dummy individual its assigned parents are listed (as in the Pedigree), as well as its sex, its estimated birth year (based on the birth years of its offspring and parents; point estimate, upper and lower bound of 95\% confidence interval are provided), the number of assigned offspring, and the IDs of its assigned offspring.
+{\footnotesize If some of the LLRs are very large negative or positive numbers, please send a bug report to \url{jisca.huisman@gmail.com} with a short description of your dataset --- something probably went wrong.}
 
 
+\subsection{DummyIDs}\label{dum}
+To each cluster of half-siblings a `dummy' parent is assigned, denoted by increasing numbers, by default with prefix `F' for females and `M' for males (sections \ref{dum-pref}). \verb+DummyIDs+ is a dataframe with for each dummy individual
+\vspace{-0.5\topsep}
+\begin{itemize} \setlength\itemsep{0em}
+  \item the assigned dam and sire (the sibship's grandparent) and their associated LLRs, which can also be found in \verb+Pedigree+
+  \item its sex
+  \item the estimated birth year, as a point estimate (`BY.est') and lower and upper bound of 95\% probability interval (`BY.min' and `BY.max'). These are based on the birthyears of the individuals in the sibship and of the sibship-grandparents, if any, in combination with \verb+AgePriors+. This may help
+  \item `NumOff', the number of individuals in the sibship (= the dummy individuals number of offspring)
+  \item the IDs of the individuals in the sibship, with column names 'O1', 'O2', \ldots
+\end{itemize}
+This information is intended to make it easier to associate dummy IDs to real IDs of observed but non-genotyped individuals (see also section \ref{compPed}).
 
-\subsubsection{MaybeRel}
-This dataframe contains for example half-siblings where it could not be determined whether they are maternal or paternal half-siblings (currently no half-sibships of unknown maternal/paternal type are created). `LLR\_Rx\_U' gives the maximum of LLR(PO/U), LLR(FS/U), LLR(HS/U); note that LLR(HS/U) = LLR(GG/U) = LLR(FA/U), as these are calculated not conditional on any assigned parents (see \cite{Huisman17} for details). `Relx' denotes whether this maximum was for PO, FS, or HS.
 
-\subsubsection{TotLikRel}
-As `TotLikParents', for sibship clustering. One can do a visual check if the asymptote has been (nearly) reached within `MaxSibIter' using
+
+\subsection{MaybeParent \& MaybeRel}\label{maybepar}
+\verb+MaybeParent+ countains probable or definite parent-offspring pairs which could not be assigned in \verb+PedigreePar+, with columns\vspace{-0.5\topsep}
+\vspace{-0.5\topsep}
+\begin{itemize} \setlength\itemsep{0em}
+	\item ID1, ID2: identities of the pair
+	\item Sex1, Sex2: sex of the individuals; 1=female, 2=male
+	\item AgeDif: Age difference, positive numbers indicate that ID2 is older
+	\item TopRel: Relationship with the highest likelihood, may be any of the abbreviations in Table \ref{tbl:RelAbbr}, or '2nd' (undetermined type of second degree relative, see text). 'XX' indicates unclear, but more likely to be first or second degree relatives than unrelated.
+  \item LLR: Log10 likelihood ratio (LLR) between the pair being related according to the most likely relationship (column 'TopRel') versus the next most likely relationship.
+	\item OH: The number of loci at which the individuals are opposite homozygotes.
+\end{itemize}
+
+This dataframe includes cases where the pair is more likely to be parent-offspring than unrelated, but where it cannot be excluded that they are otherwise related ('LLR' between most likely and next most likely $<$ \verb+Tassign+), or were an alternative relationship is even more likely ('TopRel' not PO). Additionally, \verb+MaybeParent+ may include pairs which are most likely to be parent and offspring, but where lack of birth year information made it impossible to tell which of the two was the parent and which was the offspring ('AgeDif' = NA), or where lack of sex information of the older one made it impossible to tell whether this candidate parent is the mother or the father ('Sex2' = 3).
+
+\verb+MaybeRel+ includes pairs which are more likely to be first or second degree relatives than unrelated, but which could not be assigned in \verb+Pedigree+. This includes for example half siblings where it is unclear whether they share a mother or a father. Distinguishing half siblings from grandparent--grand-offspring and full avuncular pairs is not straight forward either, and relies on either both individuals already having at least one parent assigned, or very strong support based on the age diference of the pair. When neither is the case, `TopRel' indicates `2nd', and  LLR is between being 2nd degree relatives versus the most likely of PO, FS, HA or U.
+
+Note that the \emph{most likely} relationship is not necessarily the \emph{true} relationship between a pair, due to the random nature of Mendelian segregation, and possible genotyping errors. In addition, the most likely relationship for a pair will not necessarily result in the highest global likelihood (and may therefore have not been assigned).
+
+
+
+\subsection{TotLikParents \& TotLikSib}\label{totlik}  % TODO: SIMPLIFY & SHORTEN
+These are vectors with the log10 of the approximate total likelihood of the pedigree, which is the probability of observing the genotype data, given the reconstructed pedigree, the allele frequencies of the SNPs, and the presumed genotyping error rate. The value at initiation (the first value in \verb+TotLikParents+) is calculated assuming Hardy-Weinberg equilibrium in the sample. The subsequent value are at the end of each iteration of parentage assignment (\verb+TotLikParents+) or sibshib clustering (\verb+TotLikSib+, should be increasing across iterations, and asymptoting. If there is a large change in value between the second-last and last likelihood, consider running the algorithm for more iterations (increase \verb+MaxSibIter+). One can do a visual check as follows:
 <<eval=FALSE, echo=TRUE>>=
-TLL <- c(SeqOUT$TotLikParents, NA, SeqOUT$TotLikSib)
-xv <- c(paste0("p", 1:length(SeqOUT$TotLikParents)-1), " ",
-        paste0("s", 1:length(SeqOUT$TotLikSib)-1))
+TLL <- c(SeqOUT$TotLikParents, SeqOUT$TotLikSib)
+xv <- c(paste("p", 1:length(SeqOUT$TotLikParents)-1),
+        paste("s", 1:length(SeqOUT$TotLikSib)-1))
 plot(TLL, type="b", xaxt="n", xlab="Round")
 axis(1, at=1:length(TLL), labels=xv)
 @
 
+{\footnotesize The total likelihood is calculated assuming independent SNPs as
+\begin{equation}
+\mathcal{L} = \prod_{A=1}^N\prod_l^L \sum_y \sum_z P(A_l = X | DA_l=y, SA_l=z, \epsilon)P(DA_l=y)P(SA_l=z)
+\end{equation}
+or the probability of observing individual $A$'s genotype $X$ at SNP $l$, given the true genotypes $y$ and $z$ of it assigned parents $DA$ and $SA$, multiplied over all individuals and all SNPS. For example, if $X$ is a heterozygote, the probability of this genotype is $1/2$ if $y$ is heterozygous and $z$ a homozygote, 1 if $y$ and $z$ are opposite homozygotes, and 0 (or $\epsilon/2$ when allowing genotyping errors, Table \ref{tbl:GenoErrors}) if $y$ and $z$ are identical homozygotes. This is summed over all possible parental genotypes, weighed by the probabilities that the parent have true genotype $y$ and $z$. These probabilities are determined by the parent's observed genotypes and the genotyping error rate for genotyped parents, or according to Hardy-Weinberg proportions for non-assigned parents. For dummy parents, the probability depends on $A$'s siblings and grandparents (see \cite{huisman17}).}
+
+
 
 \section{Output check}
 
-\subsection{Comparison with previous pedigree}
-Often times, a (part) pedigree is already available to which one wants to compare the results, for example consisting of maternal links, deduced from observations in the field. The function \verb+PedCompare()+ performs such comparisons, and takes as arguments the `true' pedigree and the inferred pedigree:
+\subsection{Comparison with previous pedigree}\label{compPed}
+Often times, a (part) pedigree is already available to which one wants to compare the results, for example consisting of maternal links, deduced from observations in the field. The function \verb+PedCompare()+ performs such comparisons, and takes as arguments the `true' pedigree as \verb+Ped1+, and the newly inferred pedigree as \verb+Ped2+:
 <<eval=FALSE, echo=TRUE>>=
 compareOUT <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
 @
 
-The first element of the output list consists of two 7x5 matrices, one for dams and one for sires. The columns are defined as follows, where by default Pedigree 1 is the older pedigree, and Pedigree 2 the newly reconstructed pedigree:
-\begin{itemize}
-	\item Total: The total number of individuals with a parent assigned in either or both pedigrees. When Pedigree 1 is the true pedigree (in case of simulated data), this is the maximum number of matches.
-	\item Match: The same parent is assigned in both pedigrees (non-missing). For dummy parents, it is considered a match if the inferred sibship containing the most offspring of a non-genotyped parent, consists for more than half of its offspring.
-	\item Mismatch: Different parents assigned in the two pedigrees. When a sibship according to Pedigree 1 is split over two sibships in Pedigree 2, the smaller fraction is included in the count here.
-	\item P1only: Parent present in Pedigree 1 but not assigned in 2; includes non-assignable parents such as non-genotyped parents with a single offspring and lacking genotyped grandparents.
-	\item P2only: Parent assigned in Pedigree 2 but not present 1; if pedigree 1 is the true pedigree, these are false positives.
-\end{itemize}
+Where the output list consists of \verb+Counts+, a summary of the number of matches and mismatches between the two pedigrees, as well as \verb+MergedPed+, a side-by-side comparison, and \verb+ConsensusPed+, an amalgamation of the two. \verb+PedCompare()+ does its best to align any dummy parents in the inferred pedigree, to non-genotyped individuals in the other pedigree.
 
-The rows indicate the various categories, subdivided into:
-\begin{itemize}
-  \setlength{\itemsep}{0em}
-  \item[GG]{Genotyped individual, assigned a genotyped parent in either pedigree}
-  \item[GD]{Genotyped individual, assigned a dummy parent, or at least 1 genotyped sibling or a genotyped grandparent in Pedigree 1)}
-  \item[GT]{Genotyped individual, total}
-  \item[DG]{Dummy individual, assigned a genotyped parent (i.e., grandparent of the sibship in Pedigree 2)}
-  \item[DD]{Dummy individual, assigned a dummy parent (i.e., avuncular relationship between sibships in Pedigree 2)}
-  \item[DT]{Dummy total}
-  \item[TT]{Total total, includes all genotyped individuals, plus non-genotyped individuals in Pedigree 1, plus non-replaced dummy individuals (see below) in Pedigree 2}
-\end{itemize}
-
-Potential dummy individuals according to Pedigree 1 are all non-genotyped individuals who have at least two genotyped offspring, or who have one genotyped offspring and a genotyped parent (i.e. who are `inbetween' a grandparent--grandoffspring pair). Note that not all of these will be truly identifiable with Sequoia, for example when the true grandparent is a founder, and cannot be distinguished from full avuncular.
-
-The second list element, `MergedPed', is a side-by-side comparison of the two pedigrees, plus three columns (id.real, dam.real, sire.real) where dummy IDs in Pedigree 2 are replaced by the most likely non-genotyped individual from Pedigree 1.
-
-This merged pedigree is collapsed in the third element, `ConsensusPed', here with Sequoia assignments (assumed Pedigree 2) taking priority over the `old' pedigree (Pedigree 1), and  dummy parents being replaced where known (suffix `.r'). The columns `dam.cat' and `sire.cat' indicate with a 2-letter code whether the focal individual and the assigned parent were genotyped (G), a dummy individual in Pedigree 2 (D), a dummy individual replaced by a best-match non-genotyped individual from Pedigree 1 (R) or ungenotyped (U).
-
-
-\paragraph{Example}
-In the example included in the helpfile (\verb+?sequoia+), pedigree reconstruction using the example genotype data included in the package (Simulated from the first 2 generations in Ped\_HSg5.txt) results in two mismatches: {\small
+\paragraph{Counts}
+An array printed as two 7x5 matrices, one for dams and one for sires. When checking the results from parentage assignment only, only the rows 'GG' (Genotyped focal - Genotyped parent) are relevant:
 <<eval=FALSE, echo=TRUE>>=
-data(SimGeno_example, LH_HSg5, Ped_HSg5)
-SeqOUTX <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5)
-#
-# compare
-compare <- PedCompare(Ped1 = Ped_HSg5,
-                      Ped2 = SeqOUTX$Pedigree)
-compare$Counts
+compareOUT2 <- PedCompare(Ped1 = Ped_HSg5, Ped2 = ParOUT$Pedigree)
+compareOUT2$Counts["GG",,]
+#          dam sire
+# Total    130  170
+# Match    128  166
+# Mismatch   0    0
+# P1only     2    4
+# P2only     0    0
+@
+Further details, amongst others on what counts as a 'Match' versus 'Mismatch' in the case of dummy parents is provided in the help file (\verb+?PedCompare+).
+
+
+\paragraph{MergedPed}
+This side-by-side comparison of the two pedigrees allows one to inspect any mismatches and discrepancies between the two pedigrees. In addition to the parents in Ped1 ('dam.1' and 'sire.1') and Ped2 ('dam.2' and 'sire.2'), it includes three columns ('id.r', 'dam.r', and 'sire.r') where dummy IDs in Pedigree 2 are replaced by the most likely non-genotyped individual from Pedigree 1. The value 'nomatch' in these columns indicates that there is no no-genotyped individual for which more than half of its offspring according to Ped1 has been assigned this dummy in Ped2. Note that this does include cases where a true sibship of say five individuals was split into one of three and one of two; the one of three is considered a match, and the smaller a mismatch --- even though it can be argued the pedigree does not contain any incorrect links.
+
+\paragraph{ConcensusPed}
+Here the merged pedigree is collapsed, with Pedigree 2 (here \verb+Sequoia+ assignments) taking priority over Pedigree 1, and  dummy parents being replaced where known (using 'id.r', 'dam.r', and 'sire.r'). The columns `dam.cat' and `sire.cat' indicate with a 2-letter code whether the focal individual and the assigned parent were genotyped (G), a dummy individual in Pedigree 2 (D), a dummy individual replaced by a best-match non-genotyped individual from Pedigree 1 (R) or ungenotyped (U, and thus taken from Pedigree 1 only).
+
+
+{\footnotesize \paragraph{Example}
+To increase the chance of mismatches, we simulate a genotype dataset with few SNPs and a high genotyping error rate. The specific numbers will differ between simulated datasets, but the general pattern will be the same  \vspace{-\topsep}
+<<eval=FALSE, echo=TRUE>>=
+data(LH_HSg5, Ped_HSg5)
+GM <- SimGeno(Ped = Ped_HSg5, nSnp = 100, ErHQ = 1e-3)
+SeqX <- sequoia(GenoM = GM,  LifeHistData = LH_HSg5, MaxSibIter = 5)
+comp <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqX$Pedigree)
+comp$Counts
 # , , dam
 #    Total Match Mismatch P1only P2only
-# GG   130   127        2      1      0
-# GD    54    52        2      0      0
-# GT   182   179        2      1      0
-# DG     0     0        0      0      0
-# DD     0     0        0      0      0
-# DT     0     0        0      0      0
-# TT   960   179        2    779      0
-# ...
-@
-}
-where the entries for DR, DD and DT are 0 because none of the dummy parents could have had a parent assigned - there are only 2 generations in this dataset.
-
-We can investigate these mismatches further: {\small
-<<eval=FALSE, echo=TRUE>>=
-with(compare$MergedPed,
-     compare$MergedPed[which(dam.1!=dam.2 & dam.1!=dam.r), ])
-#     id  dam.1 sire.1 dam.2 sire.2   id.r   dam.r sire.r
-# b01137 a00001 b00009 F0007 b00009 b01137 nomatch   <NA>
-# a01139 a00001 b00009 F0007 b00009 a01139 nomatch   <NA>
+# GG   561   550        6      5      0
+# GD   334   323        5      3      0
+# GT   890   873        9      8      0
+# DG    42    39        1      2      0
+# DD    28    28        0      0      0
+# DT    70    67        1      2      0
+# TT   964   940       10     10      4
 #
-compare$MergedPed[which(compare$MergedPed$dam.2=="F0007"), ]
-# --> only a01139 and b01137 are in this half-sibship
-compare$MergedPed[which(compare$MergedPed$dam.1=="a00001"), ]
-# --> a01139 and b01137 are the only ones not assigned to a00001
-#
-SeqOUTX$MaybeParent
-#       ID1    ID2 Sex1 Sex2 AgeDif Relx LLR_Rx_U TopRel LLR_R1_R2 OH
-# (...)
-# 10 a01063 b00013    1    2      1   PO    10.63     FS      1.37  1
-# 3  a01139 a00001    1    1      1   PO     7.32    2nd      4.79  2 <--
-# 8  b01168 b00002    2    2      1   PO     4.05    2nd      1.23  2
-# 2  b01137 a00001    2    1      1   PO     8.90    2nd      0.91  1 <--
-# 6  b01165 b00002    2    2      1   PO     4.14    2nd      0.45  2
-# 1  a01142 a00018    1    1      1   PO     9.89    2nd      0.17  2
+# , , sire
+#    Total Match Mismatch P1only P2only
+# GG   502   498        3      1      0
+# GD   391   382        4      2      0
+# GT   890   880        7      3      0
+# DG    41    39        0      2      0
+# DD    29    28        0      1      0
+# DT    70    67        0      3      0
+# TT   965   947        7      6      5
 @
-}
-It seems that a00001 was more likely to be a parent than unrelated to both b01137 and a01139 (`LLR\_Rx\_U' $> 0$), but due to genotyping errors (the number of opposing homozygous loci is 1 with b01137 and 2 with a01139) and Mendelian sampling, they were even more likely to be 2nd degree relatives (`TopRel').
 
-Additionally, we see on the second line of \verb+SeqOUTX$MaybeParent+ that during the parentage assignment step, a01063 and b00013 were more likely to be full siblings (FS) than parent-offspring (which they in fact are), and would even pass the threshold Tassign ($=1$). However, a correct assignment is made in the final pedigree:
+We can investigate the mismatches further:  \vspace{-\topsep}
 <<eval=FALSE, echo=TRUE>>=
-SeqOUTX$Pedigree[SeqOUTX$Pedigree$id=="a01063", ]
-#        id   dam   sire LLRdam LLRsire LLRpair
-# 90 a01063 F0001 b00013   3.88    2.47    6.05
+with(comp$MergedPed,
+     comp$MergedPed[which(dam.1!=dam.2 & dam.1!=dam.r), ])
+#         id  dam.1 sire.1 dam.2 sire.2 id.r   dam.r sire.r
+# 205 b02032 a01166 b01133 F0045 b01165 <NA> nomatch   <NA>
+# 206 a02031 a01166 b01133 F0045 b01165 <NA> nomatch   <NA>
+# 720 b03011 a02106 b02181 F0047  M0020 <NA> nomatch b02181
+# 835 b04097 a03098 b03079 F0048  M0032 <NA> nomatch b03079
+# 897 a02030 a01166 b01133 F0045   <NA> <NA> nomatch   <NA>
 @
-due to the use of age prior information (all siblings occur within the same cohort, while b00013 and a01063 are in different cohorts) and/or clustering of a01063 with its maternal siblings (assignment of dummy mother F0001).
+
+First, let's have alook at dummy mother F0045, mentioned three times -- is this one sibship according to Pedigree1 split into two, or two sibships wrongly merged into one? \vspace{-0.5\topsep}
+<<eval=FALSE, echo=TRUE>>=
+comp$MergedPed[which(comp$MergedPed$dam.2=="F0045"), ]
+# -> only a02030, a02031 and b02032 are in this half-sibship
+# -> not wrongly merged
+comp$MergedPed[which(comp$MergedPed$dam.1=="a01166"), ]
+# -> true offspring of a01166 split over dummy mothers
+# F0027 and F0045
+@
+
+Second, let's investigate dummy mother F0048 further:  \vspace{-\topsep}
+<<eval=FALSE, echo=TRUE>>=
+comp$MergedPed[which(comp$MergedPed$dam.2=="F0048"), ]
+# -> b04097 is sole individual in this sibship
+SeqX$MaybeParent[SeqX$MaybeParent$ID1=="b04097", ]
+#        ID1    ID2 Sex1 Sex2 AgeDif TopRel  LLR OH
+# 229 b04097 a03098    2    1      1     GP 0.29  1
+# 310 b04097 b04098    2    2      0     FA 1.17  1
+# -> dam in pedigree1 (a03098) more likely to be PO than U
+# (otherwise not in MaybeParent), but even more likely GP
+# Genotyping errors resulted in pair being OH at 1 SNP.
+
+comp$MergedPed[which(comp$MergedPed$id=="F0048"), ]
+# -> parents of F0048 = grandparents of b04097: a02106 and b02158
+comp$MergedPed[which(comp$MergedPed$id=="a03098"), ]
+#         id  dam.1 sire.1  dam.2 sire.2 id.r dam.r sire.r
+# 288 a03098 a02106 b02158 a02106 b02158 <NA>  <NA>   <NA>
+# -> correct grandparents assigned, even if mother not assigned.
+
+SeqX$MaybeRel[SeqX$MaybeRel$ID1=="b04097", ]
+#        ID1    ID2 Sex1 Sex2 AgeDif TopRel  LLR
+# 124 b04097 a03098    2    1      1     PO 1.31
+@
+It seems that when taking into account b04097's assigned grandparents in \verb+Pedigree+, the relationship with true mother a03098 is now most likely to be PO, rather than GP. When running another two iteration of sibship clustering, dummy F0048 is indeed replaced by a03098, and the total number of mismatches between the pedigrees drops from 10+7 to 9+5.
 
 
 \paragraph{Colony}
-To compare Colony output with an existing pedigree, use:
-\vspace{-.3cm}
+To compare Colony output with an existing pedigree, use: \vspace{-\topsep}
 <<eval=FALSE, echo=TRUE>>=
 BestConfig <- read.table("Colony/file/file.BestConfig",
                          header=T, sep="", comment.char="")
 PedCompare(PedFile1 = "ExistingPedigree.txt",
            Ped2 = BestConfig)
 @
+}
 
 
-\subsection{Estimating confidence probabilities}
-The provided likelihood ratio between the assigned parent being the parent versus otherwise related to the focal individual, does not necessarily indicate how likely the assignment is correct. Due to random Mendelian sampling and genotyping errors, true full siblings may have a higher likelihood to be parent-offspring than full siblings, for example.
-
-Pedigree-wide confidence probabilities can be estimated by
-\begin{itemize}
+\subsection{Estimating confidence probabilities}\label{confidence}
+The provided likelihood ratio between the assigned parent being the parent versus otherwise related to the focal individual, does not necessarily indicate how likely it is that the assignment is correct. Pedigree-wide confidence probabilities can, amongst others, be estimated by
+\vspace{-0.5\topsep}
+\begin{itemize} \setlength\itemsep{0em}
  \item simulating genotype data according to the reconstructed (or an existing) pedigree, imposing realistic levels of missingness and genotyping errors;
  \item reconstructing a pedigree from these simulated data;
- \item counting the number of mismatches between the `true' pedigree, used as input for the simulated data, and this reconstructed pedigree.
+ \item counting the number of mismatches between the `true' pedigree, used as input for the simulated data, and the pedigree reconstructed from the simulated data.
 \end{itemize}
-When repeated at least 10--20 times, the mean error count divided by the total number of pedigree links provides an estimate of one minus the the confidence probability. Note that this can be rather time consuming, and will give an anti-conservative estimate as the simulations assume all SNPs are completely independent.
+When repeated at least 10--20 times, the mean error count divided by the total number of pedigree links provides an estimate of one minus the the confidence probability. Note that this can be rather time consuming, and will give an anti-conservative estimate as the current simulations assume all SNPs are independent.
 
-An example script: {\small
+An example script: \vspace{-0.5\topsep} {\footnotesize
 <<eval=FALSE, echo=TRUE>>=
 data(LH_HSg5, Ped_HSg5)
 ARER <- array(dim=c(10,7,2))
@@ -489,8 +578,8 @@ dimnames(ARER) <- list(c(1:10), dimnames(CountX)[[1]], c("AR", "ER"))
 # average assignment rate (AR) & error rate (ER) per category:
 round(apply(ARER, c(2:3), mean), 4)
 @
-}To add confidence probability to the pedigree based on real data {\small
 
+To add confidence probability to the pedigree based on real data \vspace{-\topsep}
 <<eval=FALSE, echo=TRUE>>=
 ConfProb <- 1 - round(colMeans(ARER[, , "ER"]),3)
 #
@@ -502,24 +591,19 @@ PedC$sire.prob <- ConfProb[as.character(PedC$sire.cat)]
 # or, when assuming that replacement of dummies by IDs of
 # non-genotyped individuals is free from error,
 PedC$dam.prob <- with(PedC,
-                      ifelse(dam.cat=="GG",
-                               ConfProb["GG"],
-                               ifelse(dam.cat %in% c("GD", "GR"),
-                                  ConfProb["GD"],
-                                  ifelse(dam.cat %in% c("DG", "RG"),
-                                     ConfProb["DG"],
-                                     ifelse(dam.cat %in% c("DD", "DR",
-                                                           "RD", "RR"),
-                                        ConfProb["DD"],
-                                        NA)))))
+                      ifelse(dam.cat=="GG", ConfProb["GG"],
+                        ifelse(dam.cat %in% c("GD", "GR"), ConfProb["GD"],
+                          ifelse(dam.cat %in% c("DG", "RG"), ConfProb["DG"],
+                            ifelse(dam.cat %in% c("DD", "DR", "RD", "RR"),
+                                  ConfProb["DD"], NA)))))
 @
 }
 
 
-\subsection{Comparison pedigree-based and genomic relatedness}
-In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one can compare the pairwise relatedness estimated from the pedigrees to a measure of genomic relatedness, estimated directly from the SNP data. The latter will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.
+\subsection{Comparison pedigree-based and genomic relatedness}\label{compR}
+In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one can compare the pairwise relatedness estimated from the pedigrees to a measure of genomic relatedness, estimated directly from the complete SNP data -- which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using GCTA, \url{http://cnsgenomics.com/software/gcta/estimate_grm.html}, while pedigree relatedness can be calculated for example using the R package \verb+pedantics+. Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.
 
-Genomic relatedness can be estimated for example using GCTA, \url{http://cnsgenomics.com/software/gcta/estimate_grm.html}, ideally using as all available markers (i.e., potentially many more than used for pedigree reconstruction). Pedigree relatedness can be calculated for example using the R package \verb+pedantics+. As the number of pairs $p$ becomes very large even for moderate numbers of individuals $n$ ($p$ = $n \times (n-1)/2$), additional packages are required to assist with merging (\verb+data.table+) and plotting (\verb+hexbinplot+). For example: {\small
+As the number of pairs $p$ becomes very large even for moderate numbers of individuals $n$ ($p$ = $n \times (n-1)/2$), additional packages are required to assist with merging (\verb+data.table+) and plotting (\verb+hexbinplot+). For example: {\footnotesize
 <<eval=FALSE, echo=TRUE>>=
 Rel.snp <- read.table("GT.grm.gz")
 Rel.id <- read.table("GT.grm.id", stringsAsFactors=FALSE)
@@ -553,33 +637,61 @@ hexbinplot(Rel.gt$R.SNP~Rel.gt$R.ped, xbins=100, aspect=1, maxcnt=10^6.5,
 @
 }
 
+\newpage
+\subsection{Unusual relationships}
+Pedigree inference is often applied in small, (semi-)closed populations, and regularly to test for inbreeding. In such cases, pairs of individuals may be related via more than one route. For example, maternal half-siblings may also be niece and aunt via the paternal side, and be mistaken for full-siblings. A range of such double relationships is considered explicitly (Table \ref{tbl:DoubleRels}) to minimise such mistakes. If such a type is common in your population but not yet considered by \verb+sequoia+, and seems to be causing problems, please send an email to \url{jisca.huisman@gmail.com} as adding additional relationships is relatively straightforward.
+
+
+\begin{table}[hbt]
+\caption{\footnotesize Double relationships between pairs of individuals; -- = impossible, Y = explicitly considered, empty = not (yet) explicitly considered (but possible to be inferred in two steps). Abbreviations as before, and GGG=great-grandparent, F1C=full first cousins, H1C=half first cousins (parents are HS).}
+\centering
+\begin{tabular}{l|ccc ccc cccc}
+\hline
+   & PO & FS & HS & GP & FA & HA & GGG & F1C & H1C & U \\
+	\hline
+PO & -- & -- & Y & Y & & & & & & Y \\
+FS & -- & -- & -- & -- & -- & Y & & --& Y & Y\\
+HS & Y & -- & (FS) & Y & & Y[2] & & & & Y\\
+GP & Y & -- & Y & [1] & & & & & & Y\\
+FA & & -- & & &  & & & & & Y\\
+HA & & Y & Y[2] & & &  & & & & Y\\
+F1C & & & & & & &  & & & Y\\
+GGG & & --& & & & & & [3] & & Y \\
+\hline
+\end{tabular}
+\label{tbl:DoubleRels}
+\end{table}
+{\noindent\footnotesize 1: Can not be considered explicitly, as likelihood identical to PO \\
+2: Including the special case were one is inbred \\
+3: Can not be considered explicitly, as likelihood identical to GP
+
+\vspace{\fill}
 \footnotesize
 \begin{thebibliography}{1}
 
-\bibitem{Huisman17}
+\bibitem{huisman17}
 J~Huisman.
 \newblock Pedigree reconstruction using snp data: parentage assignment, sibship
   clustering, and beyond.
 \newblock {\em Molecular Ecology Resources}, accepted. DOI: 10.1111/1755-0998.12665
 
-\bibitem{Marshall98}
+\bibitem{marshall98}
 T~C Marshall, J~B K~E Slate, L~E~B Kruuk, and J~M Pemberton.
 \newblock Statistical confidence for likelihood-based paternity inference in
   natural populations.
 \newblock {\em Molecular ecology}, 7(5):639--655, 1998.
 
-\bibitem{Purcell07}
+\bibitem{purcell07}
 S~Purcell, B~Neale, K~Todd-Brown, L~Thomas, M~A~R Ferreira, D~Bender, J~Maller,
   P~Sklar, PIW De~Bakker, MJ~Daly, et~al.
 \newblock {PLINK}: a tool set for whole-genome association and population-based
   linkage analyses.
 \newblock {\em The American Journal of Human Genetics}, 81(3):559--575, 2007.
 
-\bibitem{Thompson87}
+\bibitem{thompson87}
 E~A Thompson and T~R Meagher.
 \newblock Parental and sib likelihoods in genealogy reconstruction.
 \newblock {\em Biometrics}, pages 585--600, 1987.
 
 \end{thebibliography}
-
 \end{document}

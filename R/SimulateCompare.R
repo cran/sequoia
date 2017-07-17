@@ -207,18 +207,18 @@ SimGeno <- function(Ped = NULL,
 # Utils functions for comparisons
 
 
-#' Compare two vectors
-#'
-#' Compare a vector with inferred sibs to a vector of `true' sibs
-#'
-#' @param  Infrd  vector of inferred sibs
-#' @param  Simld  vector of true sibs
-#' @param  SNPd character vector with IDs of genotyped individuals
-#'
-#' @return a named numeric vector of length 4, with the total length of Simld,
-#'   the length of the intersect of the two vectors, the number occurring in
-#'   Infrd but not Simld ('err'), and the number occuring in Simld but not
-#'   Infrd ('missed').
+# Compare two vectors
+#
+# Compare a vector with inferred sibs to a vector of `true' sibs
+#
+# @param  Infrd  vector of inferred sibs
+# @param  Simld  vector of true sibs
+# @param  SNPd character vector with IDs of genotyped individuals
+#
+# @return a named numeric vector of length 4, with the total length of Simld,
+#   the length of the intersect of the two vectors, the number occurring in
+#   Infrd but not Simld ('err'), and the number occuring in Simld but not
+#   Infrd ('missed').
 
 Vcomp <- function(Infrd, Simld, SNPd)
 {
@@ -231,16 +231,16 @@ Vcomp <- function(Infrd, Simld, SNPd)
 
 
 #======================================================================
-#' Find the closest matching inferred sibship to a true sibship
-#'
-#' @param SimX  a vector with the IDs in the true sibship
-#' @param Infrd  a list of vectors with the IDs in the inferred sibships
-#' @param SNPd character vector with IDs of genotyped individuals
-#'
-#' @return a named numeric vector with the number of matches ('NumMatch'),
-#'   the position of the best match ('Best'), the inferred sibship size of
-#'   this best match ('Tot'), the number of matching IDs ('OK'), and the
-#'   number of mismatches ('err').
+# Find the closest matching inferred sibship to a true sibship
+#
+# @param SimX  a vector with the IDs in the true sibship
+# @param Infrd  a list of vectors with the IDs in the inferred sibships
+# @param SNPd character vector with IDs of genotyped individuals
+#
+# @return a named numeric vector with the number of matches ('NumMatch'),
+#   the position of the best match ('Best'), the inferred sibship size of
+#   this best match ('Tot'), the number of matching IDs ('OK'), and the
+#   number of mismatches ('err').
 
 SibMatch <- function(SimX, Infrd, SNPd)
 {
@@ -312,6 +312,9 @@ tdf <- function(M)
 #' Both pedigrees are assumed to have as first three columns id, dam and sire,
 #' in that order.
 #'
+#' If both DumPrefix and SNPd are NULL (the default), the intersect between
+#' the IDs in Pedigrees 1 and 2 is taken as the genotyped individuals.
+#'
 #' @param  Ped1 original pedigree, dataframe with columns id-dam-sire; only the
 #'   first 3 columns will be used.
 #' @param  PedFile1  filename of original pedigree; either provide Ped1, or
@@ -319,10 +322,10 @@ tdf <- function(M)
 #' @param  Ped2 infered pedigree, e.g. SeqOUT$Pedigree, with columns
 #'   id-dam-sire.
 #' @param  sep1  the field separator character in 'PedFile1'.
-#' @param  DumPrefix  the dummy prefix used. If NULL, the intersect between
-#'   the IDs in Pedigrees 1 and 2 is taken as the list of genotyped
-#'   individuals. Otherwise, all individuals in Pedigree 2 with IDs
-#'   not starting with the Dummy prefix are taken as genotyped.
+#' @param  DumPrefix  character vector of length 2 with the dummy prefices in
+#'   Pedigree 2; all IDs not starting with the Dummy prefix are taken as
+#'   genotyped.
+#' @param SNPd character vector with IDs of genotyped individuals.
 #'
 #' @return A list with
 #' \item{Counts}{A 7 x 5 x 2 named numeric array with the number of matches and
@@ -412,7 +415,8 @@ PedCompare <- function(Ped1 = NULL,
                        PedFile1 = NULL,
                        Ped2 = NULL,
                        sep1 = "\t",
-                       DumPrefix = c("F0", "M0"))
+                       DumPrefix = c("F0", "M0"),
+                       SNPd = NULL)
 {
   if(sum(is.null(Ped1), is.null(PedFile1))!=1) stop("provide either 'Ped1' OR 'PedFile1'")
   if(is.null(Ped2)) stop("provide 'Ped2'")
@@ -426,9 +430,9 @@ PedCompare <- function(Ped1 = NULL,
   Ped2 <- Ped2[!is.na(Ped2$id), ]
   Ped1 <- AddParPed(Ped1)
   Ped2 <- AddParPed(Ped2)
-  if (is.null(DumPrefix)) {
+  if (is.null(DumPrefix) & is.null(SNPd)) {
     SNPd <- intersect(Ped2$id, Ped1$id)
-  } else {
+  } else if (is.null(SNPd)) {
     DPnc <- nchar(DumPrefix)
     SNPd <- Ped2$id[substr(Ped2$id,1,DPnc[1])!=DumPrefix[1] &
                       substr(Ped2$id,1,DPnc[2])!=DumPrefix[2]]

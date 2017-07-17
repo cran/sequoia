@@ -7,7 +7,7 @@
 sequoia(GenoM = NULL, LifeHistData = NULL, SeqList = NULL,
   MaxSibIter = 10, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
   Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complex = "full", FindMaybeRel = TRUE, quiet = FALSE)
+  Complex = "full", FindMaybeRel = TRUE, CalcLLR = TRUE, quiet = FALSE)
 }
 \arguments{
 \item{GenoM}{numeric matrix with genotype data: One row per individual, and
@@ -18,8 +18,8 @@ one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
 \item{LifeHistData}{Dataframe with 3 columns:
 \itemize{
 \item{ID: }{max. 30 characters long,}
-\item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
-\item{Birth Year: }{(or hatching year) Negative numbers are
+\item{Sex: }{1 = females, 2 = males, other = unkown, except 4 = hermaphrodite,}
+\item{BY: }{(birth or hatching year) Negative numbers are
   interpreted as missing values.}}
 If the species has multiple generations per year, use an integer coding
  such that the candidate parents' `Birth year' is at least one larger than
@@ -65,11 +65,14 @@ consideration of inbred relationships; not fully implemented yet) or
 \item{FindMaybeRel}{Identify pairs of non-assigned likely relatives after
 pedigree reconstruction. Can be time-consuming in large datasets.}
 
-\item{quiet}{suppress messages}
+\item{CalcLLR}{Calculate log-likelihood ratios for all assignments. Can be
+time-consuming in large datasets.}
+
+\item{quiet}{suppress messages.}
 }
 \value{
 A list with some or all of the following components:
-\item{AgePriors}{Matrix with age-difference based prior probabilities}
+\item{AgePriors}{Matrix with age-difference based prior probabilities.}
 \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
   their sex, estimated birth year (point estimate, upper and lower bound of
   95\% confidence interval), number of offspring, and offspring IDs.}
@@ -79,21 +82,21 @@ A list with some or all of the following components:
   identical IDs). The specified number of maximum mismatches is allowed,
   and this dataframe may include pairs of closely related individuals.}
 \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-  history dataframe}
-\item{LifeHist}{Provided dataframe with sex and birth year data}
+  history dataframe.}
+\item{LifeHist}{Provided dataframe with sex and birth year data.}
 \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
   parent-offspring than unrelated, but which could not be phased due to
   unknown age difference (coded as 999) or sex, or for whom LLR did not pass
-  Tassign}
+  Tassign.}
 \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
   to be first or second degree relatives than unrelated, but which could not
   be assigned.}
-\item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
- provided}
+\item{NoLH}{Vector, IDs in genotype data for which no life history data is
+ provided.}
 \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
   Sibship step; entries for dummy individuals are added at the bottom.}
-\item{PedigreePar}{Dataframe with assigned parents from Parentage step}
-\item{Specs}{Named vector with parameter values}
+\item{PedigreePar}{Dataframe with assigned parents from Parentage step.}
+\item{Specs}{Named vector with parameter values.}
 \item{TotLikParents}{Numeric vector, Total likelihood of the genotype data
   at initiation and after each iteration during Parentage.}
 \item{TotLikSib}{Numeric vector, Total likelihood of the genotype data
@@ -104,20 +107,17 @@ List elements PedigreePar and Pedigree both have the following columns:
  \item{id}{Individual ID}
  \item{dam}{Assigned mother, or NA}
  \item{sire}{Assigned father, or NA}
- \item{LLR_dam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
+ \item{LLRdam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
    versus the next most likely relationship between the focal individual and
    this female (see Details for relationships considered)}
- \item{LLR_sire}{idem, for male parent}
- \item{LLR_pair}{LLR for the parental pair, versus the next most likely
+ \item{LLRsire}{idem, for male parent}
+ \item{LLRpair}{LLR for the parental pair, versus the next most likely
   configuration between the three individuals (with one or neither parent
   assigned)}
 In addition, PedigreePar has the columns
- \item{OH_dam}{Number of loci at which the offspring and mother are
+ \item{OHdam}{Number of loci at which the offspring and mother are
    opposite homozygotes}
- \item{OH_sire}{idem, for male parent}
- \item{rowID}{Row number in genoM for id}
- \item{rowDam}{Row number in genoM for dam}
- \item{rowSire}{Row number in genoM for sire}
+ \item{OHsire}{idem, for father}
 }
 \description{
 Perform pedigree reconstruction based on SNP data, including parentage
@@ -136,7 +136,8 @@ Further explanation of the various options and interpretation of the output
 }
 \examples{
 data(SimGeno_example, LH_HSg5, package="sequoia")
-
+head(SimGeno_example[,1:10])
+head(LH_HSg5)
 SeqOUT <- sequoia(GenoM = SimGeno_example,
                   LifeHistData = LH_HSg5, MaxSibIter = 0)
 names(SeqOUT)
@@ -145,6 +146,11 @@ SeqOUT$PedigreePar[34:42, ]
 SeqOUT2 <- sequoia(GenoM = SimGeno_example,
                   LifeHistData = LH_HSg5, MaxSibIter = 10)
 SeqOUT2$Pedigree[34:42, ]
+
+# reading in data from text files:
+GenoM <- as.matrix(read.table("MyGenoData.txt", row.names=1, header=FALSE))
+LH <- read.table("MyLifeHistData.txt", header=TRUE)
+MySeqOUT <- sequoia(GenoM = GenoM, LifeHistData = LH)
 }
 }
 \author{
@@ -156,6 +162,6 @@ Huisman, J. Pedigree reconstruction from SNP data: Parentage
   Ecology Resources
 }
 \seealso{
-\code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}
+\code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}, vignette("sequoia")
 }
 

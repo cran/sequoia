@@ -36,7 +36,9 @@
 #'   of inbred relationships) or "mono" (monogamous breeding system)
 #' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
 #'   pedigree reconstruction. Can be time-consuming in large datasets.
-#' @return A named vector with parameter values
+#' @param CalcLLR  Calculate log-likelihood ratios for all assignments. Can be
+#'  time-consuming in large datasets.
+#' @return A 1-row dataframe with parameter values
 
 SeqPrep <- function(GenoM = NULL,
                      LifeHistData = NULL,
@@ -49,7 +51,8 @@ SeqPrep <- function(GenoM = NULL,
             				 MaxSibshipSize = 100,
             				 DummyPrefix = c("F", "M"),
             				 Complexity = "full",
-            				 FindMaybeRel = TRUE)
+            				 FindMaybeRel = TRUE,
+            				 CalcLLR = TRUE)
 
 {
   if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
@@ -67,10 +70,10 @@ SeqPrep <- function(GenoM = NULL,
   }
   if (!Complexity %in% c("full", "simp", "mono")) stop("invalid value for 'Complexity'")
   if (!FindMaybeRel %in% c(TRUE, FALSE)) stop("invalid value for 'FindMaybeRel'")
+  if (!CalcLLR %in% c(TRUE, FALSE)) stop("invalid value for 'CalcLLR'")
   if (MaxSibIter<0 || !is.wholenumber(MaxSibIter))  stop("invalid value for 'MaxSibIter'")
 
   if (!is.null(LifeHistData)) {
-    names(LifeHistData) <- c("ID", "Sex", "BY")
     nIndLH <- nrow(LifeHistData)
     if (nIndLH >1 & any(LifeHistData$BY >= 0)) {
       nAgeClasses <- with(LifeHistData, diff(range(BY[BY >= 0 & ID %in% IDs_geno],
@@ -78,10 +81,11 @@ SeqPrep <- function(GenoM = NULL,
     }
     if (nAgeClasses > 100) {
       nAgeClasses <- length(table(LifeHistData$BY[LifeHistData$BY >= 0]))
+       if (nAgeClasses > 100) stop("Cannot handle >100 cohorts!")
     }
   }
 
-  Specs <- c(NumberIndivGenotyped = nIndG,
+  Specs <- data.frame(NumberIndivGenotyped = nIndG,
              NumberSnps = nSnp,
              GenotypingErrorRate = Err,
              MaxMismatch = MaxMismatch,
@@ -93,7 +97,9 @@ SeqPrep <- function(GenoM = NULL,
              DummyPrefixFemale = DummyPrefix[1],
              DummyPrefixMale = DummyPrefix[2],
              Complexity = Complexity,
-      			 FindMaybeRel = FindMaybeRel)
+      			 FindMaybeRel = FindMaybeRel,
+      			 CalcLLR = CalcLLR,
+      			 stringsAsFactors = FALSE)
   Specs
 }
 
@@ -109,7 +115,7 @@ SeqPrep <- function(GenoM = NULL,
 #' order of IDs in the genotype and life history data is not required to be
 #' identical.
 #'
-#' @param Specs The named vector with parameter values
+#' @param Specs The 1-row dataframe with parameter values
 #' @param GenoM matrix with genotype data, size nInd x nSnp
 #' @param LhIN  life history data
 #' @param quiet suppress messages
@@ -130,12 +136,13 @@ SeqPrep <- function(GenoM = NULL,
 #'  of individuals with unknown sex.
 #'
 #' @useDynLib sequoia, .registration = TRUE
+# @useDynLib sequoia duplicates
 
 SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 {
-  Ng <- FacToNum(Specs["NumberIndivGenotyped"])
-  SpecsInt <- c(nSnp = FacToNum(Specs["NumberSnps"]),
-                MaxMis = FacToNum(Specs["MaxMismatch"]))
+  Ng <- FacToNum(Specs[,"NumberIndivGenotyped"])
+  SpecsInt <- c(nSnp = FacToNum(Specs[,"NumberSnps"]),
+                MaxMis = FacToNum(Specs[,"MaxMismatch"]))
   gID <- rownames(GenoM)
   GenoV <- as.integer(GenoM)
 
@@ -145,8 +152,8 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
                   GenoV = as.integer(GenoV),
                   nDupGenos = integer(1),
                   DupGenosFR = integer(2*Ng),  # N x 2 matrix
-                  CntMism = integer(Ng),
-                  PACKAGE = "sequoia")
+                  CntMism = integer(Ng))
+#                  PACKAGE = "sequoia")
 
   Duplicates <- list()
   if (any(duplicated(gID))) {
@@ -221,6 +228,7 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 #' For a detailed description of the output see \code{\link{sequoia}}
 #'
 #' @useDynLib sequoia, .registration = TRUE
+# @useDynLib sequoia makeped deallocall
 
 SeqParSib <- function(ParSib = "par",
                       Specs = NULL,
@@ -230,35 +238,39 @@ SeqParSib <- function(ParSib = "par",
                       Parents = NULL,
                       quiet = FALSE)
 {
-  on.exit(.Fortran("deallocall", PACKAGE = "sequoia"))
+  on.exit(.Fortran("deallocall")) #, PACKAGE = "sequoia"))
 
-  Ng <- FacToNum(Specs["NumberIndivGenotyped"])
-  SMax <- FacToNum(Specs["MaxSibshipSize"])
+  Ng <- FacToNum(Specs[,"NumberIndivGenotyped"])
+  SMax <- FacToNum(Specs[,"MaxSibshipSize"])
   gID <- rownames(GenoM)
   GenoV <- as.integer(GenoM)
-  LHL <- orderLH(LhIN, gID)
+  LHL <- orderLH(LhIN[LhIN$Sex %in% c(1:3), ], gID)
   if (!is.null(Parents)) {
-    PedPar <- c(as.matrix(Parents))
+    PedPar <- IDToNum(Parents, gID)[, 2:3]
+    PedPar <- c(as.matrix(PedPar))
     if (length(PedPar) != Ng*2) stop("'PedPar' wrong length")
   } else {
     PedPar <- rep(0, Ng*2)
   }
-  Complex <- switch(Specs["Complexity"], full = 2, simp = 1, mono = 0)
+  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0)
   PrSb <- switch(ParSib, par = 1, sib = 2)
+  nAmbMax <- 5*Ng  # no. of non-assigned relative pairs to return
 
   SpecsInt <- c(ParSib = as.integer(PrSb),        # 1
-                MaxSibIter = FacToNum(Specs["MaxSibIter"]), # 2
-                nSnp = FacToNum(Specs["NumberSnps"]),       # 3
-                MaxMis = FacToNum(Specs["MaxMismatch"]),    # 4
+                MaxSibIter = FacToNum(Specs[,"MaxSibIter"]), # 2
+                nSnp = FacToNum(Specs[,"NumberSnps"]),       # 3
+                MaxMis = FacToNum(Specs[,"MaxMismatch"]),    # 4
                 SMax = SMax,                      # 5
-                nAgeCl = FacToNum(Specs["nAgeClasses"]),    # 6
+                nAgeCl = FacToNum(Specs[,"nAgeClasses"]),    # 6
                 Complx = as.integer(Complex),               # 7
-                FindMaybe = as.integer((as.logical(Specs["FindMaybeRel"]))),  # 8
-                quiet = as.integer(quiet))        # 9
-  SpecsDbl <- c(Er = FacToNum(Specs["GenotypingErrorRate"]),
-                TF = FacToNum(Specs["Tfilter"]),
-                TA = FacToNum(Specs["Tassign"]))
-  if (length(as.integer(AgePriors)) != 8*FacToNum(Specs["nAgeClasses"])) {
+                FindMaybe = as.integer(as.logical(Specs[,"FindMaybeRel"])),  # 8
+                CalcLLR = as.integer(as.logical(Specs[,"CalcLLR"])),  # 9
+                quiet = as.integer(quiet),        # 10
+                nAmbMax = as.integer(nAmbMax))       # 11
+  SpecsDbl <- c(Er = FacToNum(Specs[,"GenotypingErrorRate"]),
+                TF = FacToNum(Specs[,"Tfilter"]),
+                TA = FacToNum(Specs[,"Tassign"]))
+  if (length(as.integer(AgePriors)) != 8*FacToNum(Specs[,"nAgeClasses"])) {
     stop("'AgePriors' matrix should have size nAgeClasses * 8")
   }
 
@@ -274,20 +286,20 @@ SeqParSib <- function(ParSib = "par",
                   LrRF = double(3*Ng),
                   OhRF = integer(2*Ng),
                   nAmb = as.integer(0),
-                  AmbigID = integer(2*Ng),
-                  AmbigSex = integer(2*Ng),
-                  AmbigAgeDif = integer(Ng),
-                  AmbigRel = integer(2*Ng),
-                  AmbigLR = double(2*Ng),
-                  AmbigOH = integer(Ng),
+                  AmbigID = integer(2*nAmbMax),
+                  AmbigSex = integer(2*nAmbMax),
+                  AmbigAgeDif = integer(nAmbMax),
+                  AmbigRel = integer(2*nAmbMax),
+                  AmbigLR = double(2*nAmbMax),
+                  AmbigOH = integer(nAmbMax),
                   Nd = integer(2),
                   DumParRF = integer(2*Ng),
                   DumLrRF = double(3*Ng),
                   DumBYRF = integer(3*Ng),
                   DumNoff = integer(Ng),
                   DumOff = integer(SMax*Ng),
-                  TotLik = double(42),
-                  PACKAGE = "sequoia")
+                  TotLik = double(42))
+#                  PACKAGE = "sequoia")
 
   TMP$LrRF[abs(TMP$LrRF - 999) < 0.1] <- NA
   TMP$AmbigLR[abs(TMP$AmbigLR - 999) < 0.1] <- NA
@@ -298,7 +310,7 @@ SeqParSib <- function(ParSib = "par",
   TMP$OhRF[TMP$OhRF < 0] <- NA
   TMP$AmbigOH[TMP$AmbigOH < 0] <- NA
 
-  DumPfx <- Specs[c("DummyPrefixFemale", "DummyPrefixMale")]
+  DumPfx <- Specs[,c("DummyPrefixFemale", "DummyPrefixMale")]
   dID <- cbind(paste0(DumPfx[1], formatC(1:Ng, width=4, flag=0)),
                paste0(DumPfx[2], formatC(1:Ng, width=4, flag=0)))
 
@@ -313,10 +325,12 @@ SeqParSib <- function(ParSib = "par",
 
   if (grepl("par", ParSib)) {
     Pedigree <- cbind(Pedigree,
-                      VtoM(TMP$OhRF),
-                      rowId = 1:Ng,
-                      VtoM(TMP$parentsRF))
-    names(Pedigree)[7:11] <- c("OHdam", "OHsire", "rowId", "rowDam", "rowSire")
+                      VtoM(TMP$OhRF))
+    names(Pedigree)[7:8] <- c("OHdam", "OHsire")
+  }
+
+  if (any(LhIN$Sex==4)) {  # hermaphrodites
+    Pedigree <- herm_unclone_Ped(Pedigree, LH=LhIN, herm.suf=c("f", "m"))
   }
 
 
@@ -335,28 +349,51 @@ SeqParSib <- function(ParSib = "par",
                            VtoM(TMP$AmbigLR, Na),
                            stringsAsFactors=FALSE)
     names(MaybeRel) <- c("ID1", "ID2", "Sex1", "Sex2", "AgeDif",
-                         "Relx", "TopRel", "LLR_Rx_U", "LLR_R1_R2")
+                         "Relx", "TopRel", "LLR_Rx_U", "LLR")
+    MaybeRel <- MaybeRel[,-which(names(MaybeRel) %in% c("Relx", "LLR_Rx_U"))]  # drop; confusing.
     for (i in 1:Na) {
       if (MaybeRel$AgeDif[i] < 0) {
         tmp <- MaybeRel[i,]
         tmp$AgeDif <- abs(tmp$AgeDif)
-        MaybeRel[i,] <- tmp[,c(2,1,4,3,5:9)]
+        MaybeRel[i,] <- tmp[,c(2,1,4,3,5:7)]
       }
     }
     if (grepl("par", ParSib)) {
       MaybeRel$OH <-  TMP$AmbigOH[1:Na]
+#      MaybeRel <- with(MaybeRel, MaybeRel[which(TopRel=="PO"), ])
+    } else {
+      MaybeRel <- with(MaybeRel, MaybeRel[TopRel %in% c("PO", "FS", "HS","GG") |
+                                          LLR > FacToNum(Specs[,"Tassign"]), ])
     }
     MaybeRel <- MaybeRel[order(ordered(MaybeRel$TopRel, levels=RelName),
-                                     -MaybeRel$LLR_R1_R2),
-                               c(1:6, 8, 7, 9:ncol(MaybeRel))]
+                                     -MaybeRel$LLR),]
+    MaybeRel$AgeDif[MaybeRel$AgeDif==999] <- NA
+
+    if (any(LhIN$Sex==4)) {  # hermaphrodites
+      tmp <- MaybeRel
+      tmp$ID1 <- chop(tmp$ID1, suf=c("f","m")[tmp$Sex1])
+      tmp$ID2 <- chop(tmp$ID2, suf=c("f","m")[tmp$Sex2])
+      tmp <- merge(tmp, Pedigree[, 1:3], by.x="ID1", by.y="id")
+      if(any(!is.na(tmp$dam) | !is.na(tmp$sire))) {
+        MaybeRel <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MaybeRel)])
+      } else {
+        MaybeRel <- tmp[, names(MaybeRel)]
+      }
+    }
+
+   if (!quiet && nrow(MaybeRel)>0) {
+     if (grepl("par", ParSib)) {
+     message("there are  ", sum(MaybeRel$TopRel=="PO"),
+             "  likely parent-offspring pairs which are not assigned, ",
+             "perhaps due to unknown birth year(s), please see 'MaybeParent'")
+     } else {
+       message("there are  ", nrow(MaybeRel), "  non-assigned pairs of possible relatives, ",
+               "including  ", sum(MaybeRel$TopRel=="PO"), "  likely parent-offspring pairs; ",
+               "please see 'MaybeRel'")
+     }
+  }
   } else  MaybeRel <- NULL
 
-  if (!quiet && grepl("par", ParSib) && sum(TMP$AmbigRel==1)>0) {
-     message("there are  ", sum(TMP$AmbigRel==1),
-             "  likely parent-offspring pairs which are not assigned, ",
-    "possibly due to unknown birth year(s), ",
-             "please see 'MaybeParent'")
-  }
 
   #=========================
   # dummies
@@ -441,38 +478,5 @@ orderLH <- function(LH=NULL, gID=NULL) {
     BY <- rep(-999, length(gID))
   }
   list(Sex=Sex, BY=BY)
-}
-
-
-#===============================
-#' replace numbers by names
-#'
-#' Replace the rownumbers by IDs, as in the genotype data, and replace negative
-#' numbers by dummy IDs
-#'
-#' @param x vector with numbers
-#' @param k  1=maternal, 2=paternal (for dummies only)
-#' @param realID vector with IDs, order as in genotype data
-#' @param dumID  2-column matrix with dummy IDs
-#'
-#' @return character vector with IDs
-
-NumToID <- function(x, k=NULL, realID=NULL, dumID=NULL) {
-  type <- ifelse(x>0, "r", ifelse(x<0, "d", "n"))
-  ID <- rep(NA, length(x))
-  ID[type=="r"] <- realID[x[type=="r"]]
-  ID[type=="d"] <- dumID[-x[type=="d"], k]
-  ID
-}
-
-#################################################################
-
-#.onLoad <- function (libname, pkgname) {
-#  library.dynam("sequoia", pkgname, libname)
-#}
-
-.onUnload <- function (libpath) {
-  .Fortran("deallocall", PACKAGE = "sequoia")
-  library.dynam.unload("sequoia", libpath)
 }
 

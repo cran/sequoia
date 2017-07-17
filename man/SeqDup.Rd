@@ -7,7 +7,7 @@
 SeqDup(Specs = NULL, GenoM = NULL, LhIN = NULL, quiet = FALSE)
 }
 \arguments{
-\item{Specs}{The named vector with parameter values}
+\item{Specs}{The 1-row dataframe with parameter values}
 
 \item{GenoM}{matrix with genotype data, size nInd x nSnp}
 

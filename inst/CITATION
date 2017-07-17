@@ -1,0 +1,10 @@
+note <- sprintf("R package version %s", meta$Version)
+
+bibentry(bibtype = "Article",
+         title = "Pedigree reconstruction from SNP data: parentage
+assignment, sibship clustering and beyond",
+         author = person("Jisca", "Huisman"),
+         journal = "Molecular Ecology Resources",
+         year = 2017,
+         note = note,
+         url = "https://CRAN.R-project.org/package=sequoia")
