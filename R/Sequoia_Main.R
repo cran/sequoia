@@ -171,11 +171,6 @@ sequoia <- function(GenoM = NULL,
     LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
   }
 
-  if (any(LifeHistData$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
-    GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
-    LifeHistData <- herm_clone_LH(LifeHistData, herm.suf=c("f", "m"))
-  }
-
   if ("Specs" %in% names(SeqList)) {
     if(!quiet)  message("settings in SeqList will overrule other settings")
     Specs <- SeqPrep(GenoM = GenoM,
@@ -222,6 +217,13 @@ sequoia <- function(GenoM = NULL,
   if ("DupGenoID" %in% names(DupList)) {
     return(DupList)
   }
+
+  if (any(LifeHistData$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
+    GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
+    LifeHistData <- herm_clone_LH(LifeHistData, herm.suf=c("f", "m"))
+    Specs[1, "NumberIndivGenotyped"] <- nrow(GenoM)
+  }
+
 
   if ("PedigreePar" %in% names(SeqList)) {
     PedParents <- SeqList$PedigreePar  #[, c("id", "dam", "sire")]

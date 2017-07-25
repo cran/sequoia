@@ -142,7 +142,8 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 {
   Ng <- FacToNum(Specs[,"NumberIndivGenotyped"])
   SpecsInt <- c(nSnp = FacToNum(Specs[,"NumberSnps"]),
-                MaxMis = FacToNum(Specs[,"MaxMismatch"]))
+                MaxMis = FacToNum(Specs[,"MaxMismatch"]),
+                quiet = as.integer(quiet))
   gID <- rownames(GenoM)
   GenoV <- as.integer(GenoM)
 
@@ -150,7 +151,7 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
                   Ng = as.integer(Ng),
                   SpecsInt = as.integer(SpecsInt),
                   GenoV = as.integer(GenoV),
-                  nDupGenos = integer(1),
+                  nDupGenos = as.integer(0),
                   DupGenosFR = integer(2*Ng),  # N x 2 matrix
                   CntMism = integer(Ng))
 #                  PACKAGE = "sequoia")
@@ -254,7 +255,7 @@ SeqParSib <- function(ParSib = "par",
   }
   Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0)
   PrSb <- switch(ParSib, par = 1, sib = 2)
-  nAmbMax <- 5*Ng  # no. of non-assigned relative pairs to return
+  nAmbMax <- 7*Ng  # max no. of non-assigned relative pairs to return
 
   SpecsInt <- c(ParSib = as.integer(PrSb),        # 1
                 MaxSibIter = FacToNum(Specs[,"MaxSibIter"]), # 2
@@ -321,6 +322,8 @@ SeqParSib <- function(ParSib = "par",
                          VtoM(TMP$LrRF, nc=3),
                          stringsAsFactors=FALSE)
   names(Pedigree) <- c("id", "dam", "sire", "LLRdam", "LLRsire", "LLRpair")
+  Pedigree$LLRdam[is.na(Pedigree$dam)]  <- NA  # not sure why sometimes '0' - TODO CHECK
+  Pedigree$LLRsire[is.na(Pedigree$sire)]  <- NA
   for (k in 1:2) Pedigree[, k+1] <- NumToID(Pedigree[, k+1], k, gID, dID)
 
   if (grepl("par", ParSib)) {
@@ -331,6 +334,17 @@ SeqParSib <- function(ParSib = "par",
 
   if (any(LhIN$Sex==4)) {  # hermaphrodites
     Pedigree <- herm_unclone_Ped(Pedigree, LH=LhIN, herm.suf=c("f", "m"))
+  }
+
+  if (!quiet) {
+    if (grepl("par", ParSib)) {
+      message("assigned ", sum(!is.na(Pedigree$dam)), " dams and ",
+           sum(!is.na(Pedigree$sire)), " sires to ", nrow(Pedigree), " individuals")
+   } else {
+     message("assigned ", sum(!is.na(Pedigree$dam)), " dams and ",
+           sum(!is.na(Pedigree$sire)), " sires to ", Ng, " + ", sum(TMP$Nd),
+           " individuals (real + dummy)")
+   }
   }
 
 
@@ -370,21 +384,14 @@ SeqParSib <- function(ParSib = "par",
     MaybeRel$AgeDif[MaybeRel$AgeDif==999] <- NA
 
     if (any(LhIN$Sex==4)) {  # hermaphrodites
-      tmp <- MaybeRel
-      tmp$ID1 <- chop(tmp$ID1, suf=c("f","m")[tmp$Sex1])
-      tmp$ID2 <- chop(tmp$ID2, suf=c("f","m")[tmp$Sex2])
-      tmp <- merge(tmp, Pedigree[, 1:3], by.x="ID1", by.y="id")
-      if(any(!is.na(tmp$dam) | !is.na(tmp$sire))) {
-        MaybeRel <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MaybeRel)])
-      } else {
-        MaybeRel <- tmp[, names(MaybeRel)]
-      }
+      MaybeRel <- herm_unclone_MaybeRel(MaybeRel, Pedigree, LH=LhIN, herm.suf=c("f", "m"))
     }
 
    if (!quiet && nrow(MaybeRel)>0) {
      if (grepl("par", ParSib)) {
      message("there are  ", sum(MaybeRel$TopRel=="PO"),
-             "  likely parent-offspring pairs which are not assigned, ",
+             "  likely parent-offspring pairs and ", nrow(MaybeRel)-sum(MaybeRel$TopRel=="PO"),
+             " other pairs of likely relatives  which are not assigned, ",
              "perhaps due to unknown birth year(s), please see 'MaybeParent'")
      } else {
        message("there are  ", nrow(MaybeRel), "  non-assigned pairs of possible relatives, ",

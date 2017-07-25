@@ -3,7 +3,7 @@
 \usepackage[colorlinks=false, pdfborder={0 0 0}, linktoc=all]{hyperref}
 
 \begin{document}
-\SweaveOpts{concordance=TRUE}
+%\SweaveOpts{concordance=TRUE}
 % \VignetteIndexEntry{Using sequoia}
 % \VignetteKeyword{pedigree}
 \setcounter{tocdepth}{2}
@@ -26,7 +26,7 @@
 \newpage
 
 
-\subsection{Example}
+\subsection*{Example}
 An example pedigree and associated life history data are provided with the package, which can be used to try out the steps detailed here. This fictional pedigree consists of 5 generations with interconnected half-sib clusters (Pedigree II in \cite{huisman17}).
 <<eval=FALSE, echo=TRUE>>=
 install.packages("sequoia")  # only required first time
@@ -637,12 +637,12 @@ hexbinplot(Rel.gt$R.SNP~Rel.gt$R.ped, xbins=100, aspect=1, maxcnt=10^6.5,
 @
 }
 
-\newpage
+%\newpage
+\section{Other}
 \subsection{Unusual relationships}
 Pedigree inference is often applied in small, (semi-)closed populations, and regularly to test for inbreeding. In such cases, pairs of individuals may be related via more than one route. For example, maternal half-siblings may also be niece and aunt via the paternal side, and be mistaken for full-siblings. A range of such double relationships is considered explicitly (Table \ref{tbl:DoubleRels}) to minimise such mistakes. If such a type is common in your population but not yet considered by \verb+sequoia+, and seems to be causing problems, please send an email to \url{jisca.huisman@gmail.com} as adding additional relationships is relatively straightforward.
 
-
-\begin{table}[hbt]
+\begin{table}[hbt]  \small
 \caption{\footnotesize Double relationships between pairs of individuals; -- = impossible, Y = explicitly considered, empty = not (yet) explicitly considered (but possible to be inferred in two steps). Abbreviations as before, and GGG=great-grandparent, F1C=full first cousins, H1C=half first cousins (parents are HS).}
 \centering
 \begin{tabular}{l|ccc ccc cccc}
@@ -656,16 +656,33 @@ GP & Y & -- & Y & [1] & & & & & & Y\\
 FA & & -- & & &  & & & & & Y\\
 HA & & Y & Y[2] & & &  & & & & Y\\
 F1C & & & & & & &  & & & Y\\
-GGG & & --& & & & & & [3] & & Y \\
+GGG & & --& & & & & [3] & & & Y \\
 \hline
 \end{tabular}
 \label{tbl:DoubleRels}
 \end{table}
+\vspace{-\topsep}
 {\noindent\footnotesize 1: Can not be considered explicitly, as likelihood identical to PO \\
 2: Including the special case were one is inbred \\
 3: Can not be considered explicitly, as likelihood identical to GP
 
-\vspace{\fill}
+
+\subsection{Hermaphrodites}\label{herma}
+For \emph{Parentage assignment only}, hermaphrodites can be specified in \verb+LifeHistData+ with sex '4', which then 'under the hood' are threated as two individuals with opposite sex, and identical genotypes. When running as usual, and all candidate parents are hermaphrodites, no parents will be assigned at all, as the configuration where A is the dam and B the sire is as likely as B being the dam and A the sire. Likely parent-offspring pairs can be found in 'MaybeParent', but note that this is truncated at 7 times the number of genotyped individuals. 
+
+To chose between A being the dam or the sire, additional information is required on the probable dam. This can e.g. the plant from which the seed was collected. This 'prior' information is not (yet) fully integrated, but rather, only when two configurations are equally likely, is the one that matches the pedigree prior chosen. Parent--offspring pairs in the pedigree prior that are not genetically a match will never be assigned. 
+\vspace{-0.5\topsep}{\small
+<<eval=FALSE, echo=TRUE>>=
+cdam <- read.table("Candidate_dams.txt", header=TRUE, stringsAsFactors=FALSE)
+# cdam has columns 'id' and 'dam', and does not need entries for all ids  
+seq.euc2 <- sequoia(GenoM = Geno, LifeHistData = LH_X, MaxSibIter=0,
+                    SeqList = list(PedigreePar = cbind(cdam, sire=NA)))
+@
+}
+
+
+
+%\vspace{\fill}
 \footnotesize
 \begin{thebibliography}{1}
 

@@ -284,3 +284,12 @@
 ##            xlim=c(-.1,.9), ylim=c(-.1, .9), colramp=ColF, colorkey = TRUE)
 
 
+###################################################
+### code chunk number 19: sequoia.Rnw:675-679 (eval = FALSE)
+###################################################
+## cdam <- read.table("Candidate_dams.txt", header=TRUE, stringsAsFactors=FALSE)
+## # cdam has columns 'id' and 'dam', and does not need entries for all ids  
+## seq.euc2 <- sequoia(GenoM = Geno, LifeHistData = LH_X, MaxSibIter=0,
+##                     SeqList = list(PedigreePar = cbind(cdam, sire=NA)))
+
+

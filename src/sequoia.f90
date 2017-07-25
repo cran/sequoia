@@ -130,16 +130,17 @@ subroutine duplicates(Ng, SpecsInt, GenoFR,nDupGenos,DupGenosFR,nMisMFR)
 use Global
 implicit none
 
-integer, intent(IN) :: Ng, SpecsInt(2)
+integer, intent(IN) :: Ng, SpecsInt(3)
 integer, intent(IN) :: GenoFR(Ng*SpecsInt(1))
 integer, intent(INOUT) :: nDupGenos, DupGenosFR(2*Ng), nMisMFR(Ng)
-integer :: i, j, l, Match, CountMismatch
+integer :: i, j, l, Match, CountMismatch, quiet
 integer, allocatable, dimension(:,:) :: DupGenos
 integer, allocatable, dimension(:) :: nMisMatch
 
 nInd = Ng
 nSnp = SpecsInt(1)
 MaxMismatch = SpecsInt(2)
+quiet = SpecsInt(3)
 
 allocate(Genos(nSnp, nInd))
 Genos = -9
@@ -178,7 +179,12 @@ do i=1,nInd-1
       DupGenos(nDupGenos,2) = j
       nMisMatch(nDupGenos) = CountMismatch
     endif
+    if (nDupGenos==nInd) then
+        if(quiet==0) call rwarn("reached max for duplicates") 
+      exit
+    endif
   enddo
+  if (nDupGenos==nInd) exit
 enddo
 
 ! ##########################
@@ -188,7 +194,7 @@ DupGenosFR = 0
 nMisMFR = 0
 do i=1,nDupGenos
   DupGenosFR(i) = DupGenos(i,1)
-  DupGenosFR(Ng+i) = DupGenos(i,2)
+ DupGenosFR(Ng+i) = DupGenos(i,2)
   nMisMFR = nMisMatch(i)
 enddo
 
@@ -908,7 +914,7 @@ do x=1, nInd
     endif
   enddo
   
-  if (ALL(nCP>0) .and. (ALL(Parent(i,:)==0) .or. ALL(nCP>1))) then 
+  if (ALL(nCP>0)) then 
     if (ALL(CandPar >= 0) .and. BY(i)/=-999 .and. &  ! test combo's  
       ALL(BY(CandPar(1:nCP(1), 1))/=-999) .and. &
       ALL(BY(CandPar(1:nCP(2), 2))/=-999) .and. &
@@ -949,7 +955,7 @@ do x=1, nInd
         endif
       endif
       call CalcLind(i)
-    else
+    else if (ALL(Parent(i,:)==0) .or. ALL(nCP>1)) then
       do u = 1, nCP(1)    
         do v = 1, nCP(2)
           if (CandPar(u, 1)==CandPar(v, 2))  cycle  !when unk sex.
@@ -971,7 +977,7 @@ do x=1, nInd
           enddo
         endif
       else
-        Parent(i,1) = 0  ! undo try-out assignment
+        Parent(i,:) = 0  ! undo try-out assignment
       endif
       call CalcLind(i)
     endif

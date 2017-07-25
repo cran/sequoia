@@ -80,6 +80,27 @@ herm_unclone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
 }
 
 #=============================================================
+herm_unclone_MaybeRel <- function(MR, Ped, LH, herm.suf=c("f", "m")) {
+  hermID <- as.character(LH$ID[which(LH$Sex==4)])
+  H1 <- substr(MR$ID1, nchar(MR$ID1)-1, nchar(MR$ID1)) %in% paste0("_", herm.suf) &
+                           chop(MR$ID1, herm.suf[MR$Sex1]) %in% hermID
+  H2 <- substr(MR$ID2, nchar(MR$ID2)-1, nchar(MR$ID2)) %in% paste0("_", herm.suf) &
+                           chop(MR$ID2, herm.suf[MR$Sex2]) %in% hermID
+  MR$ID1 <- ifelse(H1, chop(MR$ID1, suf=herm.suf[MR$Sex1]), MR$ID1)
+  MR$ID2 <- ifelse(H2, chop(MR$ID2, suf=herm.suf[MR$Sex2]), MR$ID2)
+  MR$Sex1[H1] <- 4
+  MR$Sex2[H2] <- 4
+  tmp <- merge(MR, Ped[, 1:3], by.x="ID1", by.y="id")
+  if(any(!is.na(tmp$dam) | !is.na(tmp$sire))) {
+    MR <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MR)])
+  } else {
+    MR <- tmp[, names(MR)]
+  }
+  MR <- unique(MR[MR$ID1 != MR$ID2, ])
+  MR
+}
+
+#=============================================================
 # chop suffix from end of character string
 chop <- function(x, suf, sep="_") {
    suf <- paste0(sep, suf)
