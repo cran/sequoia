@@ -10,19 +10,19 @@
 data(LH_HSg5)
 }
 \description{
-This is the lifehistory file associated with Pedigree II in the paper.
-}
-\author{
-Jisca Huisman, \email{jisca.huisman@gmail.com}
+This is the lifehistory file associated with Ped_HSg5, which
+ is Pedigree II in the paper.
 }
 \references{
-Huisman, J. Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. (under review) Molecular
-  Ecology Resources
+Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
+  assignment, sibship clustering, and beyond. Molecular Ecology Resources
+  17:1009--1024.
 }
 \seealso{
 \code{\link{Ped_HSg5} \link{sequoia}}
 }
+\author{
+Jisca Huisman, \email{jisca.huisman@gmail.com}
+}
 \keyword{datasets,}
 \keyword{sequoia}
-

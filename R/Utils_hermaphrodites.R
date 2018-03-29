@@ -44,6 +44,7 @@ herm_clone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
 #=============================================================
 herm_unclone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
   hermID <- as.character(LH$ID[which(LH$Sex==4)])
+  names(Ped)[1:3] <- c("id", "dam", "sire")
   hermPed.1 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_f" &
                            chop(Ped$id, herm.suf[1]) %in% hermID), ]
   hermPed.2 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_m" &
@@ -101,6 +102,16 @@ herm_unclone_MaybeRel <- function(MR, Ped, LH, herm.suf=c("f", "m")) {
 }
 
 #=============================================================
+herm_unclone_Trios <- function(trios, LH, herm.suf=c("f", "m")) {
+  hermID <- as.character(LH$ID[which(LH$Sex==4)])
+  for (x in 1:3) {
+    trios[,x] <- chop(trios[,x], suf=herm.suf[1])
+    trios[,x] <- chop(trios[,x], suf=herm.suf[2])
+  }
+  trios[!duplicated(trios[,1]), ]
+}
+
+#=============================================================
 # chop suffix from end of character string
 chop <- function(x, suf, sep="_") {
    suf <- paste0(sep, suf)
@@ -110,4 +121,4 @@ chop <- function(x, suf, sep="_") {
 
 
 #=============================================================
-# unique rows, taking rownames into consideration
+

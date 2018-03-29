@@ -5,56 +5,70 @@
 \title{Convert genotype file}
 \usage{
 GenoConvert(InFile = NULL, InFormat = "raw", OutFile = NA,
-  OutFormat = "seq", quiet = FALSE)
+  OutFormat = "seq", UseFID = FALSE, FIDsep = "__", quiet = FALSE)
 }
 \arguments{
 \item{InFile}{character string with name of genotype file to be converted}
 
-\item{InFormat}{One of "raw", "ped", "col" or "seq", see Details.}
+\item{InFormat}{One of "raw", "col" or "seq", see Details.}
 
 \item{OutFile}{character string with name of converted file. If NA, return
 matrix with genotypes in console; if NULL, write to "GenoForSequoia.txt".}
 
-\item{OutFormat}{as InFormat, default is "seq".}
+\item{OutFormat}{as InFormat. Currently raw -> seq, col -> seq and seq ->
+col are implemented.}
+
+\item{UseFID}{Use the family ID column in the PLINK file. The
+resulting ids (rownames of GenoM) will be in the form FID__IID.}
+
+\item{FIDsep}{characters inbetween FID and IID in composite-ID. By default a
+double underscore is used, to avoid problems when some IIDs contain an
+ underscore. Only used when UseFID=TRUE.}
 
 \item{quiet}{suppress messages}
 }
 \value{
-The converted genotype data is written to the specified file.
+A genotype matrix in the specified output format. If 'OutFile' is
+  specified, the matrix is written to this file and nothing is returned
+  inside R.
 }
 \description{
-Convert a genotype file from PLINK's .ped or .RAW, or Colony's 2-column-
- per-marker format, to sequoia's 1-column-per-marker format.
+Convert a genotype file from PLINK's .raw, or Colony's
+2-column-per-marker format, to sequoia's 1-column-per-marker format.
 }
 \details{
-The following formats are currently supported, specified by 'InFormat' and
-  'OutFormat':
+The following formats can be specified by 'InFormat' and
+'OutFormat':
  \itemize{
+  \item{col: }{No header row, 1 descriptive column, genotypes are coded as
+   numeric values, missing as 0, in 2 columns per marker.}
    \item{ped: }{No header row, 6 descriptive columns, genotypes are coded as
    A, C, T, G, missing as 0, in 2 columns per marker. NOTE: not yet
    implented, use PLINK's --recodeA to convert this format to "raw".}
    \item{raw: }{Header row with SNP names, 6 descriptive columns,
     genotypes are coded as 0, 1, 2, missing as NA, in 1 column per marker.}
-   \item{col: }{No header row, 1 descriptive column, genotypes are coded as
-   numeric values, missing as 0, in 2 columns per marker.}
    \item{seq: }{No header row, 1 descriptive column genotypes are coded as
    0, 1, 2, missing as -9, in 1 column per marker.}
  }
 }
 \examples{
 \dontrun{
-# Requires PLINK installed & in PATH:
+# Requires PLINK installed & in system PATH:
+
+# tinker with window size, window overlap and VIF to get a set of
+# 400 - 800 markers (100-200 enough for just parentage):
+system("cmd", input = "plink --file mydata --indep 50 5 2")
+
 system("cmd", input = "plink --file mydata --extract plink.prune.in
   --recodeA --out PlinkOUT")
-#
-GenoM <- GenoConvert(InFile = "PlinkOUT.raw", OutFile = NA)
+
+GenoM <- GenoConvert(InFile = "PlinkOUT.raw")
 }
 
+}
+\seealso{
+\code{\link{LHConvert}, \link{PedStripFID}}
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}
 }
-\seealso{
-\code{\link{sequoia}}
-}
-

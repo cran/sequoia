@@ -12,17 +12,11 @@ data(SimGeno_example)
 \description{
 Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
 }
+\seealso{
+\code{\link{Ped_HSg5}, \link{SimGeno}}
+}
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}
 }
-\references{
-Huisman, J. Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. (under review) Molecular
-  Ecology Resources
-}
-\seealso{
-\code{\link{Ped_HSg5} \link{sequoia}}
-}
 \keyword{datasets,}
 \keyword{sequoia}
-

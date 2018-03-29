@@ -1,26 +1,18 @@
-#
-# see also AgeDiff_priors.R
-
 # this is P(age|relationship) / P(Age),
-
 # to be used in P(relationship|age) = P(age|relationship) * P(relationship) / P(age)
-
 # where P(Age) is the emperical age distribution in the sample.
 
-
-# setwd("E:/Manuscripts/Inbreeding depression/AllData/Sequoia")
-
 #======================================================================
 #======================================================================
 
-#' Age priors
+#' @title Age priors
 #'
-#' Calculate age-based prior probabilities for various categories of pairwise
-#' relatives.
+#' @description Calculate age-difference based prior probability ratios for
+#'  various categories of pairwise relatives.
 #'
-#' if UseParents = TRUE, Retrieve age distributions of maternal & paternal
-#' parents, siblings and grandparents from assigned parents, to use as input
-#' for sibship clustering and grandparent assignment.
+#' @details if UseParents = TRUE, Retrieve age distributions of maternal
+#' & paternal parents, siblings and grandparents from assigned parents, to use
+#' as input for sibship clustering and grandparent assignment.
 #' If the lifehistory file indicates a single age class, \eqn{MS = PS = 1} and
 #'  \eqn{MGM = PGF = MGF = UA = 0}.
 #'
@@ -29,33 +21,45 @@
 #' @param nAgeClasses number of age classes; age prior matrix will have
 #'   nAgeClasses + 1 rows.
 #' @param Parents  dataframe with scaffold pedigree of assigned parents;
-#'   columns ID - Dam - Sire
+#'   columns id - dam - sire.
 #' @param LifeHistData dataframe with 3 columns:
 #'  \itemize{
 #'  \item{ID: }{max. 30 characters long,}
 #'  \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
-#'  \item{Birth Year: }{(or hatching year) Zero and negative numbers are
-#'    interpreted as missing values.}}
+#'  \item{Birth Year: }{(or hatching year) Negative numbers (and NA's) are
+#'    interpreted as missing.}}
 #'
-#' @return A matrix with the probability ratio of two individuals being a
-#'   certain type of relative versus being a random draw, conditional on the
-#'   (absolute) age difference between those individuals.
+#' @return A matrix with the probability ratio of the (absolute) age difference
+#' between two individuals conditional on them being a certain type of relative
+#' versus being a random draw from the sample.
 #'
-#'   One row per absolute age difference (0 - nAgeClasses), and one column for
+#' Using Bayes' theorem,
+#' \deqn{P(relationship | age difference) = P(age difference | relationship) /
+#' P(age difference) * P(relationship)}
+#' and the values here are multiplied by the age-independent genetic-only
+#'  \eqn{P(relationship)} inside \code{\link{sequoia}}.
+#'
+#'   One row per age difference (0 - nAgeClasses), and one column for
 #'   each relationship type, with abbreviations:
-#'      \item{MS}{Maternal siblings}
-#'      \item{PS}{Paternal siblings}
+#'      \item{M}{Mothers}
+#'      \item{P}{Fathers}
 #'      \item{MGM}{Maternal grandmother}
 #'      \item{PGF}{Paternal grandfather}
 #'      \item{MGF}{Maternal grandfathers and paternal grandmothers}
+#'      \item{FS}{Full siblings}
+#'      \item{MS}{Maternal siblings}
+#'      \item{PS}{Paternal siblings}
 #'      \item{UA}{Avuncular}
-#'      \item{M}{Mothers}
-#'      \item{P}{Fathers}
 #'
-MakeAgeprior <- function(UseParents = FALSE,
-                         nAgeClasses = 0,
-                         Parents = NULL,
-                         LifeHistData = NULL)
+#' For siblings and avuncular relationships absolute age differences are used,
+#' as when generations overlap, nephews can be older than their aunts.
+#'
+#' @export
+
+MakeAgeprior <- function(Parents = NULL,
+                         LifeHistData = NULL,
+                         UseParents = TRUE,
+                         nAgeClasses = 0)
 {
   if (UseParents & !is.null(Parents)) {
     PropAss <- with(Parents, sum(!is.na(dam)) + sum(!is.na(sire))) / (2*nrow(Parents))
@@ -63,25 +67,30 @@ MakeAgeprior <- function(UseParents = FALSE,
     PropAss <- 0
   }
 
+  if (nAgeClasses==0 & !is.null(LifeHistData)) {
+    names(LifeHistData) <- c("ID", "Sex", "BY")
+    nAgeClasses <- with(LifeHistData, diff(range(BY[BY >= 0 & ID %in% Parents$id],
+                                                 na.rm = TRUE))) + 1
+  }
+
   if (nAgeClasses > 1) {
     if (!UseParents | PropAss < 0.25) {   # rather arbitrary threshold.
-        AP <- matrix(1, nAgeClasses, 8,
+        AP <- matrix(1, nAgeClasses, 9,
                      dimnames=list(1:nAgeClasses,
-                            c("MS", "PS", "MGM", "PGF", "MGF", "UA", "M", "P")))
+                            c("M", "P", "MGM", "PGF", "MGF","FS", "MS", "PS", "UA")))
         AP[1, c("M", "P")] <- 0
         AP[1:2, c("MGM", "PGF", "MGF")] <- 0
     } else {
       AP <- MkAgePrior(LHData = LifeHistData,
-                       Par = Parents,
+                       Par = Parents[,1:3],
                        MaxT = nAgeClasses-1)
     }
   } else {
-    AP <- as.matrix(t(c(MS = 1, PS = 1, MGM = 0, PGF = 0, MGF = 0, UA = 0,
-                        M=0, P=0)))
+    AP <- as.matrix(t(c(M=0, P=0, MGM = 0, PGF = 0, MGF = 0,
+                        FS = 1, MS = 1, PS = 1, UA = 0)))
   }
   AP
 }
-
 
 #=====================================================================
 #=====================================================================
@@ -152,7 +161,6 @@ A.MS <- tbl(MSAD, n=MaxT)
 LR.MS <- (A.MS/sum(A.MS))/P.all
 
 
-
 ######################
 # paternal sibships
 
@@ -164,6 +172,22 @@ PSA.L <- plyr::dlply(Ped[which(Ped$Father %in% multiDad & !is.na(Ped$BY)),],
 PSAD <- unlist(lapply(PSA.L, BYdifs))
 A.PS <- tbl(PSAD, n=MaxT)
 LR.PS <- (A.PS/sum(A.PS))/P.all
+
+
+######################
+# full sibs
+
+Ped$ParentPair <- with(Ped, ifelse(is.na(Mother) | is.na(Father), NA,
+                                   paste(Mother, Father, sep="__")))
+tblPair <- table(Ped$ParentPair)
+multiPair <- names(tblPair[tblPair>1])
+
+XSA.L <- plyr::dlply(Ped[which(Ped$ParentPair %in% multiPair & !is.na(Ped$BY)),],
+               "ParentPair", function(x) x$BY)
+XSAD <- unlist(lapply(XSA.L, BYdifs))
+A.XS <- tbl(XSAD, n=MaxT)
+LR.XS <- (A.XS/sum(A.XS))/P.all
+
 
 ################
 ### age of grandparents ###
@@ -227,14 +251,15 @@ for (i in 0:MaxT) {
 # combine into 1 matrix & write to file
 
 #===============
-AgePrior <- cbind(MS = LR.MS,
-                  PS = LR.PS,
+AgePrior <- cbind(M = LR.mum,
+                  P = LR.dad,
                   MGM = c(MGM.pr/P.all),
                   PGF = c(PGF.pr/P.all),
                   MGF = c(MGF.pr/P.all),
-                  UA = c(UA.pr/P.all),
-                  M = LR.mum,
-                  P = LR.dad)
+                  FS = LR.XS,
+                  MS = LR.MS,
+                  PS = LR.PS,
+                  UA = c(UA.pr/P.all))
 AgePrior <- round(AgePrior, 3)
 AgePrior[is.na(AgePrior)] <- 0    # age combination not obs between genotyped indiv.
 

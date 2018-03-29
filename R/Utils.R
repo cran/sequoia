@@ -18,22 +18,70 @@ VtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
 
 
 #======================================================================
-# Data input
-ReadTable <- function(..., sep="\t") utils::read.table(...,
-                                                header=TRUE,
-                                                stringsAsFactors=FALSE,
-                                                sep=sep,
-                                                na.strings=c("", NA))
+#' @title write data to a file column-wise
+#'
+#' @description write data.frame or matrix to a text file, using white
+#' space padding to keep columns aligned as in \code{print}
+#'
+#' @param x the object to be written, preferably a matrix or data frame.
+#'  If not, it is attempted to coerce x to a matrix.
+#' @param file a character string naming a file.
+#' @param row.names a logical value indicating whether the row names of x are
+#'  to be written along with x.
+#' @param col.names a logical value indicating whether the column names of x
+#'  are to be written along with x
+#'
+#' @export
+#'
+writeColumns <- function(x, file="", row.names=TRUE,
+                         col.names=TRUE) {
+  M <- as.matrix(x)
+  if(col.names)  M <- rbind(colnames(x), M)
+  if (row.names) {
+    if (col.names) M <- cbind(c("", rownames(x)), M)
+    if (!col.names) M <- cbind(rownames(x), M)
+  }
+  write(t(format(M)), ncolumns = ncol(M), file = file)
+}
 
 
 #======================================================================
-#' table
+#' @title special merge
 #'
-#' sets UseNA to 'ifany'.
+#' @description As regular merge, but combine data from columns with the same
+#'  name
 #'
-#' @param ... one or more objects which can be interpreted as factors
-#'  (including character strings), or a list (or data frame) whose components
-#'   can be so interpreted.
+#' @param df1  first dataframe (lowest priority if overwrite=TRUE)
+#' @param df2  second dataframe (highest priority if overwrite=TRUE)
+#' @param by  columns used for merging, required.
+#' @param overwrite  If FALSE (the default), NA's in df1 are replaced by
+#'   values from df2. If TRUE, all values in df1 are overwritten by values from
+#'   df2, except where df2 has NA.
+#' @param ...  additional arguments to merge, such as \code{all}.
+#'
+#' @export
+
+Merge <- function(df1, df2, by, overwrite=FALSE, ...) {
+  commonNames <- names(df1)[which(colnames(df1) %in% colnames(df2))]
+  commonNames <- commonNames[!commonNames %in% by]
+  dfmerged <- merge(df1,df2,by=by,...)
+  for(i in commonNames){
+    left <- paste0(i, ".x")
+    right <- paste0(i, ".y")
+    if (!overwrite) {
+      dfmerged[is.na(dfmerged[left]),left] <- dfmerged[is.na(dfmerged[left]),right]
+    } else {
+      dfmerged[!is.na(dfmerged[right]),left] <- dfmerged[!is.na(dfmerged[right]),right]
+    }
+    dfmerged[right]<- NULL
+    colnames(dfmerged)[colnames(dfmerged) == left] <- i
+  }
+  dfmerged
+}
+
+
+#======================================================================
+# table, sets UseNA to 'ifany'
 Table <- function(...) table(..., useNA="ifany")
 
 
@@ -55,16 +103,23 @@ tbl.logic <- function(x) table(factor(x, levels=c(TRUE, FALSE, NA)),
 
 #======================================================================
 # Comparison
-eqv <- function(x, V, xNA=FALSE) {
+eqv <- function(x, V, xNA=NA) {
   if (length(x)==1) {
     if (!is.na(x)) {
       y <- ifelse(!is.na(V), x==V, FALSE)
+    } else if (is.na(xNA)) {
+      y <- is.na(V)
     } else {
       y <- rep(xNA, length(V))
     }
   } else if (length(x)==length(V)) {
-    y <- ifelse(!is.na(x) & !is.na(V), x==V,
-              ifelse(is.na(x) & is.na(V), xNA, FALSE))
+    y <- ifelse(!is.na(x) & !is.na(V),
+              x==V,
+              ifelse(is.na(x) & is.na(V),
+                     ifelse(is.na(xNA),
+                          TRUE,
+                          xNA),
+                     FALSE))
   } else {
     stop("unequal lengths")
   }
@@ -91,6 +146,7 @@ AddParPed <- function(PedIN) {
                          dam=NA,
                          sire=NA,
                          stringsAsFactors=FALSE)
+    names(AddPed)[1:3] <- names(PedIN)[1:3]
     Ped <- merge(AddPed, PedIN, all=TRUE)  # presume ancestors
   }
   Ped

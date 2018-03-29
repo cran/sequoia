@@ -28,12 +28,14 @@ the rest of the algorithm.}
 A list with
 \item{PedigreePar or Pedigree}{the pedigree}
 \item{MaybeParent or MaybeRel}{Non-assigned likely relatives}
+\item{MaybeTrio}{Non-assigned parent-parent-offspring trios}
 \item{DummyIDs}{Info on dummies}
 \item{TotLikParents or TotLikSib}{Total log-likelihood per iteration}
 
 For a detailed description of the output see \code{\link{sequoia}}
 }
 \description{
-Call Fortran part and convert its output to a list with dataframes.
+Call Fortran part and convert its output to a list with
+dataframes.
 }
-
+\keyword{internal}

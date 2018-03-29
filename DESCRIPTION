@@ -1,8 +1,8 @@
 Package: sequoia
 Type: Package
 Title: Pedigree Inference from SNPs
-Version: 0.9.3
-Date: 2017-07-25
+Version: 1.0.0
+Date: 2018-03-29
 Authors@R: person("Jisca", "Huisman", email = "jisca.huisman@gmail.com",
     role = c("aut", "cre"))
 Description: Fast multi-generational pedigree inference from incomplete data on
@@ -11,12 +11,12 @@ Description: Fast multi-generational pedigree inference from incomplete data on
 License: GPL-2
 LazyData: TRUE
 Imports: plyr (>= 1.8.0), stats, utils
-RoxygenNote: 5.0.1
-Suggests: knitr, rmarkdown
+RoxygenNote: 6.0.1
+Suggests: xlsx, knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2017-07-25 19:51:57 UTC; jhuisman
+Packaged: 2018-03-29 14:23:00 UTC; jhuisman
 Author: Jisca Huisman [aut, cre]
 Maintainer: Jisca Huisman <jisca.huisman@gmail.com>
 Repository: CRAN
-Date/Publication: 2017-07-25 20:32:33 UTC
+Date/Publication: 2018-03-29 14:36:48 UTC

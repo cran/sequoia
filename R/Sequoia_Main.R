@@ -1,9 +1,9 @@
-#' Pedigree Reconstruction
+#' @title Pedigree Reconstruction
 #'
-#' Perform pedigree reconstruction based on SNP data, including parentage
+#' @description Perform pedigree reconstruction based on SNP data, including parentage
 #' assignment and sibship clustering.
 #'
-#' For each pair of candidate relatives, the likelihoods are calculated of them
+#' @details For each pair of candidate relatives, the likelihoods are calculated of them
 #'  being parent-offspring (PO), full siblings (FS), half siblings (HS),
 #'  grandparent-grandoffspring (GG), full avuncular (niece/nephew - aunt/uncle;
 #'  FA), half avuncular/great-grandparental/cousins (HA), or unrelated (U).
@@ -21,65 +21,73 @@
 #'  \itemize{
 #'  \item{ID: }{max. 30 characters long,}
 #'  \item{Sex: }{1 = females, 2 = males, other = unkown, except 4 = hermaphrodite,}
-#'  \item{BY: }{(birth or hatching year) Negative numbers are
+#'  \item{BY: }{(birth or hatching year) Integer, negative numbers are
 #'    interpreted as missing values.}}
 #'  If the species has multiple generations per year, use an integer coding
-#'   such that the candidate parents' `Birth year' is at least one larger than
-#'   their putative offspring.
+#'   such that the candidate parents' `Birth year' is at least one smaller than
+#'   their putative offspring's.
 #' @param SeqList list with output from a previous run, containing the elements
 #'   `Specs', `AgePriors' and/or `PedigreePar', as described below, to be used
-#'    in the current run. If SeqList$Specs is provided, all other input
-#'    parameter values except MaxSibIter are ignored.
-#' @param MaxSibIter Number of iterations of sibship clustering, including
+#'    in the current run. If \code{SeqList$Specs} is provided, all other input
+#'    parameter values except \code{MaxSibIter} are ignored.
+#' @param MaxSibIter number of iterations of sibship clustering, including
 #'   assignment of grandparents to sibships and avuncular relationships between
 #'   sibships. Set to 0 to not (yet) perform this step, which is by far the
 #'   most time consuming and may take several hours for large datasets.
-#'   clustering is iterated until convergence or until MaxSibIter is reached.
-#' @param Err Estimated genotyping error rate. The error model aims to deal
+#'   Clustering continues until convergence or until MaxSibIter is reached.
+#' @param Err estimated genotyping error rate. The error model aims to deal
 #'   with scoring errors typical for SNP arrays.
-#' @param MaxMismatch Maximum number of loci at which candidate parent and
-#'  offspring are allowed to be opposite homozygotes.
-#' @param Tfilter Threshold log10-likelihood ratio (LLR) between a proposed
+#' @param MaxMismatch maximum number of loci at which candidate parent and
+#'  offspring are allowed to be opposite homozygotes. Setting a more liberal
+#'  threshold can improve performance if the error rate is high, at the cost
+#'  of decreased speed.
+#' @param Tfilter threshold log10-likelihood ratio (LLR) between a proposed
 #'   relationship versus unrelated, to select candidate relatives. Typically a
 #'   negative value, related to the fact that unconditional likelihoods are
 #'   calculated during the filtering steps. More negative values may decrease
 #'   non-assignment, but will increase computational time.
-#' @param Tassign Minimum LLR required for acceptance of
+#' @param Tassign minimum LLR required for acceptance of
 #'  proposed relationship, relative to next most likely relationship. Higher
 #'  values result in more conservative assignments. Must be zero or positive.
-#' @param MaxSibshipSize  Maximum number of offspring for a single individual
+#' @param MaxSibshipSize  maximum number of offspring for a single individual
 #'  (a generous safety margin is advised).
 #' @param DummyPrefix character vector of length 2 with prefixes for dummy
 #'   dams (mothers) and sires (fathers); maximum 20 characters each.
-#' @param Complex  Either "full" (default), "simp" (simplified, no explicit
+#' @param Complex  either "full" (default), "simp" (simplified, no explicit
 #'  consideration of inbred relationships; not fully implemented yet) or
 #'  "mono" (monogamous).
-#' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
+#' @param UseAge  either "yes" (default), "no", or "extra" (additional rounds
+#'   with extra reliance on ageprior, may boost assignments but increased risk
+#'   of erroneous assignments); used during full reconstruction only.
+#' @param FindMaybeRel  identify pairs of non-assigned likely relatives after
 #'   pedigree reconstruction. Can be time-consuming in large datasets.
-#' @param CalcLLR  Calculate log-likelihood ratios for all assignments. Can be
-#'  time-consuming in large datasets.
+#' @param CalcLLR  calculate log-likelihood ratios for all assigned parents (
+#' is parent vs. is otherwise related). Time-consuming in large datasets.
 #' @param quiet suppress messages.
 #'
 #' @return A list with some or all of the following components:
-#' \item{AgePriors}{Matrix with age-difference based prior probabilities.}
+#' \item{AgePriors}{Matrix with age-difference based prior probability ratios,
+#'  used for full pedigree reconstruction.}
 #' \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
 #'   their sex, estimated birth year (point estimate, upper and lower bound of
-#'   95\% confidence interval), number of offspring, and offspring IDs.}
-#' \item{DupGenoID}{Dataframe, rownumbers of duplicated IDs in genotype file.
-#'   Please do remove or relabel these to avoid downstream confusion.}
-#' \item{DupGenotype}{Dataframe, duplicated genotypes (with or without
-#'   identical IDs). The specified number of maximum mismatches is allowed,
-#'   and this dataframe may include pairs of closely related individuals.}
+#'   95\% confidence interval), number of offspring, and offspring IDs
+#'  (genotyped offspring only).}
+#' \item{DupGenotype}{Dataframe, duplicated genotypes (with different IDs,
+#'  duplicate IDs are not allowed). The specified number of maximum mismatches
+#'   is used here too. Note that this dataframe may include pairs of closely
+#'   related individuals, and monozygotic twins.}
 #' \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
-#'   history dataframe.}
+#'   history dataframe. For convenience only, but may signal a problem. The
+#'   first entry is used.}
 #' \item{LifeHist}{Provided dataframe with sex and birth year data.}
 #' \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
 #'   parent-offspring than unrelated, but which could not be phased due to
-#'   unknown age difference (coded as 999) or sex, or for whom LLR did not pass
-#'   Tassign.}
+#'   unknown age difference or sex, or for whom LLR did not pass Tassign.}
 #' \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
 #'   to be first or second degree relatives than unrelated, but which could not
 #'   be assigned.}
+#' \item{MaybeTrio}{Dataframe with non-assigned parent-parent-offspring trios
+#' (both parents are of unknown sex), with similar columns as the pedigree}
 #' \item{NoLH}{Vector, IDs in genotype data for which no life history data is
 #'  provided.}
 #' \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
@@ -110,11 +118,17 @@
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @references Huisman, J. Pedigree reconstruction from SNP data: Parentage
-#'   assignment, sibship clustering, and beyond. (accepted manuscript) Molecular
-#'   Ecology Resources
+#' @references Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
+#'   assignment, sibship clustering, and beyond. Molecular Ecology Resources
+#'   17:1009--1024.
 #'
-#' @seealso \code{\link{GenoConvert}, \link{SimGeno}, \link{PedCompare}}, vignette("sequoia")
+#' @section Disclaimer:
+#' While every effort has been made to ensure that sequoia provides what it
+#' claims to do, there is absolutely no guarantee that the results provided are
+#' correct. Use of sequoia is entirely at your own risk.
+#'
+#' @seealso \code{\link{GenoConvert}, \link{EstConf}, \link{writeSeq}},
+#'  vignette("sequoia")
 #'
 #' @examples
 #' data(SimGeno_example, LH_HSg5, package="sequoia")
@@ -147,14 +161,24 @@ sequoia <- function(GenoM = NULL,
                     MaxSibshipSize = 100,
                     DummyPrefix = c("F", "M"),
                     Complex = "full",
+                    UseAge = "yes",
                     FindMaybeRel = TRUE,
                     CalcLLR = TRUE,
                     quiet = FALSE)
 {
   if (is.null(GenoM)) stop("please provide 'GenoM'")
   if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
+  if (is.null(rownames(GenoM))) stop("'GenoM' has no rownames, these should be the individual IDs")
   if (!"Specs" %in% names(SeqList)) {
-    if (is.null(LifeHistData)) warning("no lifehistory data provided; assuming single cohort")
+    if (is.null(LifeHistData)) {
+      warning("no LifeHistData provided, expect lower assignment rate",
+              immediate.=TRUE)
+    } else if (all(is.na(LifeHistData))) {
+      stop("invalid value for LifeHistData, provide NULL or dataframe")
+    } else if (length(intersect(LifeHistData[,1], rownames(GenoM)))==0) {
+      warning("none of the genotyped individuals included in lifehistory data",
+              immediate.=TRUE)
+    }
   }
   if (!is.logical(quiet)) stop("`quiet' must be TRUE/FALSE")
 
@@ -165,10 +189,16 @@ sequoia <- function(GenoM = NULL,
   if (!is.null(LifeHistData)) {
     names(LifeHistData) <- c("ID", "Sex", "BY")
     LifeHistData$ID <- as.character(LifeHistData$ID)
+    LifeHistData <- LifeHistData[!is.na(LifeHistData$ID), ]
     for (x in c("Sex", "BY")) LifeHistData[, x] <- as.integer(LifeHistData[, x])
     LifeHistData$BY[is.na(LifeHistData$BY)] <- -999
     LifeHistData$Sex[is.na(LifeHistData$Sex)] <- 3
     LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
+  } else {
+    LifeHistData = data.frame(ID = rownames(GenoM),
+                              Sex = 3,
+                              BY = -999,
+                              stringsAsFactors = FALSE)
   }
 
   if ("Specs" %in% names(SeqList)) {
@@ -185,6 +215,7 @@ sequoia <- function(GenoM = NULL,
                      DummyPrefix = as.character(SeqList$Specs[c("DummyPrefixFemale",
                                                    "DummyPrefixMale")]),
                      Complexity = as.character(SeqList$Specs["Complexity"]),
+                     UseAge = as.character(SeqList$Specs["UseAge"]),
                      FindMaybeRel = as.logical(SeqList$Specs["FindMaybeRel"]),
                      CalcLLR = as.logical(SeqList$Specs["CalcLLR"]))
   } else {
@@ -199,24 +230,25 @@ sequoia <- function(GenoM = NULL,
             				 MaxSibshipSize = MaxSibshipSize,
             				 DummyPrefix = DummyPrefix,
             				 Complexity = Complex,
+            				 UseAge = UseAge,
             				 FindMaybeRel = FindMaybeRel,
             				 CalcLLR = CalcLLR)
   }
-
-
 
   if ("AgePriors" %in% names(SeqList)) {
     if(!quiet)  message("using ageprior in SeqList")
     AgePriors <- SeqList$AgePriors
   } else {
     AgePriors <- MakeAgeprior(UseParents = FALSE,
-                              FacToNum(Specs[,"nAgeClasses"]))
+                              nAgeClasses = FacToNum(Specs[,"nAgeClasses"]))
   }
 
-  DupList <- SeqDup(Specs, GenoM, LifeHistData, quiet)
-  if ("DupGenoID" %in% names(DupList)) {
-    return(DupList)
-  }
+  if (MaxSibIter>-9) {
+    DupList <- SeqDup(Specs, GenoM, LifeHistData, quiet)
+    if ("DupGenoID" %in% names(DupList)) {
+      return(DupList)
+    }
+  } else DupList <- NULL
 
   if (any(LifeHistData$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
     GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
@@ -243,12 +275,13 @@ sequoia <- function(GenoM = NULL,
       if ("TotLikParents" %in% names(SeqList)) {
         ParList <- c(ParList, SeqList[c("MaybeParent", "TotLikParents")])
       }
-    } else {  # 'hidden' for now: re-run parentage with pedigree-prior
+    } else if (MaxSibIter==0) {  # 'hidden' for now: re-run parentage with pedigree-prior
       ParList <- SeqParSib("par", Specs, GenoM, LifeHistData,
                          AgePriors, Parents=PedParents[,1:3], quiet)
 
-    }
-  } else {
+    } # else keep old parents
+
+  } else if (MaxSibIter>=0){
     ParList <- SeqParSib("par", Specs, GenoM, LifeHistData,
                          AgePriors, Parents=NULL, quiet)
     if (!is.null(LifeHistData)) {
@@ -257,7 +290,7 @@ sequoia <- function(GenoM = NULL,
                                 Parents = ParList$PedigreePar[,1:3],
                                 LifeHistData = LifeHistData)  # update agepriors
     }
-  }
+  } else if (MaxSibIter <0) ParList <- NULL
 
   if (MaxSibIter>0) {
     SibList <- SeqParSib(ParSib = "sib", Specs = Specs, GenoM = GenoM,

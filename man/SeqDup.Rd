@@ -21,21 +21,20 @@ A list with one or more of the following elements:
   Please do remove or relabel these to avoid downstream confusion.}
 \item{DupGenotype}{Dataframe, duplicated genotypes (with or without
   identical IDs). The specified number of maximum mismatches is allowed,
-  and this dataframe may include pairs of closely related individuals.}
+  and this dataframe may include pairs of closely related individuals.
+  Mismatch = number of SNPs at which genotypes differ, LLR = likelihood
+  ratio between 'self' and most likely non-self.}
 \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
   history data}
 \item{NoLH}{Vector, IDs (in genotype data) for which no life history data is
  provided}
-
-dataframe with the numbers of duplicated genotypes, duplicated IDs in the
-genotype data, number of duplicated IDs in the life history data, and number
- of individuals with unknown sex.
 }
 \description{
-Check the genotype and life history data for duplicate IDs (not permitted)
+Check the genotype and life history data for duplicate IDs
+(not permitted)
 and duplicated genotypes (not advised), and count how many individuals in
 the genotype data are not included in the life history data (permitted). The
 order of IDs in the genotype and life history data is not required to be
 identical.
 }
-
+\keyword{internal}

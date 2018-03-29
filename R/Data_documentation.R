@@ -1,12 +1,12 @@
-#' Example pedigree
+#' @title Example pedigree
 #'
-#' This is Pedigree II in the paper.
+#' @description This is Pedigree II in the paper.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @references Huisman, J. Pedigree reconstruction from SNP data: Parentage
-#'   assignment, sibship clustering, and beyond. (under review) Molecular
-#'   Ecology Resources
+#' @references Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
+#'   assignment, sibship clustering, and beyond. Molecular Ecology Resources
+#'   17:1009--1024.
 #'
 #' @seealso \code{\link{LH_HSg5} \link{SimGeno_example} \link{sequoia}}
 #'
@@ -19,15 +19,16 @@ NULL
 
 
 
-#' Example life history file
+#' @title Example life history file
 #'
-#' This is the lifehistory file associated with Pedigree II in the paper.
+#' @description This is the lifehistory file associated with Ped_HSg5, which
+#'  is Pedigree II in the paper.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @references Huisman, J. Pedigree reconstruction from SNP data: Parentage
-#'   assignment, sibship clustering, and beyond. (under review) Molecular
-#'   Ecology Resources
+#' @references Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
+#'   assignment, sibship clustering, and beyond. Molecular Ecology Resources
+#'   17:1009--1024.
 #'
 #' @seealso \code{\link{Ped_HSg5} \link{sequoia}}
 #'
@@ -41,17 +42,13 @@ NULL
 
 
 
-#' Example genotype file
+#' @title Example genotype file
 #'
-#' Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
+#' @description Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @references Huisman, J. Pedigree reconstruction from SNP data: Parentage
-#'   assignment, sibship clustering, and beyond. (under review) Molecular
-#'   Ecology Resources
-#'
-#' @seealso \code{\link{Ped_HSg5} \link{sequoia}}
+#' @seealso \code{\link{Ped_HSg5}, \link{SimGeno}}
 #'
 #' @docType data
 #' @keywords datasets, sequoia

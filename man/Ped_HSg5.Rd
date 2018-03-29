@@ -11,17 +11,16 @@ data(Ped_HSg5)
 \description{
 This is Pedigree II in the paper.
 }
-\author{
-Jisca Huisman, \email{jisca.huisman@gmail.com}
-}
 \references{
-Huisman, J. Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. (under review) Molecular
-  Ecology Resources
+Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
+  assignment, sibship clustering, and beyond. Molecular Ecology Resources
+  17:1009--1024.
 }
 \seealso{
 \code{\link{LH_HSg5} \link{SimGeno_example} \link{sequoia}}
 }
+\author{
+Jisca Huisman, \email{jisca.huisman@gmail.com}
+}
 \keyword{datasets,}
 \keyword{sequoia}
-
