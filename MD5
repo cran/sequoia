@@ -1,4 +1,4 @@
-0eb96b675aae6377555ccae657df65e0 *DESCRIPTION
+a4dd0b5199bc153bcfb9e4348ef6520d *DESCRIPTION
 5e779c462630fc96e77c9dd4883534cc *NAMESPACE
 a97686977ef3acb2aa64c1cd0334f114 *R/ComparePeds.R
 2ba8043e56a63dc9e3b64757c23f0ffd *R/ConfProb.R
@@ -8,7 +8,7 @@ dc9f4ab3cfe43fb96ce8fbfa031010b6 *R/GenoConvert.R
 41e8963382ea3bdeee32cf9e7ab6c186 *R/MkAgePrior.R
 fed497241bd883491f41b360f5776b3f *R/Prepare.R
 d4f8850b383353b5193b6ebb400a07be *R/SNPstats.R
-948900d12f98ce024d8d406253b739a9 *R/Sequoia_F90wrappers.R
+0cc2855176998d34009ff80eedad126f *R/Sequoia_F90wrappers.R
 63a16e8252a4637814d98091636d1d0c *R/Sequoia_Main.R
 ce41c134f98da9e167c1eba6f522b436 *R/Simulate.R
 19fc81a80268287edd269dccb4408848 *R/Utils.R
@@ -22,10 +22,10 @@ aa83bc80da7f5317d0c857e0f119d9aa *data/LH_HSg5.txt
 6826c594710d5fb2aebbdcab62fa2642 *data/Ped_HSg5.txt
 50bf7e2cc9633968c27a74c68f7f0d5f *data/SimGeno_example.RData
 1d65db08717905a925ccb463cdbb7adb *inst/CITATION
-0201facacaa198ab6fed3fac9411d699 *inst/Fortran/sequoia.f90
+7923f71cf7740f16c246f3a308ba08c6 *inst/Fortran/sequoia.f90
 2a388cecfe39c9d279c2f8bd46bdffb1 *inst/doc/sequoia.R
 6aa4bf980fd10e4e8754e8842d563bea *inst/doc/sequoia.Rnw
-b50541ecc495717d3801b563f386060c *inst/doc/sequoia.pdf
+06b43c5cab2eba91b6aa6f621d39439a *inst/doc/sequoia.pdf
 35dc01e95fe120a3da7f61d6b5e5912b *man/DyadCompare.Rd
 0ee9dd69a5c8bc5628336899e771f9fe *man/EstConf.Rd
 36030785055feec92d20a504b681fb9d *man/FindFamilies.Rd
@@ -51,5 +51,5 @@ affb837ec22ef7214993799c4e71cc9e *man/sequoia.Rd
 cce75109ff9d770ff230e951f19a0758 *man/writeColumns.Rd
 ee6bf031bce3b7758f2a54e3957b8451 *man/writeSeq.Rd
 aa638151ff611d8b63417d6727a4c2a3 *src/init.c
-0201facacaa198ab6fed3fac9411d699 *src/sequoia.f90
+7923f71cf7740f16c246f3a308ba08c6 *src/sequoia.f90
 6aa4bf980fd10e4e8754e8842d563bea *vignettes/sequoia.Rnw

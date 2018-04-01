@@ -49,6 +49,7 @@ integer, intent(IN) :: V(:), x
 integer :: which
 integer :: i
 
+which = 0        
 do i = 1, size(V)
     if (V(i) .eq. x) then
         which = i
@@ -147,21 +148,23 @@ subroutine duplicates(Ng, SpecsInt, SpecsDbl, GenoFR, &
 use Global
 implicit none
 
-integer, intent(IN) :: Ng, SpecsInt(3), GenoFR(Ng*SpecsInt(1))
-double precision, intent(IN) :: SpecsDbl
+integer, intent(IN) :: Ng, SpecsInt(12), GenoFR(Ng*SpecsInt(3))
+double precision, intent(IN) :: SpecsDbl(3)
 integer, intent(INOUT) :: nDupGenos, DupGenosFR(2*Ng), nMisMFR(Ng)
 double precision, intent(INOUT) :: DupGenoLR(Ng)
-integer :: i, j, l, Match, CountMismatch, quiet
-integer, allocatable, dimension(:,:) :: DupGenos
-integer, allocatable, dimension(:) :: nMisMatch
-                                           
-double precision, allocatable, dimension(:) :: LRdup
-double precision :: LL(7), LLtmp(2), LLX(7)
+integer :: i, j, l, Match, quiet, DupGenos(Ng,2), nMisMatch(Ng), CountMismatch
+double precision :: LL(7), LLtmp(2), LLX(7), LRdup(Ng)
 
 nInd = Ng
-nSnp = SpecsInt(1)
-MaxMismatch = SpecsInt(2)
-quiet = SpecsInt(3)
+nSnp = SpecsInt(3)
+MaxMisMatch = SpecsInt(4)
+maxSibSize = SpecsInt(5)
+nAgeClasses = SpecsInt(6)
+ Complx = SpecsInt(7)
+quiet = SpecsInt(10)
+Er = SpecsDbl(1)
+TF = SpecsDbl(2)
+TA = SpecsDbl(3)
 
 allocate(Genos(nSnp, nInd))
 Genos = -9
@@ -179,21 +182,16 @@ enddo
 allocate(Sex(nInd))
 allocate(BY(nInd))
 Sex = 3
-BY = -9
+BY = -999
 nAgeClasses = 1
 allocate(AgePriorM(nAgeClasses, 9))
 AgePriorM = 1
-maxSibSize = 1
-Complx = 2
-Er = SpecsDbl  !(1)
  call PrepData(0)
 nDupGenos = 0
-allocate(DupGenos(nInd,2))
-allocate(nMismatch(nInd))
 nC = 0
 
-call PrecalcProbs
-call UpdateAllProbs()
+ call PrecalcProbs
+ call UpdateAllProbs()
 !====================
 do i=1,nInd-1
   do j=i+1, nInd
@@ -219,19 +217,20 @@ do i=1,nInd-1
         if(quiet==0) call rwarn("reached max for duplicates") 
       exit
     endif
+    if (nDupGenos==nInd) exit
   enddo
   if (nDupGenos==nInd) exit
 enddo
+ 
 !================
-allocate(LRdup(nInd))
 ! call intpr("n dup: ", -1, nDupGenos, 1)
 if (nDupGenos > 0) then
+  maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int
+
   do i=1, nDupGenos
     LLtmp = 999
     call PairSelf(DupGenos(i,1),DupGenos(i,2), LLtmp(1))
     call CheckPair(DupGenos(i,1),DupGenos(i,2),3,1,LL, LLX)
-!    call dblepr("LL self: ", -1, LLtmp(1), 1)
-!    call dblepr("LL non-self: ", -1, LL, 7)
     LLtmp(2) = MaxLL(LL)
     if (LLtmp(1) < 0 .and. LLtmp(2)<0) then
       LRdup(i) = LLtmp(1) - LLtmp(2)
@@ -254,8 +253,6 @@ do i=1,nDupGenos
   DupGenoLR(i) = LRdup(i)
 enddo
 
-deallocate(DupGenos)
-deallocate(nMismatch) 
  call DeAllocAll            
 
  end subroutine duplicates
@@ -321,7 +318,6 @@ allocate(Genos(nSnp, nInd))
 Genos = -9
 j = 0
 do l=1,nSnp      
-    
   do i=1, nInd
     j = j+1
     if (GenoFR(j)/=-9) then
@@ -330,9 +326,9 @@ do l=1,nSnp
   enddo    
 enddo                     
  call PrepData(ParSib)
-if (nInd/=Ng) call rexit("number of individuals has changed")
  call PrecalcProbs
 nC = 0
+maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int
 
  call rchkusr()
 !=========================
@@ -587,7 +583,6 @@ double precision, allocatable, dimension(:) :: SortBY
 if (Error/=0) return
  call rchkusr()     
  
-maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int
 allocate(OppHomM(nInd, nInd))
 OppHomM = 999 
 allocate(LLR_O(nInd, nInd))
@@ -4513,8 +4508,8 @@ integer :: k, s, xs, i, n,maybe, topX, CurNumC(2), OH, Par, MaybeOpp, &
 double precision :: LL(7), dLL, LLtmp(7), ALR, LLO
 logical :: OK             
 
- CurNumC = nC
-maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int 
+ CurNumC = nC 
+maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)                                                                        
 do k=1,2
   s = 0
   do xs=1, CurNumC(k)

@@ -36,16 +36,33 @@
 SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
 {
   Ng <- FacToNum(Specs[,"NumberIndivGenotyped"])
-  SpecsInt <- c(nSnp = FacToNum(Specs[,"NumberSnps"]),
-                MaxMis = FacToNum(Specs[,"MaxMismatch"]),
-                quiet = as.integer(quiet))
+  SMax <- FacToNum(Specs[,"MaxSibshipSize"])
   gID <- rownames(GenoM)
   GenoV <- as.integer(GenoM)
+  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0)
+  UAge <- switch(Specs[,"UseAge"], extra = 2, yes = 1, no = 0)
+  PrSb <- 0
+  nAmbMax <- 0
+  SpecsInt <- c(ParSib = as.integer(PrSb),        # 1
+                MaxSibIter = FacToNum(Specs[,"MaxSibIter"]), # 2
+                nSnp = FacToNum(Specs[,"NumberSnps"]),       # 3
+                MaxMis = FacToNum(Specs[,"MaxMismatch"]),    # 4
+                SMax = SMax,                      # 5
+                nAgeCl = FacToNum(Specs[,"nAgeClasses"]),    # 6
+                Complx = as.integer(Complex),                # 7
+                FindMaybe = as.integer(as.logical(Specs[,"FindMaybeRel"])),  # 8
+                CalcLLR = as.integer(as.logical(Specs[,"CalcLLR"])),  # 9
+                quiet = as.integer(quiet),        # 10
+                nAmbMax = as.integer(nAmbMax),    # 11
+                UseAge = as.integer(UAge))        # 12
+  SpecsDbl <- c(Er = FacToNum(Specs[,"GenotypingErrorRate"]),
+                TF = FacToNum(Specs[,"Tfilter"]),
+                TA = FacToNum(Specs[,"Tassign"]))
 
   DUP <- .Fortran("duplicates",
                   Ng = as.integer(Ng),
                   SpecsInt = as.integer(SpecsInt),
-                  SpecsDbl = as.double(FacToNum(Specs[,"GenotypingErrorRate"])),
+                  SpecsDbl = as.double(SpecsDbl),
                   GenoV = as.integer(GenoV),
                   nDupGenos = as.integer(0),
                   DupGenosFR = integer(2*Ng),  # N x 2 matrix
