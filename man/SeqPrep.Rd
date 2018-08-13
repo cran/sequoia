@@ -47,7 +47,8 @@ values result in more conservative assignments.}
 dams (mothers) and sires (fathers); maximum 20 characters each.}
 
 \item{Complexity}{Either "full" (default), "simp" (no explicit consideration
-of inbred relationships) or "mono" (monogamous breeding system)}
+of inbred relationships), "mono" (monogamous breeding system), or "herm"
+(hermaphrodites)}
 
 \item{FindMaybeRel}{Identify pairs of non-assigned likely relatives after
 pedigree reconstruction. Can be time-consuming in large datasets.}

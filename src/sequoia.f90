@@ -18,6 +18,7 @@ implicit none
 integer :: nInd, nSnp, nIndLH, maxSibSize, MaxMismatch, maxOppHom, &
  nC(2), nAgeClasses, nPairs, BY1, maxAgePO, XP, Complx, Error=0, AgePhase                             
   integer, parameter :: mxA=32 ! max no. ancestors considered when testing for pedigree loop
+ logical :: Hermaphrodites                          
 integer, allocatable, dimension(:) :: Sex, BY, PairType, nFS
 integer,allocatable,dimension(:,:) :: Genos, AgeDiff, Parent, OppHomM,&
   nS, PairID, FSID
@@ -186,7 +187,7 @@ BY = -999
 nAgeClasses = 1
 allocate(AgePriorM(nAgeClasses, 9))
 AgePriorM = 1
- call PrepData(0)
+ call PrepData
 nDupGenos = 0
 nC = 0
 
@@ -241,7 +242,7 @@ if (nDupGenos > 0) then
 endif  
 
 ! ##########################
-! write to vectors to send to R
+! copy to vectors to send to R
 
 DupGenosFR = 0
 nMisMFR = 0
@@ -260,7 +261,7 @@ enddo
 ! ####################################################################
 
 subroutine makeped(Ng, SpecsInt, SpecsDbl, GenoFR, &
-  SexRF, BYRF, APRF, parentsRF, LrRF, OhRF, & 
+  SexRF,  BYRF, APRF, parentsRF, LrRF, OhRF, & 
   nAmb, AmbigID, AmbigSex, AmbigAgeDif, AmbigRel, AmbigLR, AmbigOH, &
   Nd, DumParRF, DumLrRF, DumBYRF, DumNoff, DumOff, &
   TotLL, ntrio, trioIDs, trioLR)
@@ -299,6 +300,13 @@ Er = SpecsDbl(1)
 TF = SpecsDbl(2)
 TA = SpecsDbl(3)
 
+if (Complx == 4) then
+  Hermaphrodites = .TRUE.
+  Complx = 2
+else
+  Hermaphrodites = .FALSE.
+endif
+
 allocate(Sex(nInd))
 allocate(BY(nInd))
 Sex = SexRF
@@ -325,7 +333,7 @@ do l=1,nSnp
     endif
   enddo    
 enddo                     
- call PrepData(ParSib)
+ call PrepData
  call PrecalcProbs
 nC = 0
 maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int
@@ -346,15 +354,16 @@ maxOppHom = MaxMismatch - FLOOR(-nSNP * Er)   ! round up to nearest int
       endif                                     
     endif
   enddo                                                                                               
-  ! find current FS (based on real parents)
-  do i=1,nInd-1
-    do j=i+1,nInd
-      if (Parent(i,1)==Parent(j,1) .and. Parent(i,1)/=0 .and. &
-        Parent(i,2)==Parent(j,2) .and. Parent(i,2)/=0) then
-        call MakeFS(i, j)
-      endif
+  if (ParSib == 2) then ! find current FS (based on real parents)
+    do i=1,nInd-1
+      do j=i+1,nInd
+        if (Parent(i,1)==Parent(j,1) .and. Parent(i,1)/=0 .and. &
+          Parent(i,2)==Parent(j,2) .and. Parent(i,2)/=0) then
+          call MakeFS(i, j)
+        endif
+      enddo
     enddo
-  enddo
+  endif
   
 !=========================
 if (ParSib == 1) then
@@ -429,13 +438,14 @@ ntrio = 0
 trioLR = 999D0
 
 do i=1,nInd-1
+  if (Error/=0) return
+  if (MODULO(i,500)==0)   call rchkusr()
   if (quiet==0 .and. nInd>1500) then 
     if (MODULO(i,500)==0) call intpr (" ", 1, i, 1)
   endif
-  if (MODULO(i,100)==0)   call rchkusr()
   do j=i+1,nInd   
     if (ANY(Parent(i,:)==j) .or. ANY(Parent(j,:)==i)) cycle  ! PO
-    if (Parent(i,1)/=0 .and. Parent(i,2)/=0) then
+    if (ALL(Parent(i,:)/=0)) then
       if (Parent(i,1)==Parent(j,1) .and. Parent(i,2)==Parent(j,2)) cycle  ! FS
       call GetAncest(i,1,Anc)
       if (ANY(Anc(:,3)==j) .and. ANY(Anc(:,4)==j)) cycle  ! double GP
@@ -448,7 +458,7 @@ do i=1,nInd-1
     LL = 999D0
     topX = 0
     LLtmp = 999D0
-    if (ParSib == 1 .or. ParSib==11) then
+    if (ParSib == 1) then
       if (OppHomM(i,j) > maxOppHom .or. OppHomM(i,j)<0) cycle
       if ((LLR_O(i,j)==999 .or. LLR_O(i,j)< TA) .and. &
         (LLR_O(j,i)==999 .or. LLR_O(j,i)< TA))  cycle
@@ -472,8 +482,7 @@ do i=1,nInd-1
       topX = 0
       do k=1,2 
         if (Parent(i,k)/=0 .and. Parent(i,k)==Parent(j,k)) cycle
-        if (All(Parent(i,:)/=0) .and. ALL(Parent(j,:)/=0)) cycle
-                                                         
+!        if (All(Parent(i,:)/=0) .and. ALL(Parent(j,:)/=0)) cycle
         if (Parent(i,k)>0) then
             if (ANY(Parent(Parent(i,k), :)==j)) cycle
         else if (Parent(i,k)<0) then
@@ -486,6 +495,7 @@ do i=1,nInd-1
         endif
         if (AgeDiff(i,j) > 0)  call CalcPO(i, j, LRR(1))
         if (AgeDiff(j,i) > 0)  call CalcPO(i, j, LRR(1))
+        if (LRR(1) < 2*TA .and. All(Parent(i,:)/=0) .and. ALL(Parent(j,:)/=0)) cycle                                                                                                                
         call PairQFS(i, j, LRR(2)) 
         call PairQHS(i, j, LRR(3)) 
         maybe = 0
@@ -531,7 +541,11 @@ do i=1,nInd-1
       if(quiet==0) then
 !        call rwarn("reached max for maybe-rel")  ! doesn't return any output
         call intpr(" ",-1, 0, 0)
-        call intpr("WARNING - reached max for maybe-rel, truncated!",-1, 0, 0)
+        if (ParSib == 1) then
+          call intpr("WARNING - reached max for maybe-par, truncated!",-1, 0, 0)
+        else
+          call intpr("WARNING - reached max for maybe-rel, truncated!",-1, 0, 0)
+        endif
         call intpr(" ",-1, 0, 0)
       endif
       exit
@@ -562,8 +576,9 @@ use Global
 implicit none
 
  character(len=*), intent(IN) :: message
-Error = 1
- call rwarn("  ERROR!!! ***"//message//"*** Results are not reliable!")
+! Error = 1
+ call DeAllocAll
+ call rexit("  ERROR! ***"//message//"*** Results are not reliable!")
 
 end subroutine Erstop
 
@@ -610,18 +625,14 @@ allocate(BYRank(nInd))
 SortBY = REAL(BY, 8)
 WHERE (SortBY < 0) SortBY = HUGE(0.0D0) 
 BYRank = (/ (i, i=1, nInd, 1) /)
-if(ANY(BY>0)) call QsortC(SortBy, BYRank)
+if(ANY(BY>=0)) call QsortC(SortBy, BYRank)
 
 TotLL = 0
  call UpdateAllProbs
 TotLL(1) = SUM(Lind)
-do Round=1,42
+do Round=1,41
   if (Error/=0) return
   call rchkusr()
-  if (Round==42) then
-    call Erstop("parentage not converging")
-    return
-  endif
   call Parentage(BYrank, PriorPed)   
   call UpdateAllProbs
   do i=1,nInd
@@ -649,6 +660,9 @@ do Round=1,42
   call UpdateAllProbs
   TotLL(Round + 1) = SUM(Lind)
   if (TotLL(Round + 1) - TotLL(Round) < ABS(TF)) exit ! convergence
+  if (Round==41) then
+    call Erstop("parentage not converging")
+  endif
 enddo
 
 if(quiet==0) call dblepr("Post-parentage total LL : ", -1, SUM(Lind), 1) 
@@ -672,7 +686,7 @@ integer, intent(IN) :: quiet, Nrounds, UseAge
 double precision, intent(INOUT) :: TotLL(42)                 
 double precision :: CurLL(8), PrevLL(8)
 integer :: Round, RX, RoundEA
- character(len=2) :: RoundC
+ character(len=2) :: RoundChars(42)
  if (Error/=0) return
  call rchkusr()
 
@@ -690,8 +704,18 @@ ns = 0
 allocate(SibID(maxSibSize, nInd/2, 2))
 SibID = 0
 allocate(DumBY(nAgeClasses +maxAgePO, nInd/2, 2)) 
-
+DumBY = 0
 !=======================
+
+! K.I.S.S.
+! intpr() for iteration & dblepr() for LL --> 4 lines/iteration in R console
+! w-rite(RoundC, '(i2)') Round --> use of Fortran I/O will when compiled on Windows 
+! interfere with C I/O: when the Fortran I/O support code is initialized (typically 
+! when the package is loaded) the C stdout and stderr are switched to LF line endings
+RoundChars = (/ '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', &
+  '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', &
+  '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', &
+  '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42'/)
 
  call UpdateAllProbs
  call UpdateAllProbs
@@ -708,13 +732,14 @@ if (UseAge==0 .or. nAgeClasses==1) then
 else
   AgePhase = 1
 endif
-if (Nrounds > 42) then
+if (Nrounds >= 42) then
   call Erstop("too many sib rounds")
-  return
 endif
 
- call MoreParent(.TRUE.)  ! double check parents, using updated ageprior
- call UpdateAllProbs                                                                     
+if (.not. Hermaphrodites) then
+  call MoreParent(.TRUE.)  ! double check parents, using updated ageprior
+  call UpdateAllProbs
+endif    
 
 do Round=1, Nrounds
   if (Error/=0) return
@@ -735,10 +760,10 @@ do Round=1, Nrounds
     call UpdateAllProbs
     call UpdateAllProbs
     CurLL(3) = SUM(Lind)                                                                                          
-  endif                         
+  endif                                                               
   call Merging
   call UpdateAllProbs    
-  call UpdateAllProbs                                                                                                            
+  call UpdateAllProbs     
   CurLL(4) = SUM(Lind)
   if (Error/=0) return
   call rchkusr() 
@@ -756,7 +781,9 @@ do Round=1, Nrounds
   endif   
 
   if (nAgeClasses > 1) then                             
-    call MoreParent(.FALSE.)  !  assign additional parents to singletons 
+    if (.not. Hermaphrodites) then
+      call MoreParent(.FALSE.)  !  assign additional parents to singletons   
+    endif  
     call UpdateAllProbs
     call UpdateAllProbs
     CurLL(7) = SUM(Lind)                                                                                                   
@@ -769,13 +796,11 @@ do Round=1, Nrounds
   endif
   
   if(quiet==0) then
-    write(RoundC, '(i2)') Round
-    call dblepr("Round "//RoundC//" end, Total LogLik: ", -1, SUM(Lind), 1)
+    call dblepr("Round "//RoundChars(Round)//" end, Total LogLik: ", -1, SUM(Lind), 1)
   endif
   
   if (Round == 1 .and. curLL(8) - MaxLL(curLL(1:7)) < ABS(TF)) then
     call Erstop("LL not decreased in round 1, terminating.")
-    return
   else if (Round == nRounds) then                                                      
     exit
   else if (Round>1 .and. (MaxLL(curLL) - MaxLL(PrevLL(1:7)) < 2*ABS(TF) .or. &
@@ -792,7 +817,9 @@ do Round=1, Nrounds
 enddo  
  
  call UpdateAllProbs
-TotLL(Round+1) = SUM(Lind)      
+if (Round<nRounds) then
+    TotLL(Round+1) = SUM(Lind)      
+endif
   
 end subroutine Sibships
 
@@ -967,6 +994,7 @@ double precision :: LLX(51,51), LLY(51,51), tmpLind
 
 
 do x=1, nInd
+if (Error/=0) return
   if (MOD(x,500)==0) call rchkusr()
 !          call intpr ( " ",2, x, 1)
 !   endif
@@ -1024,13 +1052,15 @@ do x=1, nInd
     endif
   enddo
   
-  if (ALL(nCP>0)) then   ! test combo's 
+  if (ALL(nCP == 1) .and. ALL(CandPar(1,:) == curPar))  cycle                                                                                                                     
+  if (ALL(nCP>0)) then   ! test combo's
     if (ALL(CandPar >= 0) .and. BY(i)/=-999 .and. &
       ALL(BY(CandPar(1:nCP(1), 1))/=-999) .and. &
       ALL(BY(CandPar(1:nCP(2), 2))/=-999) .and. &
       ALL(Sex(CandPar(1:nCP(1), 1))==1) .and. &
       ALL(Sex(CandPar(1:nCP(2), 2))==2)) then
       LLX = -999
+      LLY = -999                    
       do u = 1, nCP(1)+1    
         do v = 1, nCP(2)+1
           call CalcPO2(i,CandPar(u, 1), CandPar(v, 2), LLX(u,v))
@@ -1041,10 +1071,12 @@ do x=1, nInd
       u = tmp(1)
       v = tmp(2)
       LLY = LLX - MAXVAL(LLX)  ! negative values
-      LLY(u,v) = -888
+      if (COUNT(ABS(LLY) < 0.01) < 2) then
+        LLY(u,v) = -888
+      endif
       LLX = LLX - LLX(nCP(1)+1, nCP(2)+1)
       
-      if (MAXVAL(LLY) < -2*TA .and. ALL(nCP>1)) then  ! vs next most likely parents
+      if (MAXVAL(LLY) < -2*TA) then  ! vs next most likely parents   .and. ALL(nCP>1)
         if (CandPar(u, 1)==0 .and. CandPar(v, 2)==0) then
           Parent(i,:) = 0
         else if (CandPar(u, 1)>0 .and. CandPar(v, 2)>0) then
@@ -1117,6 +1149,7 @@ do x=1, nInd
         Parent(i,:) = 0  ! undo try-out assignment
       endif
     endif
+
     do k=1,2
       if (Parent(i,k)==0) cycle
       if (Sex(Parent(i,k))==3) then
@@ -1133,7 +1166,6 @@ do x=1, nInd
   call CalcLind(i)
 enddo
 
-if (Error/=0) return
 end subroutine Parentage
 
 ! #####################################################################
@@ -1144,7 +1176,7 @@ implicit none
 
 integer, intent(IN) :: A, B
 logical, intent(IN) :: UseAge
-integer :: m, CurPar(2), TopX, k, x, CY(3), kY(3), y, cpb(2)
+integer :: m, CurPar(2), TopX, k, CY(3), kY(3), y, cpb(2)
 double precision :: LLA(2,7,7), TopLL, LLcp(3), LLBA(7), TopBA, dLL, &
 LLtmp(4), ALR(3), ALRtmp(2), LLAp
 logical :: OK, AgeOK                    
@@ -1153,8 +1185,7 @@ logical :: OK, AgeOK
  cpb = Parent(B,:)
  call CalcLind(A)                 
 
-if ((AgeDiff(A,B)==999 .or. (Sex(A)==3 .and. Sex(B)==3)) .and. &
- (ALL(Parent(A,:)==0) .and. ALL(Parent(B,:)==0))) then
+if (Sex(A)==3 .and. Sex(B)==3 .and. ALL(Parent(A,:)==0) .and. ALL(Parent(B,:)==0)) then
   return  ! can't tell if A or B is parent
 endif
 if (Sex(B)/=3) then
@@ -1168,6 +1199,7 @@ else
     endif
   enddo   
 endif
+
 LLtmp = 999D0
 if (Sex(B)==3 .and. CurPar(3-k)<0) then
   call AddParent(B, -CurPar(3-k),3-k, LLtmp(1))      
@@ -1180,12 +1212,12 @@ ALRtmp = 999D0
 AgeOK = .FALSE.
 if (AgeDiff(A,B)==999) then
    Parent(A,:) = 0  ! do not rely on (temporarily) assigned parent for age info
-  call CalcAgeLR(A, 0, B, 0, k, 1, ALRtmp(1))
+  call CalcAgeLR(A, 0, B, 0, k, 1, .FALSE., ALRtmp(1))
   Parent(A,:) = CurPar
   if (ALRtmp(1) < 3*TF)  return
   if (ALRtmp(1)/=777) then
     Parent(A,:) = 0
-    call CalcAgeLR(B, 0, A, 0, k, 1, ALRtmp(2))
+    call CalcAgeLR(B, 0, A, 0, k, 1, .FALSE., ALRtmp(2))
     Parent(A,:) = CurPar                 
     if (ALRtmp(2)/=777 .and. ALRtmp(2) - ALRtmp(1) > ABS(TF)) then
       return
@@ -1260,7 +1292,7 @@ else
     kY = (/ 1, 2, k /)
     do y=1,3
       if (y<3)  call NewPar(A, kY(y), 0) 
-      call CalcAgeLR(A,Sex(A), CY(y),kY(y), 0,1, ALR(y))
+      call CalcAgeLR(A,Sex(A), CY(y),kY(y), 0,1, .FALSE., ALR(y))
       if (y<3)  call NewPar(A, kY(y), CY(y))
     enddo
   endif
@@ -1335,13 +1367,17 @@ else
     enddo
   endif
   
+  do m=1,2
+    call NewPar(A, m, 0)
+  enddo    
   if (LLA(3-k,1,1)==TopLL .or. ANY(LLA(k,1,:) == TopLL)) then 
     call NewPar(A, k, B)
     call NewPar(A, 3-k, curPar(3-k))
-  else if ((TopLL - MaxLL(RESHAPE(LLA(:,2:7,1), (/2*6/)))) <0.01) then  
+  else if ((TopLL - MaxLL(RESHAPE(LLA(:,2:7,1), (/2*6/)))) <0.01 .and. &
+    ALL(curPar/=0)) then
     call NewPar(A, k, curPar(k))
     call NewPar(A, 3-k, curPar(3-k))
-  else if (ANY(LLA(:,1,:)==TopLL)) then  ! only B
+  else if (ANY(LLA(:,1,:)==TopLL) .and. ALL(TopLL - LLA(k, 2:7, 2:7) > TF)) then  ! only B
     call BestRel(LLA(k,:,1),1,topX, TopBA)
     if ((MaxLL(LLA(k,1,:)) - TopBA) > TA) then
       call NewPar(A, k, curPar(k))
@@ -1349,14 +1385,11 @@ else
       call NewPar(A, k, 0)
     endif
     call NewPar(A, 3-k, 0)
-  else if (ANY(LLA(k, 2:7, 2:7) == TopLL)) then  ! keep CurPar(3-k)
+  else if (ANY(LLA(k, 2:7, 2:7) == TopLL) .and. ALL(TopLL - LLA(:,1,:) > TF)) then  ! keep CurPar(3-k)
     call NewPar(A, k, 0)
   else if (ANY(LLA(3-k, 2:7, 2:7) == TopLL)) then  ! keep CurPar(k)
     call NewPar(A, k, curPar(k))
     call NewPar(A, 3-k, 0)
-  else
-    call NewPar(A, k, curPar(k))
-    call NewPar(A, 3-k, curPar(3-k))
   endif
 endif 
 
@@ -1413,9 +1446,13 @@ PairDLLR = 999D0
 PairType = 0
 UseAge = AgePhase > 0
 
-do i=1,  nInd-1
-  if (Parent(i,1)/=0 .and. Parent(i,2)/=0) cycle
-  do j=i+1,nInd     
+do i=1,  nInd-1 
+  if (Error/=0) return
+  if (MODULO(i,500)==0) call rchkusr()  
+  if (ALL(Parent(i,:)/=0)) cycle
+  do j=i+1,nInd
+    if (hermaphrodites .and. (ANY(parent(i,:)/=0) .and. ALL(parent(j,:)==0)) .or. &
+     (ALL(parent(i,:)==0) .and. ANY(parent(j,:)/=0)))  cycle                                                       
     LRS = 0
     mp = 0                                                      
     call PairQHS(i, j, LRS(1))  ! quick check
@@ -1428,8 +1465,9 @@ do i=1,  nInd-1
       endif
       mp(k) = 1
     enddo
-    if (ALL(Parent(i,:)==0) .and. ALL(Parent(j,:)==0) .and. UseAge .and. &
-      ALL(mp==1)) then
+    if ((ALL(Parent(i,:)==0) .and. ALL(Parent(j,:)==0) .and. UseAge .and. &
+      ALL(mp==1)) .or. (Hermaphrodites .and. (ALL(Parent(i,:)==0) .or. &
+       ALL(Parent(j,:)==0)))) then
       call PairQFS(i, j, LRS(2)) 
     endif
 
@@ -1440,6 +1478,9 @@ do i=1,  nInd-1
         if (.not. UseAge) cycle
         if (LRS(2) < TF) cycle  
       endif    
+      if (hermaphrodites .and. (ALL(Parent(i,:)==0) .or. ALL(Parent(j,:)==0))) then
+        if (LRS(2) < TF) cycle 
+      endif   
       if (AgeDiff(i,j)>=0) then
         call CheckPair(i, j, k, 3, LLg, LL)
       else
@@ -1447,6 +1488,8 @@ do i=1,  nInd-1
       endif
       if (UseAge)  call BestRel(LL, 3, top, dLL)
       if (.not. UseAge)  call BestRel(LLg, 3, top, dLL)                          
+      if (hermaphrodites .and. (ALL(Parent(i,:)==0) .or. &
+       ALL(Parent(j,:)==0)) .and. top/=2)  cycle                                     
       if (top==2 .or. top==3) then  
         if (nPairs >= XP*nInd) cycle  ! do in next round
         nPairs = nPairs+1
@@ -1461,8 +1504,6 @@ do i=1,  nInd-1
       endif
     enddo                  
   enddo
-  if (Error/=0) return
-  if (MODULO(i,100)==0) call rchkusr()
 enddo
 
 ! sort by decreasing dLL
@@ -1509,18 +1550,22 @@ ntrio = 0
 trioIDs = 0
 trioLR = 999D0
 do i=1, nInd
+  if (Error/=0) return
+  if (MODULO(i,500)==0)   call rchkusr()
   if (ntrio == nInd) exit
-  if (ANY(Parent(i,:)/=0)) cycle
+  if (ANY(Parent(i,:)/=0) .and. .not. Hermaphrodites) cycle
+  if (ANY(Parent(i,:)>0) .and. Hermaphrodites) cycle                                                  
   ncp = 0
   CandPar = 0  
-  if (.not. ANY(AmbigID == i))  cycle
+  if ((COUNT(AmbigID(:,1) == i .and. topRel == 1) + &
+    COUNT(AmbigID(:,2) == i .and. topRel == 1)) < 2) cycle
   do j=1, nAmb
     if (topRel(j) /= 1)  cycle
     if (.not. ANY(AmbigID(j,:) == i))  cycle
     if (ncp == 50) exit
     do m=1,2
       if (AmbigID(j,m) == i) then
-        if (AgeDiff(i, AmbigID(j,3-m))>0) then   ! Sex(AmbigID(j,3-m))==3 .and. 
+        if (AgeDiff(i, AmbigID(j,3-m))>0) then   
           ncp = ncp + 1
           CandPar(ncp) = AmbigID(j,3-m)
         endif
@@ -1531,10 +1576,10 @@ do i=1, nInd
   if (ncp > 1) then
     do u=1, ncp-1
       do v=u+1, ncp
+        if (Sex(CandPar(u))/=3 .and. Sex(CandPar(u))==Sex(CandPar(v))) cycle      ! hermaphrodites                                                               
         call NewPar(i, 1, CandPar(u))
         call NewPar(i, 2, 0)
         if (CandPar(v) == CandPar(u))  cycle  ! not sure why that should happen?
-!        if (Sex(CandPar(v))/=3 .and. Sex(CandPar(v))==Sex(CandPar(u))) cycle  ! hermaphrodites
         call CalcPOZ(i, CandPar(v), .FALSE.)
         if (ANY(Parent(i,:)==0)) then
           call NewPar(i, 1, 0)
@@ -1641,7 +1686,7 @@ implicit none
 integer, intent(IN) :: A,B,kIN, focal                                   
 double precision, intent(OUT) :: Llg(7), LL(7)  ! PO,FS,HS,GG,FAU,HAU,U
 integer :: x, cgp, k
-double precision :: LLtmpA(2,3), LLGGP(2), LLCC, LRS, ALR(7), &
+double precision :: LLtmpA(2,3), LLGGP(3), LLCC, LRS, ALR(7), &
  LLHH(2,3), LLX(4), LLZ(6), LLC(7), LLP(5), LLFC, LLPK(3)
 
 LLg = 999D0
@@ -1668,7 +1713,7 @@ LL(7) = LLg(7)
  
 do x=1,4
   if (focal == x) then
-    call CalcAgeLR(A,k, B, k, k, x, ALR(x)) 
+    call CalcAgeLR(A,k, B, k, k, x, .TRUE., ALR(x)) 
     if (ALR(x)==777 .or. ALR(x)<5*TF) then
       LLg(x) = 777    
     else
@@ -1687,15 +1732,15 @@ do x=1,4
   endif
 enddo
 
-if ((LLg(focal) == 777 .or. LLg(focal) < LLg(7)) .and. focal/=1 .and. &
- .not. (focal==3 .and. LLg(2)<0 .and. LLg(2) > LLg(7))) then
+if ((LLg(focal) == 777 .or. LLg(focal) - LLg(7) < TA) .and. focal/=1 .and. &
+ .not. (focal==3 .and. LLg(2)<0 .and. LLg(2) - LLg(7) > TA)) then
   LL = LLg
   return
 endif
 
 do x=1,4
   if (ALR(x) /= 999) cycle
-  call CalcAgeLR(A,k, B,k, k, x, ALR(x))
+  call CalcAgeLR(A,k, B,k, k, x, .TRUE., ALR(x))
   if (ALR(x) == 777) then
     LLg(x) = 777
     LL(x) = 777
@@ -1720,25 +1765,28 @@ endif
 
 if (LLg(4)==999) then  ! GP?
   call PairGP(A, B, k, focal, LLg(4))
-  if (AgeDiff(A,B)>=3) then   ! no ageprior for GGP
+endif
+if (ALR(4)/=777) then   ! no ageprior for GGP
+  if (AgeDiff(A,B)>=3) then
     call PairGGP(A, B, k, LLGGP(1))
-    call PairGGP(A,B,3, LLGGP(2))  ! double GGP indistinguishable from GP
+    call PairGGP(A, B, 3, LLGGP(2))  ! double GGP indistinguishable from GP
   endif
-  if (focal==3 .and. MaxLL(LLg(2:3))>LLg(4) .and. Sex(B)/=3 .and. &
-    .not. (Parent(A,3-k)==Parent(B,3-k) .and. Parent(A,3-k)/=0)) then
-    cgp = 0
-    if (Parent(A,3-k)>0)  cgp = Parent(Parent(A,3-k),Sex(B))
-    if (Parent(A,3-k)<0)  cgp = GpID(Sex(B), -Parent(A,3-k), 3-k)
-    if (cgp == 0) then
-      call PairGP(A, B, 3-k, focal, LLCC)
-      LLg(4) = MaxLL((/ LLg(4), LLCC /))  ! Note: wrong ageprior 
-    endif
+  call PairGA(A, B, k, LLGGP(3))
+endif
+if (focal==3 .and. MaxLL(LLg(2:3))>LLg(4) .and. Sex(B)/=3 .and. &
+  .not. (Parent(A,3-k)==Parent(B,3-k) .and. Parent(A,3-k)/=0)) then
+  cgp = 0
+  if (Parent(A,3-k)>0)  cgp = Parent(Parent(A,3-k),Sex(B))
+  if (Parent(A,3-k)<0)  cgp = GpID(Sex(B), -Parent(A,3-k), 3-k)
+  if (cgp == 0) then
+    call PairGP(A, B, 3-k, focal, LLCC)
+    LLg(4) = MaxLL((/ LLg(4), LLCC /))  ! Note: wrong ageprior 
   endif
 endif
 
 ! FA/HA?
 LLFC = 999D0
- call CalcAgeLR(A,k, B,k, 0, 6, ALR(6))                                       
+ call CalcAgeLR(A,k, B,k, 0, 6, .TRUE., ALR(6))                                       
 if (ALR(6)/=777) then  ! FA & HA have same ageprior.
   LLtmpA = 999D0
   do x=1,3  ! mat, pat, FS
@@ -1770,6 +1818,12 @@ LLCC = 999D0
  call PairCC(A, B, k, LLCC) 
 
  LLg(6) = MaxLL( (/LLg(6), LLGGP, LLCC/) )  ! most likely 3rd degree
+
+if (LLGGP(3) <0) then
+  LLGGP(3) = LLGGP(3) + ALR(4)  ! approx.
+  ! TODO ageprior GGP, CC
+endif
+
   LL(6) = MaxLL( (/LL(6), LLGGP, LLCC/) ) 
 
 LLPK = 999D0
@@ -1818,7 +1872,7 @@ if (Complx==2 .and. LL(2)<0 .and. (focal==2 .or. focal==3)) then
         call PairHSHA(A, B, k, x, LLHH(1,x))
         call PairHSHA(B, A, k, x, LLHH(2,x))
       enddo
-      if (ANY(LLHH<0) .and. LLg(2) - MaxLL((/LLHH(1,:), LLHH(2,:)/)) < TA) then
+      if (ANY(LLHH<0) .and. LLg(2) - MaxLL((/LLHH(1,:), LLHH(2,:)/)) < 2*TA) then
         LL(2) = 222
       endif
       if (LL(2)/=222) then  
@@ -1918,7 +1972,7 @@ if (focal==1 .and. LL(5) < LL(7)) then  ! check if FS of other parent
     endif
   endif
 endif
-
+ 
 end subroutine CheckPair
 
 ! #####################################################################
@@ -1955,8 +2009,8 @@ implicit none
 integer, intent(IN) :: A, B, k, focal
 double precision, intent(OUT) :: LL
 integer :: l, x, y,m, MaybeInbred(3), curPar(2), AncB(2,mxA), PAB, AncPA(2,mxA)
-double precision :: PrL(nSnp,3), PrX(3,3,3), PrPA(3), PrB(3),PrPB(3,2),&
-  LLtmp(3), PrPAB(3), PrPAX(3), PrG(3)
+double precision :: PrL(nSnp,4), PrX(3,3,4), PrPA(3), PrB(3),PrPB(3,2),&
+  LLtmp(4), PrPAB(3), PrPAX(3), PrG(3)
 
 LL = 999D0
 if(Parent(A,k)>0) then  ! allow dummy to be replaced (need for AddFS)
@@ -2070,16 +2124,22 @@ else
             PrX(x,y,3) = PrX(x,y,3) * OcA(Genos(l,B), x)
           endif
         endif
+        if (hermaphrodites) then  ! B selfing
+          if (x/=y)  PrX(x,y,4) = 0.0
+          if (x==y)  PrX(x,y,4) = OKA2P(Genos(l, A), x, x) * PrB(x)                                                    
+        endif
       enddo
     enddo
     PrL(l,1) = LOG10(SUM(PrX(:,:,1)))
     if (MaybeInbred(1) == 1)  PrL(l,2) = LOG10(SUM(PrX(:,:,2)))
     if (MaybeInbred(2) == 1)  PrL(l,3) = LOG10(SUM(PrX(:,:,3)))
+    if (hermaphrodites)       PrL(l,4) = LOG10(SUM(PrX(:,:,4)))                                                          
   enddo
   
   LLtmp = SUM(PrL, DIM=1)        
   if (MaybeInbred(1) == 0)  LLtmp(2) = 777
   if (MaybeInbred(2) == 0)  LLtmp(3) = 777
+  if (.not. hermaphrodites)  LLtmp(4) = 777                                         
   LL = MaxLL(LLtmp)
 endif
 
@@ -2292,7 +2352,7 @@ LL = 999D0
 if (Parent(A,3-k)/=0) then
   LL = 444
   return
-else if (Parent(A,k)/=0 .or. Parent(A,k)/=Parent(B,k)) then
+else if (Parent(A,k)/=0 .and. Parent(A,k)/=Parent(B,k)) then
   LL = 777
   return
 endif
@@ -2662,8 +2722,7 @@ do l=1, nSnp
         else
           do i=1, nS(-A,k)
             if (Genos(l,SibID(i,-A,k))/=-9) then
-              PrXYZ(x,y,z) = PrXYZ(x,y,z) * &
-                OKA2P(Genos(l,SibID(i,-A,k)), x, y)
+              PrXYZ(x,y,z) = PrXYZ(x,y,z) * OKA2P(Genos(l,SibID(i,-A,k)), x, y)
             endif
           enddo
         endif
@@ -2674,8 +2733,7 @@ do l=1, nSnp
         else
           do i=1, nS(-B,k)
             if (Genos(l,SibID(i,-B,k))/=-9) then
-              PrXYZ(x,y,z) = PrXYZ(x,y,z) * &
-                OKA2P(Genos(l,SibID(i,-B,k)), x, y)
+              PrXYZ(x,y,z) = PrXYZ(x,y,z) * OKA2P(Genos(l,SibID(i,-B,k)), x, y)
             endif
           enddo
         endif
@@ -2852,7 +2910,7 @@ else if (Parent(A,3-k)/=0) then
   if (ANY(AncB(3-k,:) == Parent(A,3-k))) then
     cat(2) = .FALSE.
   else
-    call CalcAgeLR(Parent(A,3-k), 3-k, B,k, k, 1, ALR)
+    call CalcAgeLR(Parent(A,3-k), 3-k, B,k, k, 1, .TRUE., ALR)
     if (ALR == 777 .or. ALR < 3*TF) then
       cat(2) = .FALSE.
     endif 
@@ -2867,7 +2925,7 @@ if (complx==2 .and. (Parent(B,3-k)==0 .or. Parent(A,3-k)==0 .or. &
     if (ANY(AncPA == B)) then
       cat(3) = .FALSE.
     else
-      call CalcAgeLR(B,k, Parent(A,3-k), 3-k, 3-k, 1, ALR)
+      call CalcAgeLR(B,k, Parent(A,3-k), 3-k, 3-k, 1, .TRUE., ALR)
       if (ALR == 777 .or. ALR < 3*TF) then
         cat(3) = .FALSE.
       endif
@@ -3000,6 +3058,7 @@ do k=1,2
 enddo
 
 MaybeF = 0
+call getAncest(A, k, AncA)                           
 if (kIN==3) then
   MaybeF = 1
   k = 1
@@ -3007,13 +3066,12 @@ else
   k = kIN
   if (Parent(A,3-k)==0) then
     MaybeF = 1
-  else if (Parent(A,3-k) < 0 .and. Parent(A,k)==0 .and. Complx==2) then
-    if (ANY(GpID(:, -Parent(A,3-k),3-k)==0)) then
+  else if (Parent(A,k)==0 .and. Complx==2) then
+    if (ANY(AncA(:,5-k) == 0)) then   ! GP via parent 3-k
       MaybeF = 1  ! maybe inbreeding loop
     endif
   endif
 endif
- call getAncest(A, k, AncA)
 
 PrL = 0D0    
 do l=1,nSnp
@@ -3088,7 +3146,69 @@ end subroutine PairGGP
 
 ! #####################################################################
 
+ subroutine PairGA(A, B, k, LL)   ! B full sib of GP
+use Global
+implicit none
+
+integer, intent(IN) :: A,B,k
+double precision, intent(OUT) :: LL
+integer :: l, x, y,v,w, AncB(2, mxA), m, n
+double precision :: PrL(nSnp), PrX(3,3,3,3), PrPA(3), PrGG(3, 2) 
+
+LL = 999D0
+if (AgeDiff(A, B) <= 0) then  ! B younger than A
+  LL = 777
+else if (ANY(Parent(A,:)==B)) then
+  LL = 444
+else
+  call GetAncest(B, k, AncB)
+  if (ANY(AncB == A)) then
+    LL = 777
+  else if (Parent(A,3-k)/=0 .and. Parent(A,3-k)==Parent(B,3-k)) then
+    LL = 444   ! not impossible, just unlikely.
+  endif
+endif
+if (LL==777) return
+
+m = 3-k  ! most neutral, doesn't matter in most cases
+if (Parent(A,k)/=0) then
+  LL = 444
+  return
+endif
+
+PrL = 0D0    
+do l=1,nSnp
+  PrX = 0
+  if (Genos(l,A)==-9) cycle
+  call ParProb(l, Parent(A,3-k), 3-k, A, 0, PrPA) 
+  do n=1,2
+    call ParProb(l, Parent(B, n), n, B, 0, PrGG(:,n))
+  enddo
+
+  do x=1,3  
+    do y=1,3
+      do v=1,3
+        do w=1,3
+          PrX(x,y,v,w) = SUM(OKA2P(Genos(l,A),x,:) * PrPA) * AKAP(x,y,l) * &
+            OKA2P(y, v, w) * PrGG(v,1) * PrGG(w,2)
+          if (Genos(l,B)/=-9) then
+            PrX(x,y,v,w) = PrX(x,y,v,w) * OKA2P(Genos(l,B), v, w)
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  PrL(l) = LOG10(SUM(PrX))
+enddo
+
+LL = SUM(PrL)
+
+end subroutine PairGA
+
+! #####################################################################
+
 subroutine PairUA(A, B, kA, kB, LL)
+! B half sib or full sib (kB=3) of parent kA of A?
 use Global
 use qsort_c_module
 implicit none
@@ -3474,6 +3594,15 @@ if (kB/=3) then   ! TODO: for kB==3
         endif
       endif
     enddo
+    if (ANY(cat == 8) .and. kB/=3) then
+      do i=1,nA
+        if (PA<0 .and. NFS(AA(i))==0) cycle
+        if (Parent(AA(i), 3-kA)>=0) cycle
+        if (GpID(3-kB,-Parent(AA(i), 3-kA),3-kA) == Parent(BB(j),3-kB)) then
+          catB(j) = -i
+        endif
+      enddo
+    endif    
   enddo
 endif
 
@@ -3668,16 +3797,25 @@ do l=1,nSnp
             do e=1,3
               PrE(e) = SUM(AKA2P(e,x,:) * PrH)
             enddo
-          else if (cat(r)==8) then  ! TODO: for kB==3
-            do g=1,2  !needed for kB==3
-              if (GpID(g,-Parent(AA(r),3-kA),3-kA) == GG(g) .and. GG(g)/=0) then
-                call ParProb(l, GpID(3-g,-Parent(AA(r),3-kA),3-kA), 3-g, 0,0,PrH)
-                do e=1,3
-                  if (g==kA)  PrE(e) = SUM(AKA2P(e,z,:) * PrH)
-                  if (g/=kA)  PrE(e) = SUM(AKA2P(e,y,:) * PrH)
-                enddo
+          else if (cat(r)>=8 .and. cat(r)<=10) then
+            if (kB < 3) then
+              call ParProb(l, GpID(kB,-Parent(AA(r),3-kA),3-kA), kB, 0,0,PrH)
+            else if (cat(r)==8) then
+              call ParProb(l, GpID(3-kA,-Parent(AA(r),3-kA),3-kA), 3-kA, 0,0,PrH)
+            else if (cat(r)==9) then
+              call ParProb(l, GpID(kA,-Parent(AA(r),3-kA),3-kA), kA, 0,0,PrH)
+            endif
+            do e=1,3
+              if (cat(r)==8) then
+                PrE(e) = SUM(AKA2P(e,y,:) * PrH)
+              else if (cat(r)==9) then
+                PrE(e) = SUM(AKA2P(e,:,z) * PrH)
+              else if (cat(r)==10) then
+                PrE(e) = AKA2P(e,y,z)
               endif
-            enddo   
+            enddo  
+          else if (cat(r)==42) then
+            cycle ! do with B  (catB(j) = -i)                               
           else if (UseEE(r)/=0) then
             call ParProb(l, MateABpar(r), 3-TypeEE(r), 0,0,PrH)
             do e=1,3
@@ -3721,6 +3859,7 @@ do l=1,nSnp
                 Ei = SibID(g, -Parent(AA(r), 3-kA),3-kA)
                 if (nFS(Ei) == 0) cycle 
                 if (Parent(Ei,kA)==PA .and. PA/=0) cycle
+                if (kA==kB .and. Parent(Ei,kA)==GG(kA) .and. GG(kA)/=0)  cycle                                              
                 if (kB<3) then
                   if (Parent(Ei, kB)== PB(kB) .and. PB(kB)/=0) cycle
                 endif                
@@ -3799,9 +3938,11 @@ do l=1,nSnp
             do j=1,nB
               if (Parent(BB(j),3-kA) /= Parent(AA(r),3-kA)) cycle
               if (ANY(AA == BB(j)))  cycle
-              if (Genos(l,BB(j))/=-9) then
-                PrE=PrE*OKA2P(Genos(l,BB(j)),y,:)
-              endif
+              do i=1, MAX(nFS(BB(j)),1)
+                if (B>0 .and. FSID(i,BB(j))/=B) cycle
+                if (Genos(l,FSID(i,BB(j)))==-9) cycle
+                PrE = PrE * OKA2P(Genos(l,FSID(i,BB(j))), y, :)
+              enddo
               DoneB(j) = 1
             enddo
           endif
@@ -3875,6 +4016,7 @@ do l=1,nSnp
               enddo
             enddo                   
           endif
+
           if (catB(j)==5) then
             do e=1,3
               PrE(e) = PrE(e) * SUM(AKA2P(y,e,:) * PrGG)
@@ -3914,6 +4056,31 @@ do l=1,nSnp
           else if (SUM(PrE)<3) then
             PrAB(:,y,:,2) = PrAB(:,y,:,2) * SUM(PrE) 
           endif
+
+          if (catB(j) < 0) then   ! GpID(3-kB, -Parent(AA(r),3-kA), 3-kA) == Parent(BB(j), 3-kB)
+            r = -catB(j)
+            call ParProb(l, GpID(kB,-Parent(AA(r),3-kA),3-kA), kB, 0,0,PrH)
+            call ParProb(l, Parent(AA(r), 3-kA), 3-kA, AA(r), -5, PrW)  ! excl GPs & A & FS of A
+            do w=1,3
+              do e=1,3
+                PrW(w) = PrW(w) * SUM(AKA2P(w, e, :) * PrE(e) * PrH)
+              enddo
+              do i=1, MAX(nFS(AA(r)),1)
+                if (A>0 .and. FSID(i, AA(r))==A) cycle
+                if (Genos(l,FSID(i, AA(r)))==-9) cycle
+                PrW = PrW*OKA2P(Genos(l,FSID(i,AA(r))),x,:)  ! FS of A
+              enddo
+              if (A>0) then
+                PrAB(x,y,:,1) = PrAB(x,y,:,1) * PrW
+                if (Genos(l,A)/=-9) then
+                  PrW = PrW*OKA2P(Genos(l,A),x,:)
+                endif
+                PrAB(x,y,:,2) = PrAB(x,y,:,2) * PrW
+              else
+                PrAB(x,y,:,2) = PrAB(x,y,:,2) * PrW
+              endif
+            enddo
+          endif
         enddo   ! j
 
       else if (B>0) then 
@@ -3923,6 +4090,7 @@ do l=1,nSnp
             do j=1, nBx(m)
               Bj = BBx(j, m)
               if (nFS(Bj)==0 .and. Bj/=B) cycle    
+              if (B>0 .and. ANY(FSID(:,Bj)==B) .and. DoneB(1)==1)  cycle                                                          
               if (kA/=kB .and. PA<0 .and. Parent(Bj, kA)==PA) cycle
               if (kB==3 .and. Parent(Bj, 3-m)==GG(3-m) .and. GG(3-m)/=0) then  ! FS of B
                 if (Parent(Bj,1)<0 .and. Parent(Bj,2)<0 .and. m==2) cycle
@@ -3930,7 +4098,11 @@ do l=1,nSnp
                   if (FSID(u,Bj)==B) cycle
                   if (ANY(AA(1:nA)==FSID(u,Bj))) cycle
                   if (Genos(l,FSID(u, Bj))==-9) cycle
-                  PrAB(:,y,z,:) = PrAB(:,y,z,:) * OKA2P(Genos(l,FSID(u,Bj)),y,z) 
+                  if (ALL(UseEE==0)) then
+                    PrAB(:,y,z,:) = PrAB(:,y,z,:) * OKA2P(Genos(l,FSID(u,Bj)),y,z) 
+                  else
+                    PrAB(x,y,z,:) = PrAB(x,y,z,:) * OKA2P(Genos(l,FSID(u,Bj)),y,z)
+                  endif  
                 enddo
               else if (kB==3 .and. Parent(Bj,1)<0 .and. Parent(Bj,2)<0 &
                .and. MateLoop(j,m)) then  
@@ -3971,7 +4143,14 @@ do l=1,nSnp
                     enddo  ! w
                   enddo  ! e
                 enddo  ! sib g
-                PrAB(:,y,z,:) = PrAB(:,y,z,:) * SUM(PrEW)
+                if (ALL(UseEE==0)) then
+                  PrAB(:,y,z,:) = PrAB(:,y,z,:) * SUM(PrEW)
+                else
+                  do e=1,3
+                    PrEE(:,x,nA+1) = SUM(PrEW(e,:))
+                  enddo
+                  PrAB(x,y,z,:) = PrAB(x,y,z,:) * SUM(PrEW)
+                endif
 
               else
                 if (catB(j)==2) then
@@ -4039,8 +4218,8 @@ do l=1,nSnp
                   if (ANY(UseEE/=0)) then
                     if (catB(j)==2) then 
                       PrAB(x,y,z,1) = PrAB(x,y,z,1) * PrE(z)
-                    else
-                      PrAB(x,y,:,1) = PrAB(x,y,:,1) * SUM(PrE)
+                    else if (SUM(PrE)<3) then
+                      PrAB(x,y,z,1) = PrAB(x,y,z,1) * SUM(PrE)
                     endif
                   else if (catB(j)==2) then 
                     PrAB(:,y,z,1) = PrAB(:,y,z,1) * PrE(z)
@@ -4056,7 +4235,7 @@ do l=1,nSnp
                   if (ANY(UseEE/=0)) then
                     if (catB(j)==2) then 
                       PrAB(x,y,z,2) = PrAB(x,y,z,2) * PrE(z)
-                    else
+                    else if (SUM(PrE)<3) then
                       PrAB(x,y,z,2) = PrAB(x,y,z,2) * SUM(PrE)
                     endif
                     if (Bj==B)  PrEE(:,x,nA+1) = PrE
@@ -4101,9 +4280,10 @@ implicit none
 
 integer, intent(IN) :: A,B,k
 double precision, intent(OUT) :: LL
-integer :: l, x, y, u, v, AreHS, z
+integer :: l, x, y, u, v, AreHS, z, AncA(2,mxA), AncB(2,mxA)
 double precision :: PrL(nSnp, 3), PrXY(3,3), PrUV, PrPA(3), PrPB(3), &
-  PrC(3,3,3), PrZ(3), PrXYf(3,3,2)
+  PrC(3,3,3), PrZ(3), PrXYf(3,3,2), LLself(2)
+logical :: MaybeInbr(2)
 
 LL = 999D0
 if (Parent(A,k)/=0 .and. Parent(B,k)/=0) then
@@ -4117,10 +4297,35 @@ if (Parent(A,k)/=0 .or. Parent(B,k)/=0) then  ! TODO: this is temp.
 endif
 if (LL/=999) return
 
+ call GetAncest(A,1,AncA)
+ call GetAncest(B,1,AncB)
+if (ANY(AncA == B) .or. ANY(AncB == A)) then
+  LL = 777
+  return
+endif
+
 AreHS = 0
+MaybeInbr = .TRUE.
 if (Parent(A,3-k)/=0 .and. Parent(A,3-k)==Parent(B,3-k)) then
     AreHS = 1
 endif
+if (hermaphrodites) then
+  if (Parent(A,3-k)>0) then
+    call PairSelf(B, Parent(A,3-k), LLself(1))
+    call PairFullSib(B, Parent(A,3-k), LLself(2))
+    if (LLself(1) > LLself(2)) then
+      MaybeInbr(1) = .FALSE.
+    endif
+  endif
+  if (Parent(B,3-k)>0) then
+    call PairSelf(A, Parent(B,3-k), LLself(1))
+    call PairFullSib(A, Parent(B,3-k), LLself(2))
+    if (LLself(1) > LLself(2)) then
+      MaybeInbr(2) = .FALSE.
+    endif
+  endif
+endif
+
 PrL = 0D0
 do l=1, nSnp
   if (Genos(l,A)==-9 .and. Genos(l,B)==-9) cycle
@@ -4131,7 +4336,7 @@ do l=1, nSnp
     call ParProb(l, Parent(A,3-k), 3-k, A, B, PrPA)
   endif
   
-  PrC = 1
+  PrC = 0
   do u=1,3  ! GG 3-k
     do v=1,3  ! GG k
       PrUV = AHWE(u,l) * AHWE(v,l)
@@ -4163,8 +4368,8 @@ do l=1, nSnp
       enddo
       PrC(u,v,1) = SUM(PrXY)
       if (AreHS==0) then
-        PrC(u,v,2) = SUM(PrXYf(:,:,1))
-        PrC(u,v,3) = SUM(PrXYf(:,:,2))
+        if (MaybeInbr(1))  PrC(u,v,2) = SUM(PrXYf(:,:,1))
+        if (MaybeInbr(2))  PrC(u,v,3) = SUM(PrXYf(:,:,2))
       endif
     enddo
   enddo 
@@ -4190,32 +4395,37 @@ FSM = .FALSE.
 UseAge = (/.TRUE., .FALSE./)
 LLx = 999D0           
 do x=1, nPairs
+  if (Error/=0) return
+  if (MODULO(x,500)==0) call rchkusr()
   LL = 999D0
   ij = PairID(x,:)
   PK = PairType(x)
   
   do k=1,2
     if (Parent(ij(1),k)>0 .or. Parent(ij(2),k)>0) cycle                                                  
+    if (hermaphrodites .and. ANY(parent(ij,3-k)>0) .and. ANY(parent(ij,k)==0))  cycle                                                   
     sx(1) = -Parent(ij(1),k)  
     sx(2) = -Parent(ij(2),k)
-    if (sx(1)==0 .and. sx(2)==0) then
-      IsPair = .TRUE.
-       if (Complx==0) then
-        fcl = 2
-      else if (PK==3 .and. Parent(ij(1),3-k)==0 .and. Parent(ij(2),3-k)==0) then
-        if (AgeDiff(ij(1),ij(2))/=999) then
-          if (AgePriorM(ABS(AgeDiff(ij(1),ij(2)))+1, 9) == 0.0 .or. &
-           AgePriorM(ABS(AgeDiff(ij(1),ij(2)))+1, 3-k) == 0.0) then
-            fcl = 3
-          else
-            fcl = 2  ! FS?
-          endif
+    if (Complx==0) then
+      fcl = 2
+    else if (Parent(ij(1),3-k)==Parent(ij(2),3-k) .and. Parent(ij(1),3-k)/=0) then
+      fcl = 2         
+    else if (PK==3 .and. Parent(ij(1),3-k)==0 .and. Parent(ij(2),3-k)==0) then
+      if (AgeDiff(ij(1),ij(2))/=999) then
+        if (AgePriorM(ABS(AgeDiff(ij(1),ij(2)))+1, 9) == 0.0 .or. &
+         AgePriorM(ABS(AgeDiff(ij(1),ij(2)))+1, 3-k) == 0.0) then
+          fcl = 3
         else
-          fcl = 2
+          fcl = 2  ! FS?
         endif
       else
-        fcl = 3
+        fcl = 2
       endif
+    else
+      fcl = 3
+    endif
+    if (sx(1)==0 .and. sx(2)==0) then
+      IsPair = .TRUE.                                                                   
       do n=1,2
         if (AgePhase==0 .and. n==1)  cycle
         topX = 0
@@ -4236,8 +4446,8 @@ do x=1, nPairs
           exit
         endif
         call BestRel(LL, fcl, topX(1), dLL(1))
-        if (dLL(1)<2*TA .or. .not. (topX(1)==fcl .or. &
-         (fcl==3 .and. topX(1)==2))) then
+        if (dLL(1)<2*TA .or. (Complx==0 .and. dLL(1)<TA) .or. &
+        .not. (topX(1)==fcl .or. (fcl==3 .and. topX(1)==2))) then
           if (AgePhase==2 .and. n==2) then
             if (MaxLL(LL((/2,3/))) - MaxLL(LL((/1,6,7/)))>TA .and. &
               MaxLL(LL((/4,5/))) - MaxLL(LL((/2,3/))) < TA) then
@@ -4317,19 +4527,20 @@ do x=1, nPairs
       do m=1,2
         if (sx(m)>0 .and. sx(3-m)==0) then
           IsPair = .TRUE.
+          topX = -9                   
           do n=1,2
             if (AgePhase==0 .and. n==1)  cycle                                 
             if (AgePhase==2 .and. n==2)  cycle
             if (Complx==0)  call CheckRel(ij(3-m), 0, -sx(m), k, UseAge(n), 2, LL)
             if (Complx >0)  call CheckRel(ij(3-m), 0, -sx(m), k, UseAge(n), 3, LL)
             call BestRel(LL, 2, topX(1), dLL(1))
-            if (topX(1)/=2 .and. Parent(ij(3-m),3-k)==0 .and. &
+            if (topX(1)/=2 .and. fcl==2 .and. &
               ALL(Parent(SibID(1:nS(sx(m),k),sx(m),k),3-k)<=0)) then
               IsPair = .FALSE.
               exit
             endif
             call BestRel(LL, 3, topX(2), dLL(2))
-            if (.not. ((topX(1)==2 .and. dLL(1)>2*TA) .or. &
+            if (.not. ((topX(1)==2 .and. (dLL(1)>2*TA .or. Complx==0)) .or. &
               ((topX(2)==3 .or. topX(2)==2)))) then
               IsPair = .FALSE.
               exit
@@ -4343,7 +4554,7 @@ do x=1, nPairs
           endif  
           if (Complx==0) then
             call DoAdd(ij(3-m), -Parent(ij(m), 3-k), 3-k)
-          else if (topX(3)>0 .and. MaxLL(dLLtmp)>2*TA) then
+          else if (topX(3)>0 .and. MAXVAL(dLLtmp, mask=dLLtmp<777)>2*TA) then
             if (ANY(FSID(:,topX(3))==ij(m))) then   ! focal most likely FS within HS group 
               call DoAdd(ij(3-m), -Parent(ij(m), 3-k), 3-k)
             endif
@@ -4353,8 +4564,6 @@ do x=1, nPairs
       enddo
     endif
   enddo
-  if (Error/=0) return
-  if (MODULO(x,100)==0) call rchkusr()
 enddo
 
 end subroutine Clustering
@@ -4375,6 +4584,8 @@ do k=1,2
   if (Complx==0 .and. k==2) cycle
   do s=1,nC(k)-1
     r = s
+    if (Error/=0) return
+    if (MODULO(s,20)==0) call rchkusr()
                                                    
     do xr=s+1, nC(k)
       r = r + 1
@@ -4416,26 +4627,32 @@ subroutine GrowClusters
 use Global
 implicit none
 
-integer :: k, s, i, nMaybe, ClM(100), topX, n, fcl, j, ctop(100), opPar
-double precision :: LLtmp(7), dLL, dLLM(100), ALR
+integer :: k, s, i, nMaybe, ClM(100), topX, n, fcl, j, ctop(100), opPar, topFS
+double precision :: LLtmp(7), dLL, dLLM(100), ALR, dLLtmp(maxSibSize), LR
 logical :: UseAge(2), Addi
 
 UseAge = (/.TRUE., .FALSE./)
 do k=1,2   
   if (Complx==0 .and. k==2) exit
   do i=1, nInd
+    if (Error/=0) return
     if (MODULO(i,500)==0) call rchkusr()
-    if (Parent(i,k)/=0) cycle                                          
+    if (Parent(i,k)/=0) cycle                                                                                       
     nMaybe = 0
     Clm = 0
     dLLM = 999D0
     do s=1,nC(k)  ! sibships
       if (ANY(GpID(:,s,k)==i)) cycle
-      call CalcAgeLR(i,0,-s,k,k,1,ALR)
-      if (ALR==777 .or. ALR < 3*TF)  cycle                                 
+      if (BY(i)>=0 .and. ALL(BY(SibID(1:ns(s,k),s,k))>=0)) then
+        if(ANY(AgePriorM(ABS(AgeDiff(SibID(1:ns(s,k),s,k),i))+1, k)==0.0)) cycle
+      endif
+      call CalcAgeLR(i,0,-s,k,k,1, .TRUE., ALR)
+      if (ALR==777 .or. ALR < 3*TF)  cycle
+      call Qadd(i, s, k, LR)
+      if (LR < ns(s,k)*TF) cycle                     
       LLtmp = 999D0
       Addi=.TRUE.
-      if (Complx==0) then
+      if (Complx==0 .or. (Hermaphrodites .and. Parent(i,3-k)==0)) then
         fcl = 2 ! FS
       else if (Parent(i,3-k)==0 .and. ALL(Parent(SibID(1:ns(s,k),s,k),3-k)<=0)) then
          call getFSpar(s, k, .FALSE., opPar)
@@ -4445,7 +4662,7 @@ do k=1,2
           fcl = 3
         endif  
         do j=1,ns(s,k)
-          call CalcAgeLR(i,0,j,0,0,2,ALR)
+          call CalcAgeLR(i,0,j,0,0,2, .TRUE.,ALR)
           if (ALR == 777) then
             fcl = 3   ! not FS with all
             exit
@@ -4483,14 +4700,14 @@ do k=1,2
     enddo 
     
     if (nMaybe==1) then
-      if (fcl==2 .and. ctop(1)==2 .and. dLLM(1)>2*TA) then  
-        call DoAdd(i, Clm(1), k)
-        call getFSpar(Clm(1), k, .TRUE., opPar)
-        if (opPar<0)  call DoAdd(i, -opPar, 3-k)
-      else if (fcl==3) then                                                                    
-        call DoAdd(i, Clm(1), k)
+      if (fcl==2 .and. ctop(1)==2 .and. dLLM(1)>2*TA) then
+        call AddFS(i, Clm(1), k,0,k, LLtmp(2), topFS, dLLtmp)
+        if (Complx==0 .or. (topFS>0 .and. MAXVAL(dLLtmp, mask=dLLtmp<777)>2*TA)) then
+          call NewPar(i, 3-k, Parent(topFS, 3-k))                  
+        endif
       endif
-    endif                  
+      call DoAdd(i, Clm(1), k)  
+    endif                       
   enddo
 enddo
   
@@ -4505,7 +4722,7 @@ implicit none
 
 integer :: k, s, xs, i, n,maybe, topX, CurNumC(2), OH, Par, MaybeOpp, &
   j, nCandPar, CandPar(20), h, SibTmp(maxSibSize), nSib
-double precision :: LL(7), dLL, LLtmp(7), ALR, LLO
+double precision :: LL(7), dLL, LLtmp(7), ALR, LLO, LR
 logical :: OK             
 
  CurNumC = nC 
@@ -4514,18 +4731,22 @@ do k=1,2
   s = 0
   do xs=1, CurNumC(k)
     s = s+1
+    if (Error/=0) return
+    if (MODULO(s,20)==0) call rchkusr()
     if (s > nC(k)) exit   
     nCandPar = 0
+    if (hermaphrodites) then
+      call getFSpar(s, k, .TRUE., Par)
+      if (Par < 0)  cycle
+    endif  
     do i=1,nInd                                                                 
-                                                                  
       if (nCandPar == 20) exit  !unlikely
       if (Sex(i)/=k .and. Sex(i)/=3) cycle
       if (Parent(i,k)==-s) cycle
       if (GpID(1,s,k)==i .or. GpID(2,s,k)==i) cycle
+      if (ANY(AgeDiff(SibID(1:ns(s,k), s, k), i) <= 0))  cycle                                                        
       maybe=1
-                 
-      call CalcAgeLR(-s, k, i, k, k, -1, ALR)
-                                                                    
+      call CalcAgeLR(-s, k, i, k, k, -1, .TRUE., ALR)
       if (ALR==777 .or. ALR < 3*TF)  cycle                             
       do n=1,nS(s,k)
         call CalcOH(i, SibID(n,s,k), OH)
@@ -4544,6 +4765,8 @@ do k=1,2
         endif   
       enddo                                                                         
       if (maybe==0) cycle
+      call QPO(i, s, k, LR)
+      if (LR < TF*nS(s,k))  cycle                          
        LL = 999D0                                                                 
       call CheckRel(-s, k, i, k, AgePhase > 1, 1, LL)
       call BestRel(LL, 1, topX, dLL)
@@ -4551,7 +4774,7 @@ do k=1,2
         maybe = 0
         cycle
       endif
-      if (Sex(i)==3) then  ! check if parent of opposite sex instead
+      if (Sex(i)==3 .or. hermaphrodites) then  ! check if parent of opposite sex instead
         MaybeOpp = 1
         call getFSpar(s, k, .TRUE., Par)                       
         if (Par > 0) then
@@ -4564,7 +4787,7 @@ do k=1,2
           else  ! check if could all be FS
             do j=1, ns(s,k)-1
               do h=j+1, ns(s,k)
-                call CalcAgeLR(sibID(j,s,k), 0, SibID(h,s,k), 0, 0, 2, ALR)
+                call CalcAgeLR(sibID(j,s,k), 0, SibID(h,s,k), 0, 0, 2, .TRUE., ALR)
                 if (ALR == 777 .or. ALR < 3*TF) then
                   MaybeOpp = 0
                   exit
@@ -4579,6 +4802,24 @@ do k=1,2
               MaybeOpp = 0
             endif
           endif           
+          else if (Par < 0) then
+          do n=1,nS(-Par,3-k)
+            call CalcOH(i, SibID(n,-par,3-k), OH)
+            if (OH > maxOppHom) then
+              maybeOpp = 0
+              exit
+            endif   
+          enddo
+          if (maybeOpp == 1) then
+            do n=1,2
+              if (GpID(n,-Par,3-k) <= 0) cycle
+              call CalcOH(i, GpID(n,-Par,3-k), OH)
+              if (OH > maxOppHom) then
+                maybeOpp = 0
+                exit
+              endif   
+            enddo
+          endif
         endif 
         if (MaybeOpp == 1) then
           if (Par < 0) then  ! may have more/fewer sibs
@@ -4610,7 +4851,6 @@ do k=1,2
       call DoMerge(0, s, k, OK)  !removes cluster s, 
       s = s-1  ! otherwise a cluster is skipped
     endif
-    if (Error/=0) return
   enddo ! s
 enddo ! k
   
@@ -4633,38 +4873,41 @@ do j=1,nInd
 enddo
 
 do i=1, nInd
+  if (Error/=0) return
+  if (MODULO(i,500)==0) call rchkusr()
   call CalcLind(i)
   CurPar = Parent(i,:)
   curLL = Lind(i)
   dropped = .FALSE.
-  if (ANY(Parent(i,:)>0) .and. ANY(Parent(i,:)<=0)) then  ! double check
-    do k=1,2
-      if (Parent(i,k)<=0)  cycle
-      if (AgeDiff(i,Parent(i,k)) == 999)  cycle
-    if (AgePriorM(AgeDiff(i,Parent(i,k))+1, 6+k) < 0.1) then
-      call NewPar(i, k, 0)            
-      else if (Parent(i,3-k) < 0) then
-        if (ns(-Parent(i,3-k),3-k)>2) then
-!          if (nFS(i)>1 .or. nFS(i)==0) cycle
-          call NewPar(i, k, 0)      
-          call CheckRel(i, k, CurPar(k), k, .TRUE., 1, LLP)
-          call BestRel(LLP, 1, topX, LRP)
-          if (topX==1 .and. LRP>TA) then  ! restore                          
-            call NewPar(i, k, curPar(k))
-        endif
-      endif        
-    endif
-    if (Parent(i,k)==0) then 
-      if (Parent(i,3-k) < 0 .or. Complx==0) then
-        call NewPar(i, 3-k, 0)
-        dropped = .TRUE.
+  if (pre) then             
+    if (ANY(Parent(i,:)>0) .and. ANY(Parent(i,:)<=0)) then  ! double check
+      do k=1,2
+        if (Parent(i,k)<=0)  cycle
+        if (AgeDiff(i,Parent(i,k)) == 999)  cycle
+        if (AgePriorM(AgeDiff(i,Parent(i,k))+1, 6+k) < 0.1) then
+          call NewPar(i, k, 0)            
+        else if (Parent(i,3-k) < 0) then
+          if (ns(-Parent(i,3-k),3-k)>2) then
+  !          if (nFS(i)>1 .or. nFS(i)==0) cycle
+            call NewPar(i, k, 0)      
+            call CheckRel(i, k, CurPar(k), k, .TRUE., 1, LLP)
+            call BestRel(LLP, 1, topX, LRP)
+            if (topX==1 .and. LRP>TA) then  ! restore                          
+              call NewPar(i, k, curPar(k))
+          endif
+        endif        
       endif
-      call CalcLind(i)
+      if (Parent(i,k)==0) then 
+        if (Parent(i,3-k) < 0 .or. Complx==0) then
+          call NewPar(i, 3-k, 0)
+          dropped = .TRUE.
+        endif
+        call CalcLind(i)
+      endif
+      enddo
     endif
-    enddo
-  endif
-  if (ALL(Parent(i,:)/=0)) cycle 
-  if (pre)  cycle                                                  
+  else
+  if (ALL(Parent(i,:)/=0)) cycle                                                   
   do j=1, nInd  ! candidate parent.
     if (i==j) cycle
     if (ANY(Parent(j,:)==i) .or. ANY(Parent(i,:)==j)) cycle
@@ -4691,9 +4934,9 @@ do i=1, nInd
       Lboth = COUNT(Genos(:,i)/=-9 .and. Genos(:,j)/=-9)
       if (Lboth < nSnp/4.0)  cycle   ! >3/4th of markers missing
     endif               
-    call CalcAgeLR(i,sex(i), j, sex(j), 0, 1, ALR(1))
+    call CalcAgeLR(i,sex(i), j, sex(j), 0, 1, .TRUE., ALR(1))
     if (ALR(1) == 777 .or. ALR(1)<= 3*TF)  cycle
-    call CalcAgeLR(j, sex(j), i,sex(i), 0, 1, ALR(2))
+    call CalcAgeLR(j, sex(j), i,sex(i), 0, 1, .TRUE., ALR(2))
     if (ALR(2) /= 777 .and. (ALR(1)-ALR(2)) < TF)  cycle
     call CalcPO(i, j, LRP)
     if (LRP < 5*TF) cycle 
@@ -4749,7 +4992,8 @@ do i=1, nInd
         Sex(Parent(i,k)) = k
       endif
     enddo
-  endif  
+  endif 
+ endif  
 enddo
 
 end subroutine MoreParent
@@ -4762,38 +5006,44 @@ use Global
 implicit none
 
 integer :: k, s, i,j, r, m, par, xs, candGP(20, 2), nCG(2), curGP(2),&
-   u, v, AncR(2,mxA), Best(2), GGP(2), newGP(2), x, GpIN(2)
-double precision :: LRG, ALRtmp(2), LL(7), LLG(21,21),gLL,curCLL,LLGGP(2,2)
-logical :: SexUnk(20,2), OK(2), sharing 
+   u, v, AncI(nInd,2,mxa), AncR(maxval(nC),2,2,mxA), GGP(2), GpIN(2), ix
+double precision :: LRG, ALRtmp(2), LLX(3,2), curCLL, &
+ LLGGP(2,2), dx(maxSibSize), LL(7)
+logical :: SexUnk(20,2), OK, sharing, skip(nInd/2,2) 
 
+skip = .FALSE.
+do k=1,2
+  do s=1, nC(k)
+    if (ALL(Parent(SibID(1:nS(s,k), s, k), 3-k) < 0)) then
+      call getFSpar(s, k, .TRUE.,par)
+      if (par < 0) then
+        if (nS(-par, 3-k) == nS(s,k)) then  !cannot tell if mat or pat
+          skip(s,k) = .TRUE.
+        endif
+      endif          
+    endif
+    call GetAncest(-s, k, AncR(s,k,:,:))
+  enddo
+enddo
+
+do i=1, nInd
+  call GetAncest(i,1,AncI(i,:,:))
+enddo
+  
 do k=1,2
   s = 0
   do xs=1, nC(k)
     s = s+1
-    if (MODULO(s,50)==0)  call rchkusr()
+    if (Error/=0) return
+    if (MODULO(s,5)==0) call rchkusr()
     if (s > nC(k)) exit
-    if (ALL(GpID(:,s,k)>0) .and. ns(s,k)>2) cycle  ! TODO drop?
-    if (ns(s,k)>2 .and. ALL(GpID(:,s,k)/=0)) then
-      OK = .FALSE.
-      do m=1,2
-        if (GpID(m,s,k) > 0) then
-          OK(m) = .TRUE.
-        else if (ns(-GpID(m,s,k), m) > 3) then
-          OK(m) = .TRUE.
-        endif
-      enddo
-      if (ALL(OK))  cycle
-    endif
-    if (ALL(Parent(SibID(1:nS(s,k), s, k), 3-k) < 0)) then
-      call getFSpar(s, k, .TRUE.,par)
-      if (par < 0) then
-        if (nS(-par, 3-k) == nS(s,k))  cycle !cannot tell if mat or pat
-      endif          
-    endif
+    if (ALL(GpID(:,s,k)/=0)) cycle   
+    if (skip(s,k))  cycle
     nCG = 1  ! first pair = 0,0
     CandGP = 0
     SexUnk = .FALSE.
     CurGP = GpID(:,s,k)
+    call calcCLL(s,k)                 
     curCLL = CLL(s,k)
     do m=1,2
       if (GpID(m,s,k)/=0) then
@@ -4807,12 +5057,18 @@ do k=1,2
     do i=1,nInd
       if (Parent(i,k)==-s) cycle
       if (CandGP(2,1)==i .or. CandGP(2,2)==i) cycle
-      call CalcAgeLR(-s,k, i,Sex(i), 0,1, ALRtmp(1))
+      if (ANY(curGP/=0) .and. Sex(i)/=3 .and. .not. hermaphrodites) then
+        if (curGP(Sex(i)) > 0) cycle
+        if (curGP(Sex(i))<0) then
+          if (ns(-curGP(Sex(i)), Sex(i)) > 1) cycle
+        endif  
+      endif
+      if (ANY(AgeDiff(SibID(1:ns(s,k), s, k), i) <= 1))  cycle
+      call CalcAgeLR(-s,k, i,Sex(i), 0,1, .FALSE., ALRtmp(1))
       if (ALRtmp(1) == 777 .or. ALRtmp(1) < 3*TF) cycle
-      call CalcAgeLR(i,Sex(i), -s,k, 0,1, ALRtmp(2))
-      if (ALRtmp(2)/=777 .and. (ALRtmp(1)-ALRtmp(2)) < TF)  cycle                                    
-      if (ALL(ALRtmp==0.0))  cycle  ! no age info                                           
-      LL = 999       
+      call CalcAgeLR(i,Sex(i), -s,k, 0,1, .FALSE., ALRtmp(2))
+      if (ALRtmp(2)/=777 .and. (ALRtmp(1)-ALRtmp(2)) < TF)  cycle
+      if (ALL(ALRtmp==0.0))  cycle  ! no age info      
       if (nS(s,k)>1) then
         call QGP(i, 0, s, k, LRG) 
         if (LRG < TF*nS(s,k))  cycle    !  
@@ -4820,11 +5076,16 @@ do k=1,2
         call PairQHS(i, SibID(1,s,k), LRG)
         if (LRG < 2*TF)  cycle
       endif
-      call GetAncest(i,1,AncR)
-      if (ANY(AncR(k,:) == -s)) cycle
-      call CheckRel(i, 0, -s, k, .FALSE., 4, LL)
-      if (LL(4)>0 .or. (LL(4)<0 .and. (LL(4)-MaxLL(LL) < TF  .or. &
-          LL(4) - LL(7) < TA))) cycle
+      if (ANY(AncI(i,k,:) == -s)) cycle
+      LLX = 999D0
+      call AddGP(i, s, k, LLX(1,1))
+      if (LLX(1,1)>0) cycle
+      call CalcU(i, k, -s, k, LLX(1,2))
+      if ((LLX(1,1) - LLX(1,2)) < TA)  cycle   
+      call AddGGP(i, s, k, LLX(2,2))    ! i GP of dummy?
+      if ((LLX(1,1) - MaxLL(LLX(:,2))) < TF)  cycle 
+      call pairUA(-s, i, k, 3, LLX(3,2))    ! i FS of dummy?  (todo?: PHS, MHS)
+      if ((LLX(1,1) - MaxLL(LLX(:,2))) < TF)  cycle 
       do m=1,2
         if (Sex(i)/=3 .and. Sex(i)/=m) cycle
         if (ncG(m) < 20) then  ! arbitrary threshold to limit comp. time
@@ -4838,18 +5099,29 @@ do k=1,2
     enddo
     
     do m=1,2
+      if (curGP(m)>0) cycle
+      if (curGP(m)<0) then
+        if (ns(-curGP(m),m) > 1) cycle
+      endif
       do r=1, nC(m) 
         if (m==k .and. s==r) cycle
-        if (CandGP(2,m) == -r) cycle
-        if (GPID(k,r,m) == -s) cycle 
-        if (ANY(SibID(1:nS(s,k),s,k) == GpID(1,r,m)) .or. &
-          ANY(SibID(1:nS(s,k),s,k) == GpID(2,r,m))) cycle
-        if (nS(r,m)==1 .and. &
-          ANY(SibID(1:nS(s,k),s,k) == SibID(1,r,m))) cycle 
+        if (CandGP(2,m) == -r) cycle  ! current GP
+        if (ANY(AncR(r,m,k,:)==-s)) cycle
+        do j=1, nS(s,k)
+          if (ANY(AncR(r,m,:,:) == SibID(j,s,k))) cycle ! covers 1 extra gen
+        enddo
+        if (nS(r,m)==1 .and. ANY(SibID(1:nS(s,k),s,k) == SibID(1,r,m))) cycle
         if (m/=k .and. complx<2) then
           if (ALL(Parent(SibID(1:ns(s,k),s,k),m) == -r))  cycle
           if (ALL(Parent(SibID(1:ns(r,m),r,m),k) == -s))  cycle
-        endif 
+        endif
+        if (ANY(GpID(:,r,m)>0)) then
+          do u=1,2
+            if (GpID(u,r,m)>0) then
+              if (ANY(AgeDiff(SibID(1:ns(s,k), s, k), GpID(u,r,m)) <= 2))  cycle
+            endif
+          enddo
+        endif
         sharing = .FALSE.
         do i=1, ns(s,k)
           if (m/=k .and. ANY(SibID(:,r,m) == SibID(i,s,k))) then
@@ -4861,28 +5133,25 @@ do k=1,2
               exit
             endif
           endif
-        enddo       
+        enddo  
         if (.not. sharing) then  ! QGP doesn't work when inbreeding loops
           call QGP(-r, m, s, k,  LRG) 
           if (LRG < TF*MIN(nS(s,k), nS(r,m))) cycle  ! conservative.
         endif
-        call GetAncest(-r,m,AncR)
-        if (ANY(AncR(k,:)==-s)) cycle
-        do j=1, nS(s,k)
-          if (ANY(AncR == SibID(j,s,k))) cycle ! covers 1 extra gen
-        enddo
-        call CalcAgeLR(-s,k, -r,m, 0,1, ALRtmp(1))
+        call CalcAgeLR(-s,k, -r,m, 0,1, .FALSE., ALRtmp(1))
         if (ALRtmp(1) == 777 .or. ALRtmp(1) < 2*TF) cycle
-        call CalcAgeLR(-r,m, -s,k, 0,1, ALRtmp(2))
-        if (ALRtmp(2)/=777 .and. (ALRtmp(1)-ALRtmp(2)) < TF)  cycle
-        if (ALL(ALRtmp==0.0))  cycle  ! no age info        
-        call PairUA(-s, -r, k, m, LL(4))
-        if (LL(4)>0) cycle
-        call CalcU(-s,k, -r,m, LL(7))
-        if ((LL(4) - LL(7)) < nS(s,k)*TF) cycle
-        call CheckRel(-s, k, -r, m, .FALSE., 7, LL) 
-        if (LL(4)>0 .or. (LL(4)<0 .and. (LL(4)-MaxLL(LL) <nS(s,k)*TF .or. &
-          LL(4) - LL(7) < abs(TF)))) cycle
+        call CalcAgeLR(-r,m, -s,k, 0,1, .FALSE., ALRtmp(2))
+        if (ALRtmp(2)/=777 .and. (ALRtmp(1)-ALRtmp(2)) < TF)  cycle  ! what threshold?
+        if (ALL(ALRtmp==0.0))  cycle  ! no age info
+        LLX = 999D0
+        call PairUA(-s, -r, k, m, LLX(1,1))
+        if (LLX(1,1)>0) cycle
+        call CalcU(-s,k, -r,m, LLX(1,2)) 
+        if ((LLX(1,1) - LLX(1,2)) < nS(s,k)*TF)  cycle   
+        call addFS(0, r, m, s, k, LLX(2,1), ix, dx) 
+        if ((MaxLL(LLX(:,1)) - LLX(1,2)) < TA)  cycle
+        call dummyGP(s, r, k, m, LLX(2,2))  ! SB GGP of A's
+        if (MaxLL(LLX(:,1)) - MaxLL(LLX(:,2)) < TA)  cycle   ! nS(s,k)*TF 
         if (ncG(m) < 20) then
           nCG(m) = nCG(m) + 1
           CandGP(nCG(m), m) = -r
@@ -4891,145 +5160,118 @@ do k=1,2
               SexUnk(nCG(m),m) = .TRUE.
           endif
         else
-            exit 
+          exit 
         endif                
       enddo
     enddo
     
-    LLG = 999D0
-    LLG(1,1) = 0D0  ! no GP
-        if (ALL(nCG==1)) then
+    if (ALL(nCG==1)) then
       cycle  ! no candidate GPs
     else if (ANY(nCG==1)) then  ! cand GP of 1 sex only
       do m=1,2
         if (nCG(m)>1) then
           if (nCG(m)==2 .and. CandGP(2,m)==curGP(m)) then
-            GpID(m,s,k) = curGP(m)
+            GpID(m,s,k) = curGP(m)  ! restore
           else 
             do u=2, nCG(m)  ! first pair = 0,0
-              call CalcGPz(s, k, CandGP(u,m), m, gLL)
+              call CalcGPz(s, k, CandGP(u,m), m)
             enddo
           endif
         endif
       enddo
     else if (ALL(nCG==2)) then
       GpID(1,s,k) = CandGP(2,1)
-      call CalcGPz(s, k, CandGP(2,2), 2, gLL)
+      call CalcGPz(s, k, CandGP(2,2), 2)
     else   ! test all combo's
-      if (.not. ANY(SexUnk)) then
-        do x=2, MAXVAL(nCG)
-          do m=1,2
-            if (CandGP(x,m) == 0) cycle
-            GpIN = GPID(:,s,k)
-            u = which(CandGP(:,1), GpIN(1))
-            v = which(CandGP(:,2), GpIN(2))
-            if (m==1)  LLG(x, v) = 505
-            if (m==2)  LLG(u, x) = 505
-            call CalcGPz(s, k, CandGP(x, m), m, gLL)
-            if (GpID(m,s,k) == CandGP(x,m)) then
-              if (GpID(3-m,s,k) == GpIN(3-m)) then
-                if (m==1)  LLG(x, v) = gLL
-                if (m==2)  LLG(u, x) = gLL
-              else if (GpID(3-m,s,k) == 0) then
-                if (m==1)  LLG(x, 1) = gLL
-                if (m==2)  LLG(1, x) = gLL
-              endif
-            else if (GpID(1,s,k) == GpIN(1) .and. GpID(2,s,k)==0) then
-              LLG(u, 1) = gLL
-            else if (GpID(2,s,k) == GpIN(2) .and. GpID(1,s,k)==0) then 
-              LLG(1, v) = gLL
-            endif
-          enddo
-        enddo
-      endif
-      do u = 2, nCG(1) 
+      do u = 2, nCG(1)    
         do v = 2, nCG(2)
           if (SexUnk(u,1) .and. SexUnk(v,2))  cycle
           if (CandGP(u, 1)==CandGP(v, 2) .and. CandGP(u,1)>0) cycle 
-          if (LLG(u,v)/=999) cycle
-          LLG(u,v) = 505
           if (GpID(1,s,k) == CandGP(u,1)) then
-            call CalcGPz(s, k, CandGP(v, 2), 2, gLL)
+            call CalcGPz(s, k, CandGP(v, 2), 2)
           else if (GpID(2,s,k) == CandGP(v,2)) then
-            call CalcGPz(s, k, CandGP(u, 1), 1, gLL)
+            call CalcGPz(s, k, CandGP(u, 1), 1)
           else
+            GPIN = GpID(:,s,k)
             GpID(1,s,k) = CandGP(u,1)
-            call CalcGPz(s, k, CandGP(v, 2), 2, gLL)
-          endif  
-          if (GpID(1,s,k)==CandGP(u,1) .and. GpID(2,s,k)==CandGP(v,2)) then
-            LLG(u,v) = gLL
-          else if (GpID(1,s,k)==CandGP(u,1) .and. GpID(2,s,k)==0) then
-            LLG(u,1) = gLL
-          else if (GpID(2,s,k)==CandGP(v,2) .and. GpID(1,s,k)==0) then
-            LLG(1,v) = gLL
+            call CalcGPz(s, k, CandGP(v, 2), 2)
+            if (GPIN(1)/=0 .and. GpID(1,s,k) == 0) then  ! restore GP1?
+              if (GpID(2,s,k) == GPIN(2)) then
+                GPID(1,s,k) = GPIN(1)  
+              else if (GPIN(2)/=0 .and. GpID(2,s,k)==0) then
+                GPID(:,s,k) = GPIN
+              else
+                call CalcGPz(s, k, GPIN(1), 1)
+              endif
+            endif
           endif
         enddo
       enddo
-      Best = MAXLOC(LLG, MASK=LLG<505)
-      if (ALL(Best==1)) then
-        GpID(:,s,k) = 0
-      else 
-        if (Best(1) >1 .and. GpID(1,s,k)/=CandGP(Best(1),1) .and. &
-         Best(2) >1 .and. GpID(2,s,k)/=CandGP(Best(2),2)) then 
-          GpID(1,s,k) = CandGP(Best(1),1)
-          call CalcGpz(s,k, CandGP(Best(2),2), 2, gLL)
-          if (GpID(2,s,k) /= CandGP(Best(2),2) .or. &
-           GpID(1,s,k) /= CandGP(Best(1),1)) then
-            GpID(:,s,k) = 0
-            call CalcCLl(s,k)
+    endif
+    
+    if (ANY(GpID(:,s,k)==0) .and. ANY(GpID(:,s,k)<0)) then   ! safety net
+      do m=1,2
+        if (GpID(m,s,k)<0) then
+          if (skip(-GpID(m,s,k), m)) then
+            GpID(:,s,k) = 0  ! can't be sure if grandmother or grandfather
           endif
         endif
-        do m=1,2
-          if (GpID(m,s,k)/=CandGP(Best(m),m)) then
-            if ((SexUnk(Best(m),m) .and. GpID(3-m,s,k)==0) .or. Best(m)==1) then
-              GpID(m,s,k) = 0 
-            else
-              call CalcGpz(s,k, CandGP(Best(m),m), m,gLL)
-            endif
-          endif
-        enddo        
-      endif
+      enddo
     endif
     
     if (ANY(GpID(:,s,k)==0)) then   ! double check that not offspring assigned as parent
-      newGP = GpID(:,s,k)
+      GPIN = GpID(:,s,k)
       GpID(:,s,k) = 0
       do m=1,2
-        if (newGP(m)/=0) then
-          call CalcAgeLR(-s,k, newGP(m),m, 0,1, ALRtmp(1))
-          call CalcAgeLR(newGP(m),m, -s,k, 0,1, ALRtmp(2))     
-          if (ALRtmp(2)/=777 .and. (ALRtmp(1)-ALRtmp(2)) > abs(TF)) then
-            GpID(m,s,k) = newGP(m)
+        if (GPIN(m)/=0) then
+          call CalcAgeLR(-s,k, GPIN(m),m, 0,1, .FALSE., ALRtmp(1))
+          call CalcAgeLR(GPIN(m),m, -s,k, 0,1, .FALSE., ALRtmp(2))     
+          if (ALRtmp(1)/=777 .and. (ALRtmp(2)==777 .or. &
+           (ALRtmp(1)-ALRtmp(2)) > abs(TF))) then
+            GpID(m,s,k) = GPIN(m)
           ! else drop - might be other way around
           endif
           call CalcCLL(s,k)
         endif
       enddo
+      
+      if (nS(s,k)==1 .and. ANY(GpID(:,s,k)>0)) then
+        do m=1,2
+          if (GPIN(m)>0) then
+            call CheckRel(-s, k, GPIN(m), m, AgePhase>0, 4, LL)
+            call BestRel(LL, 4, ix, LRG)
+            if (ix == 4) then
+              GpID(m,s,k) = GPIN(m)  
+            endif
+            call CalcCLL(s,k)
+          endif
+        enddo
+      endif
     endif
     
     if (nS(s, k)==1 .and. ALL(GpID(:,s,k)==0)) then  ! single sib left; remove sibship  
       u = SibID(1,s, k)
       call RemoveSib(u, s, k)
-      call DoMerge(0, s, k, OK(1))
+      call DoMerge(0, s, k, OK)
       cycle
     endif
     
     call CalcCLl(s,k)
-    do m=1,2 
+    do m=1,2  ! Shouldn't be necessary, as GGP among candGP?
       if (GpID(m,s,k)==curGP(m)) cycle
       if (GpID(m,s,k) < 0) then ! check if non-sampled non-dummy sib-of-dummy is GP
         GGP = GpID(:, -GpID(m,s,k), m)
         if (ALL(GGP <= 0))  cycle
-        newGP = GpID(:,s,k)
+        GPIN = GpID(:,s,k)
         do u=1,2
           if (GGP(u) > 0) then
-            call CalcU(-s, k, newGP(m), m, LLGGP(1,2))
+            call CalcU(-s, k, GPIN(m), m, LLGGP(1,2))
             GpID(m,s,k) = 0
-            call CalcU(-s, k, newGP(m), m, LLGGP(1,1))
+            call CalcU(-s, k, GPIN(m), m, LLGGP(1,1))
             call CalcU(-s, k, GGP(u), u, LLGGP(2,1))
             call AddGGP(GGP(u), s, k, LLGGP(2,2))
             if ((LLGGP(1,2)-LLGGP(1,1)) - (LLGGP(2,2)-LLGGP(2,1)) > TA) then
-              GpID(m,s,k) = newGP(m)  ! restore; else don't trust.
+              GpID(m,s,k) = GPIN(m)  ! restore; else don't trust.
             else
               exit
             endif
@@ -5042,7 +5284,14 @@ do k=1,2
         endif
       endif
     enddo
-    if (Error/=0) return
+    
+    !update ancestors
+    if (GPID(1,s,k)/=curGP(1) .or. GPID(2,s,k)/=curGP(2)) then
+      call GetAncest(-s, k, AncR(s,k,:,:))
+      do i=1, ns(s,k)
+        call GetAncest(SibID(i,s,k),1,AncI(SibID(i,s,k),:,:))
+      enddo
+    endif
   enddo  ! s
 enddo  ! k
 
@@ -5050,12 +5299,11 @@ end subroutine SibGrandparents
 
 ! #####################################################################
 
-subroutine CalcGPz(SA, kA, B, kB, gLL) ! B or SB gp of sibship SA?
+subroutine CalcGPz(SA, kA, B, kB) ! B or SB gp of sibship SA?
 use Global
 implicit none
 
 integer, intent(IN) :: SA, kA, B, kB
-double precision, intent(OUT) :: gLL
 integer :: m,n, CurGP(2), topX, x, mid(5), y, CY(4), kY(4), v
 double precision :: LLA(2,7,7), dLL, PairLL(2,2,2), LLcp(3,2), LLU(3), &
  LLtmp(3), ALR(3), TopLL(2), LLAA(2,7,7)
@@ -5065,7 +5313,6 @@ curGP = GpID(:,SA,kA)
 dLL = 999D0
 PairLL = 999D0
 LLA = 999D0
-gLL = 999D0
 UseAge = (AgePhase>0)                     
  call CalcCLL(SA,kA)
 
@@ -5087,11 +5334,6 @@ if (curGP(1)==0 .and. curGP(2)==0) then
   if (topX==4) then   !   .and. dLL>TA*nS(SA,kA)
     GpID(n,SA,kA) = B
   endif       
-   if (LLA(1,4,7)<0 .and. LLA(1,7,7)<0) then
-    gLL = LLA(1,4,7) - LLA(1,7,7)
-  else
-    gLL = 909D0
-  endif
 else
   ConPar = .FALSE.
   GpID(:,SA,kA) = 0
@@ -5154,7 +5396,7 @@ else
   ! age based prior prob.
   ALR = 0
   do y=1,3
-    call CalcAgeLR(-SA,kA, CY(y),kY(y), 0,1, ALR(y))
+    call CalcAgeLR(-SA,kA, CY(y),kY(y), 0,1, .FALSE., ALR(y))
   enddo 
   
   mid = (/1,2,3,5,6/)
@@ -5240,10 +5482,8 @@ else
   if (PairLL(1,1,2) == TopLL(1) .and. TopLL(1) - TopLL(2) > TA) then
     GpID(n,SA,kA) = B
     GPID(3-n, SA, kA) = CurGP(3-n)
-    gLL = LLA(3-n,4,4)
   else if (PairLL(2,1,1) == TopLL(1) .and. TopLL(1) - TopLL(2) >TA) then
     GpID(:,SA,kA) = curGP                            
-    gLL = MaxLL(LLA(:,7,4))
   else
     PairLL(1,1,2) = 555
     PairLL(2,1,1) = 555
@@ -5252,24 +5492,12 @@ else
     if ( TopLL(1) - TopLL(2) > TA) then
       if (PairLL(1,2,2) == TopLL(1)) then
         GpID(n,SA,kA) = B  
-        gLL = LLA(3-n,4,7)
       else if (PairLL(2,1,2) == TopLL(1)) then
         GpID(3-n,SA,kA) = curGP(3-n)
-        gLL = LLA(n,7,7)
       else if (PairLL(2,1,2) == TopLL(1)) then
         GpID(n,SA,kA) = curGP(n)
-        gLL = LLA(3-n,7,7)
       endif
     endif
-  endif
-  if (gLL>0) then
-    gLL = 909D0
-  else if (LLA(3-n,7,7) < 0) then
-    gLL = gLL - LLA(3-n,7,7) - LLU(n) 
-  else if (LLA(n,7,7) < 0) then
-    gLL = gLL - LLA(n,7,7) - LLU(3-n) 
-  else
-    gLL = 909D0 
   endif
 endif 
 
@@ -5291,11 +5519,13 @@ use Global
 implicit none
 
 integer, intent(IN) :: ExtraAge                               
-integer :: i, j, k, x, TopX, nCG(2,2), CandG(2,2,50), m, n
-double precision :: LLa(7), LLg(7), dLL, LRS, gLL, LL(7)
+integer :: i, j, k, x, nCG(2,2), CandG(2,2,50), m, n
+double precision :: LLa(7), LLg(7), LRS, LL(7)
 logical :: IsPair
 
 do i=1, nInd
+  if (Error/=0) return
+  if (MODULO(i,500)==0) call rchkusr()
   if (Parent(i,1)==0 .and. Parent(i,2)==0) cycle
   if (Parent(i,1)/=0 .and. Parent(i,2)/=0) cycle
   if (BY(i) < 0) cycle
@@ -5323,7 +5553,9 @@ do i=1, nInd
           x = 5  ! pat. grandmother
         endif
       endif
-      if (LOG10(AgePriorM(AgeDiff(i, j)+1, x)) < TF) cycle  ! unlikely
+      if (AgeDiff(i,j)/=999) then
+        if (LOG10(AgePriorM(AgeDiff(i, j)+1, x)) < TF) cycle  ! unlikely
+      endif
       call PairQHS(i, j, LRS) 
       if (LRS < TF)  cycle
       IsPair = .TRUE.
@@ -5332,8 +5564,7 @@ do i=1, nInd
         if (AgePhase==0 .and. n==1)  cycle
         if (n==1)  LL = LLa
         if (n==2)  LL = LLg                   
-        call BestRel(LL, 4, topX, dLL)
-        if (topX /= 4 .or. dLL < 2*TA) then
+        if (LL(4) > 0 .or. (LL(4)-LL(7)) < TA .or. (LL(4) - MaxLL(LL)) < TF) then                                                                         
           if (ExtraAge>0 .and. n==2 .and. LL(4)- MaxLL(LL((/1,2,6,7/)))>TA &
            .and. MaxLL(LL((/3,5/)))-LL(4) < TA) then
             IsPair = .TRUE.
@@ -5359,11 +5590,13 @@ do i=1, nInd
         do m=1,2
           if (nCG(k,m)>0) then
             do x=1,nCG(k,m)
-              call calcGPZ(nC(k), k, CandG(k,m,nCG(k,m)),m,gLL)
+              call calcGPZ(nC(k), k, CandG(k,m,nCG(k,m)),m)
             enddo
           endif
         enddo
         if (ALL(GpID(:,nC(k),k)==0)) then
+          nS(nC(k),k) = 0
+          SibID(:, nC(k), k) = 0
           nC(k) = nC(k) -1
           Parent(i, k) = 0
           call CalcLind(i)
@@ -5406,32 +5639,57 @@ implicit none
 
 integer, intent(IN) :: A, kA, SB, kB
 double precision, intent(OUT) :: LR
-integer :: l, x, y
-double precision :: PrL(nSnp), PrX(3), PrXY(3,3), LL(2)
+integer :: l, x
+double precision :: PrL(nSnp), PrX(3), PrXY(3,3), LL(2), PrA(3)
 
 if (ns(SB,kB)==1 .and. A>0) then
   call CalcU(SibID(1,SB,kB),kB,A,kA, LL(1))
-  call PairGP(SibID(1,SB,kB), A, kA, 7, LL(2))
+  call PairGP(SibID(1,SB,kB), A, kA, 4, LL(2))
   LR = LL(2) - LL(1)
-else                                  
+else
   PrL = 0D0
   do l=1,nSnp
+    call ParProb(l, A, kA, 0, 0, PrA)
     do x=1,3
-      PrX(x) = XPr(1,x,l,SB,kB) * AHWE(x,l)
-      do y=1,3
-        if (A>0) then
-          PrXY(x,y) = XPr(1,x,l,SB,kB) * AKAP(x,y,l) * LindG(y,l,A)
-        else if (A<0) then
-          PrXY(x,y) = XPr(1,x,l,SB,kB) * AKAP(x,y,l) * DumP(y,l,-A,kA)
-        endif
-      enddo
+      PrX(x) = XPr(1,x,l,SB,kB) * AHWE(x,l)          
+      PrXY(x,:) = XPr(1,x,l,SB,kB) * AKAP(x,:,l) * PrA    
     enddo
     PrL(l) = LOG10(SUM(PrXY)) - LOG10(SUM(PrX))
   enddo
   LR = SUM(PrL)
-endif     
+endif
 
 end subroutine QGP
+
+! #####################################################################
+
+subroutine QPO(A, SB, kB, LR)  ! A replaces dummy SB?
+use Global
+implicit none
+
+integer, intent(IN) :: A, SB, kB
+double precision, intent(OUT) :: LR
+integer :: l, x
+double precision :: PrL(nSnp), PrX(3,2), LL(2), PrA(3)
+
+if (ns(SB,kB)==1) then
+  call CalcU(SibID(1,SB,kB),kB,A,kB, LL(1))
+  call PairPO(SibID(1,SB,kB), A, kB, 1, LL(2))
+  LR = LL(2) - LL(1)
+else
+  PrL = 0D0
+  do l=1,nSnp
+    call ParProb(l, A, kB, 0, 0, PrA)
+    do x=1,3
+      PrX(x,1) = XPr(1,x,l,SB,kB) * XPr(2,x,l,SB,kB)
+      PrX(x,2) = XPr(1,x,l,SB,kB) * PrA(x)
+    enddo
+    PrL(l) = LOG10(SUM(PrX(:,2))) - LOG10(SUM(PrX(:,1)))
+  enddo
+  LR = SUM(PrL)
+endif
+
+end subroutine QPO
 
 ! #####################################################################
 
@@ -5482,10 +5740,10 @@ logical, intent(IN) :: InclAge
 double precision, intent(OUT) :: LL(7)
 double precision :: LLg(7),  LLtmp(2,3), ALR(7), LLz(8), LRHS, LHH, &
  ALRx(3,2), LLM(4), LLp(7), LLx(3), LLC, dx(maxSibSize), ALRq, &
- dLL(2), LLPg(7), LLPO, LLFH(3)                                                                         
+ dLL(2), LLPg(7), LLPO, LLFH(3), ALRg(2), LLi(ns(SB,k), 3), LLHH(3)                                                                        
 integer :: x, y, Par, MaybeOpp, i, ParTmp(2), npt, fsi, ix, topX(2), &
-  AncA(2,mxA), m, Bi, AncBi(2, mxA)                                                                    
-logical :: con             
+  AncA(2,mxA), m, Bi, AncBi(2, mxA), AncB(2,mxA)                                                                               
+logical :: maybeFA                       
 
 LL = 999D0
 LLg = 999D0
@@ -5496,17 +5754,17 @@ LLtmp = 999D0
  call Qadd(A, SB, k, LRHS)  ! 2nd degree relatives vs unrelated
 if (LRHS < TF*nS(SB,k) .and. (focal/=4 .and. focal/=7)) return   
 if (focal==1) then
-  if (Sex(A)/=3 .and. Sex(A)/=k) then
+  if (Sex(A)/=3 .and. Sex(A)/=k .and. .not. hermaphrodites) then
     LL(1) = 777
     return
   endif
-  call CalcAgeLR(-SB,k, A,k, 0,-1, ALR(1))
+  call CalcAgeLR(-SB,k, A,k, 0,-1, .TRUE., ALR(1))
   if (ALR(1)==777 .or. ALR(1)<5*TF) then
     LL(1) = 777
     return
   endif
 else if (focal==2 .or. focal==3) then
-  call CalcAgeLR(A,Sex(A), -SB,k, k,1, ALR(3))
+  call CalcAgeLR(A,Sex(A), -SB,k, k,1, .TRUE., ALR(3))
   if (ALR(3)==777 .or. ALR(3)<5*TF) then
     LL(2:3) = 777
     return
@@ -5521,6 +5779,7 @@ if (ANY(Parent(A,:)/=0)) then
     if (focal==1 .or. focal==4)  return
   endif
 endif
+
  call CalcU(A,k, -SB, k, LLg(7))   ! unrelated
 LL(7) = LLg(7)
 
@@ -5547,11 +5806,11 @@ enddo
 if (LL(1)/=777 .and. LLg(1)==999) then
   call AddParent(A, SB, k, LLg(1))  ! A parent of SB
 endif
-if (InclAge .and. ALR(1)==999)  call CalcAgeLR(-SB,k, A,k, 0,1, ALR(1))
+if (InclAge .and. ALR(1)==999)  call CalcAgeLR(-SB,k, A,k, 0,-1, .TRUE., ALR(1))
 
 if (LLg(2)==999)  call AddFS(A, SB, k,0,k, LLg(2), fsi, dx)
 if (Complx>0 .and. LLg(3)==999)  call AddSib(A, SB, k, LLg(3))
- call CalcAgeLR(A,Sex(A), -SB,k, 0,1, ALR(3))  ! SB parent of A
+ call CalcAgeLR(A,Sex(A), -SB,k, 0,1, .TRUE., ALR(3))  ! SB parent of A
 ALR(2) = ALR(3)  ! TODO?
 
 do x=1,3
@@ -5566,9 +5825,9 @@ enddo
 if (nAgeClasses>2 .and. LL(4)/=777) then
   call AddGP(A, SB, k, LLg(4))
   if (Sex(A)<3) then
-    call CalcAgeLR(-SB,k, A,Sex(A), 0,1, ALR(4))  ! A parent of SB
+    call CalcAgeLR(-SB,k, A,Sex(A), 0,1, .TRUE., ALR(4))  ! A parent of SB
   else
-    call CalcAgeLR(-SB,k, A,3-k, 0,1, ALR(4))
+    call CalcAgeLR(-SB,k, A,3-k, 0,1, .TRUE., ALR(4))
   endif
 endif
 if (LLg(4) < 0) then 
@@ -5584,74 +5843,95 @@ endif
 
 ! FAU
 LLC = 999D0 
-do i=1, nS(SB,k)
-  if (AgeDiff(A, SibID(i,SB,k)) == 999D0) cycle
-  if (AgePriorM(ABS(AgeDiff(A, SibID(i,SB,k)))+1, 6) == 0.0) then
-    ALR(5) = 777
-  endif
-enddo
+Par = 0
+maybeFA = .TRUE.                
+call GetAncest(-SB, k, AncB)
+call CalcAgeLR(-SB,k, A,3-k, 0,2, .TRUE., ALR(5))
+call CalcAgeLR(A,3-k, -SB,k, k,4, .TRUE., ALR(6))   !B's FA of A?
 if (ALR(5)/=777 .and. (InclAge .or. ALR(5)>5*TF)) then
-  call pairUA(-SB, A, k, 3, LLtmp(2,3))    ! A FS with SB?
+  call pairUA(-SB, A, k, 3, LLtmp(1,3))    ! A FS with SB?
+endif
+if (ALR(6)/=777 .and. (InclAge .or. ALR(6)>5*TF) .and. .not. ANY(AncB == A)) then
   call getFSpar(SB, k, .FALSE., Par)
   if (Par /= 0 .and. (Parent(A, 3-k)==0 .or. Parent(A,3-k)==Par)) then
-    call pairUA(A, -SB, k, k, LLtmp(1,3))
-    LLg(5) = MaxLL(LLtmp(:,3))
-  else
-    LLg(5) = LLtmp(2,3)
-  endif
-  if (complx>0 .and. (focal==2 .or. focal==3 .or. focal==7) .and. LL(2)<0 .and. &
-   Parent(A,3-k)==Par .and. (MaxLL(LLtmp(:,3)) - MaxLL(LL(2:3)) > -TA)) then
-      call FSHC(A, -SB, k, LLC)
-      if (LLC >LLg(2) .and. LLC<0 .and. ALR(2)/=777) then
-        LL(2) = LLC + ALR(2)
-      endif
-  endif
-  
-  ! HAU
-  ALRx = 0
-  do x=1,2
-    call pairUA(A, -SB, x, k, LLtmp(1,x))  
-    if (Parent(A,x)>0) then
-      call CalcAgeLR(Parent(A,x),x, -SB,k, 0,1, ALRx(1,x))
+    if (Parent(A,3-k)==Par) then
+      call pairUA(A, -SB, k, k, LLtmp(2,3)) 
     else
-      call CalcAgeLR(A,Sex(A), -SB,k, x,4, ALRx(1,x))
-    endif
-    call pairUA(-SB, A, k, x, LLtmp(2,x))
-    call CalcAgeLR(-SB,k, A,Sex(A), x,3, ALRx(2,x))
-  enddo
-  if (Complx>0)  LLg(6) = MaxLL(RESHAPE(LLtmp(:,1:2), (/2*2/) ))
-  do x=1,2
-    do y=1,2
-      if (LLtmp(y,x) < 0 .and. ALRx(y,x) /= 777 .and. &
-        (InclAge .or. ALRx(y,x)>5*TF)) then
-          if (InclAge)  LLtmp(y,x) = LLtmp(y,x) + ALRx(y,x)
+      if (Par>0) then
+        if (AgeDiff(A, Par)<=0)  maybeFA = .FALSE.
       else
-        LLtmp(y,x) = 777
+        call CalcAgeLR(A,3-k, Par,3-k, 0,1, .TRUE., ALRq) 
+        if (ALRq < TF .or. ALRq==777)  maybeFA = .FALSE. 
       endif
-    enddo
-  enddo
-  if (Complx>0)  LL(6) = MaxLL(RESHAPE(LLtmp(:,1:2), (/2*2/) ))
-  if (LLg(5)<0 .and. ALRx(2,1)/=777 .and. ALRx(2,2)/=777) then
-    if (InclAge)  LL(5) = LLg(5) + ALRx(2,1) + ALRx(2,2)  ! A FS of SB
-    if (.not. InclAge)  LL(5) = LLg(5)
-  else if (LLg(5)<0 .and. ALRx(1,1)/=777 .and. ALRx(1,2)/=777) then
-    if (InclAge)  LL(5) = LLg(5) + ALRx(1,1) + ALRx(1,2)  ! one or all in SB FA of A
-    if (.not. InclAge)  LL(5) = LLg(5)                               
-  else
-    LL(5) = 777
-  endif      
+      if (maybeFA) then
+        call getAncest(Par, 3-k, AncBi)
+        if (ANY(AncBi == A))   maybeFA = .FALSE. 
+      endif
+      if (maybeFA) then
+        ParTmp = Parent(A,:)
+        call NewPar(A, 3-k, Par)
+        call pairUA(A, -SB, k, k, LLtmp(2,3))
+        call NewPar(A, 3-k, ParTmp(3-k))
+      endif
+    endif
+  endif
 endif
+LLg(5) = MaxLL(LLtmp(:,3))
+if (InclAge) then
+  if (ALL(LLtmp(:,3)<0)) then
+    LL(5) = MaxLL((/LLtmp(1,3)+ALR(5), LLtmp(2,3)+ALR(6)/))
+  else if (LLtmp(1,3) < 0) then
+    LL(5) = LLtmp(1,3)+ALR(5)
+  else if (LLtmp(2,3) < 0) then
+    LL(5) = LLtmp(2,3)+ALR(6)
+  else
+    LL(5) = LLg(5)    ! >0
+  endif
+endif
+
+if (complx>0 .and. (focal==2 .or. focal==3 .or. focal==7) .and. LL(2)<0 .and. &
+ Parent(A,3-k)==Par .and. (MaxLL(LLtmp(:,3)) - MaxLL(LL(2:3)) > -TA)) then
+    call FSHC(A, -SB, k, LLC)
+    if (LLC >LLg(2) .and. LLC<0 .and. ALR(2)/=777) then
+      LL(2) = LLC + ALR(2)
+    endif
+endif
+  
+! HAU
+ALRx = 0
+do x=1,2
+  call pairUA(A, -SB, x, k, LLtmp(1,x))  
+  if (Parent(A,x)>0) then
+    call CalcAgeLR(Parent(A,x),x, -SB,k, 0,1, .TRUE., ALRx(1,x))
+  else
+    call CalcAgeLR(A,Sex(A), -SB,k, x,4, .TRUE., ALRx(1,x))
+  endif
+  call pairUA(-SB, A, k, x, LLtmp(2,x))
+  call CalcAgeLR(-SB,k, A,Sex(A), x,3, .TRUE., ALRx(2,x))
+enddo
+if (Complx>0)  LLg(6) = MaxLL(RESHAPE(LLtmp(:,1:2), (/2*2/) ))
+do x=1,2
+  do y=1,2
+    if (LLtmp(y,x) < 0 .and. ALRx(y,x) /= 777 .and. &
+      (InclAge .or. ALRx(y,x)>5*TF)) then
+        if (InclAge)  LLtmp(y,x) = LLtmp(y,x) + ALRx(y,x)
+    else
+      LLtmp(y,x) = 777
+    endif
+  enddo
+enddo
+if (Complx>0)  LL(6) = MaxLL(RESHAPE(LLtmp(:,1:2), (/2*2/) ))    
 
 if ((LL(focal)<0 .and. LL(focal)>=LL(7)) .or. focal==4 .or. LL(6)>0) then                                                           
   if (nAgeClasses>3 .and. ALR(4)/=777 .and. LLg(4)<0) then 
-    call CalcAgeLR(-SB,k, A,Sex(A), 1,4, ALR(5))
-    call CalcAgeLR(-SB,k, A,Sex(A), 2,4, ALR(6))
-    if ((ALR(5)/=777 .and. ALR(5)>3*TF) .or. (ALR(6)/=777 .and. ALR(6)>3*TF)) then
+    call CalcAgeLR(-SB,k, A,Sex(A), 1,4, .TRUE., ALRg(1))
+    call CalcAgeLR(-SB,k, A,Sex(A), 2,4, .TRUE., ALRg(2))
+    if ((ALRg(1)/=777 .and. ALRg(1)>3*TF) .or. (ALRg(2)/=777 .and. ALRg(2)>3*TF)) then
       call AddGGP(A, SB, k, LLz(1))
     endif
   endif               
   if (nS(SB,k)>0) then
-    call CalcAgeLR(A,k, -SB,k, 0,5, ALRx(3,1))
+    call CalcAgeLR(A,k, -SB,k, 0,5, .TRUE., ALRx(3,1))
     if (ALRx(3,1)==777 .or. ALRx(3,1)<5*TF) then
       LLz(2:3) = 777
     else
@@ -5676,16 +5956,39 @@ if ((LL(focal)<0 .and. LL(focal)>=LL(7)) .or. focal==4 .or. LL(6)>0) then
   enddo
   LLg(6) = MaxLL((/LLg(6), LLz/))
   if(LLz(1) < 0 .and. InclAge) then
-    LLz(1) = LLz(1) + MAXVAL(ALR(5:6), MASK=ALR(5:6)/=777)
+    LLz(1) = LLz(1) + MAXVAL(ALRg, MASK=ALRg/=777)
   else if (InclAge) then
     LLz(1) = 777
   endif
   LL(6) = MaxLL((/LL(6), LLz/))
 endif
       
+ LLi = 999D0 
+if ((MaxLL(LL)==LL(3) .or. MaxLL(LL)==LL(2)) .and. ANY(Parent(A,:)<=0) .and. &
+  ANY(AgeDiff(A, SibID(1:ns(SB,k),SB,k)) > 1)) then
+  do i=1, ns(SB,k)  ! an B GP of A
+    if (AgeDiff(A, SibID(i,SB,k)) <=0) cycle
+    if (AgeDiff(A, SibID(i,SB,k))/=999) then
+      if (ALL(LOG10(AgePriorM(AgeDiff(A, SibID(i,SB,k))+1, 3:5)) < TF)) cycle
+    endif
+    do x=1,2
+      call PairGP(A, SibID(i,SB,k), x, 4, LLi(i,x))
+    enddo
+    call CalcU(A,k,SibID(i,SB,k),k, LLi(i,3))
+    if (MaxLL(LLi(i,1:2)) < 0 .and. (MaxLL(LLi(i,1:2)) - LLi(i,3)) > TA) then
+      if ((MaxLL(LLi(i,1:2)) - LLi(i,3) + LLg(7)) > LL(6)) then 
+        LLg(6) = MaxLL(LLi(i,1:2)) - LLi(i,3) + LLg(7)
+        LL(6) = LLg(6)   ! TODO: ageprior (GP)
+      endif
+    endif
+  enddo
+endif
+
 LLM = 999D0    
 LLp = 999D0
 LLFH = 999D0       
+MaybeOpp = 0  
+Par = 0                 
 if (complx>0 .and. (MaxLL(LL)==LL(3) .or. MaxLL(LL)==LL(2)) .and. &
   (focal==2 .or. focal==3) .and. Parent(A,3-k)==0) then 
   MaybeOpp = 1
@@ -5733,7 +6036,7 @@ if (complx>0 .and. (MaxLL(LL)==LL(3) .or. MaxLL(LL)==LL(2)) .and. &
   else if (Par < 0) then
     call Qadd(A, -Par, 3-k, LLM(1))  ! 2nd degree relatives vs unrelated    
     if (LLM(1) < TF*nS(-Par,3-k))  MaybeOpp = 0
-    call CalcAgeLR(A,Sex(A), Par,3-k, 0,1, ALRq)
+    call CalcAgeLR(A,Sex(A), Par,3-k, 0,1, .TRUE., ALRq)
     if (ALRq==777)  MaybeOpp = 0                                        
   endif
   if (MaybeOpp == 1 .and. Par < 0) then
@@ -5758,13 +6061,13 @@ if (complx>0 .and. (MaxLL(LL)==LL(3) .or. MaxLL(LL)==LL(2)) .and. &
           call DoAdd(A, SB, k)
           call ParentHFS(A, 0,3-k,-Par, 3-k,3, LLM(4))  ! TODO: also if LL(3) not (yet) max
           call RemoveSib(A, SB, k)
-          if (LLM(4) - LLM(1) > TA) then
+          if (LLM(4)<0 .and. LLM(4) - LLM(1) > TA) then
             LL(2:3) = 222
           endif
         else
           LL(2) = LL(2)
         endif
-      else if (LLM(2) -LLM(3) >TA .and. complx>0) then
+      else if (LLM(3)<0 .and. LLM(2) -LLM(3) >TA .and. complx>0) then
         LL(2:3) = 222  ! as likely to be added to opp. parent
       endif
       endif
@@ -5776,8 +6079,23 @@ if (complx>0 .and. (MaxLL(LL)==LL(3) .or. MaxLL(LL)==LL(2)) .and. &
     WHERE(LLFH(2:3)<0)  LLFH(2:3) = LLFH(2:3) - LLFH(1) + LLg(7) 
     if (ANY(LLFH(2:3)<0) .and. MaxLL(LLFH(2:3)) > LLg(5)) then
       LLg(5) = MaxLL(LLFH(2:3))
-      LL(5) = LLg(5) + ALR(6)
+       if (InclAge .and. ANY(ALRx < 0)) then
+        LL(5) = LLg(5) + MaxLL((/ALRx(:,1), ALRx(:,2)/))
+      else
+        LL(5) = LLg(5)
+      endif          
     endif
+  endif
+endif
+
+LLHH = 999D0
+if (MaxLL(LL)==LL(2) .and. (focal==2 .or. focal==3) .and. complx>0) then
+  do x=1,3
+    call PairHSHA(A, fsi, k, x, LLHH(x))
+  enddo 
+  if (MaxLL(LLHH) <0 .and. LLg(2) - MaxLL(LLHH) < TA) then
+    LLg(2) = 222
+    LL(2) = 222
   endif
 endif
 
@@ -5822,8 +6140,10 @@ if (focal==4 .and. MaxLL(LL)==LL(4) .and. BY(A)>=0) then  ! don't rely on weak a
       LL(4) = 222 
     else if (LLg(4)-LLg(5)<.1 .and. LLg(5)<0 .and. (ALR(4) - ALR(5)) < 2*TA) then
       LL(4) = 222  ! relies on age prior only. 
-    else if (LL(6) == LLz(1) .and. LLz(1)<0 .and. LLg(4) - (LLz(1)-MAXVAL(ALR(5:6), MASK=ALR(5:6)/=777)) < .1 .and. &
-     ALR(4) -MAXVAL(ALR(5:6), MASK=ALR(5:6)/=777) < 2*TA) then  ! GGP
+    else if (LL(6) == LLz(1) .and. LLz(1)<0 .and. &
+     (LLg(4) - (LLz(1)-MAXVAL(ALRg, MASK=ALRg/=777)) < .1 .and. &
+     ALR(4) -MAXVAL(ALRg, MASK=ALRg/=777) < 2*TA) .or. &
+     LLg(4) - (LLz(1)-MAXVAL(ALRg, MASK=ALRg/=777))<2*TA) then  ! GGP
       LL(4) = 222
     endif
   endif
@@ -5837,7 +6157,7 @@ if (ANY(Parent(A,:)<=0)) then   ! one of Bi parent of A?
         Bi = SibID(i,SB,k)
         if (AgeDiff(A, Bi) < 0) cycle
         if (Sex(Bi)/=m .and. Sex(Bi)/=3)  cycle
-        call CalcAgeLR(A,Sex(A), Bi,m, m,1, ALRq)
+        call CalcAgeLR(A,Sex(A), Bi,m, m,1, .TRUE., ALRq)
         if (ALRq < TF .or. ALRq==777)  cycle
         call getAncest(Bi,sex(Bi), AncBi)
         if (ANY(AncBi == A))  cycle
@@ -5950,14 +6270,14 @@ if (LL(1) == 777 .and. focal==1) return
 if (focal==1) then
   do x=1,2
     if (GpID(x,SB,kB)/=0) then
-      call CalcAgeLR(-SA,kA, GpID(x,SB,kB),x, 0,1, ALRtmp)
+      call CalcAgeLR(-SA,kA, GpID(x,SB,kB),x, 0,1, .TRUE., ALRtmp)
       if (ALRtmp == 777) then
         LL(1) = 777
         exit
       endif
     endif
     if (GpID(x,SA,kA)/=0) then
-      call CalcAgeLR(-SB,kB, GpID(x,SA,kA),x, 0,1, ALRtmp)
+      call CalcAgeLR(-SB,kB, GpID(x,SA,kA),x, 0,1, .TRUE., ALRtmp)
       if (ALRtmp == 777) then
         LL(1) = 777
         exit
@@ -5980,7 +6300,7 @@ endif
   
 if (.not. ShareOpp .and. .not. ShareSib) then
   call Qmerge(SA, SB, kB,  LRHS)
-  if (LRHS < TF*MIN(nS(SA,kA), nS(SB,kB))) then
+  if (LRHS < 2*TF*MAX(nS(SA,kA), nS(SB,kB))) then
     LL(1) = 777
   endif
    if (LL(1) == 777 .and. focal==1) return
@@ -6008,7 +6328,7 @@ else
 endif
 if (focal==1 .and. (LL(1)==777 .or. (LL(1) - LL(7)) < TA)) return
 
-  call CalcAgeLR(-SB,kB, -SA,kA, 0,1, ALR(2))
+  call CalcAgeLR(-SB,kB, -SA,kA, 0,1, .TRUE., ALR(2))
 if (ALR(2) /= 777) then
    call addFS(0, SA, kA, SB, kB, LLg(2), ix, dx)  ! SB FS with an A
   if(complx>0)  call PairUA(-SB, -SA, kB, kA, LLg(3))  ! SB HS with an A                      
@@ -6024,7 +6344,7 @@ else
 endif
  
 LLtmp = 999D0
-call CalcAgeLR(-SA,kA, -SB,kB, 0,1, ALR(4))
+call CalcAgeLR(-SA,kA, -SB,kB, 0,1, .TRUE., ALR(4))
 if (ALR(4)/=777) then
   if (focal/=4 .or. complx==0) call addFS(0, SB, kB, SA, kA, LLtmp(1), ix, dx)   ! SB GP of A's
   if(complx>0)  call PairUA(-SA, -SB, kA, kB, LLtmp(2))  ! SB GP of A's
@@ -6038,7 +6358,7 @@ else
   LL(4) = 777
 endif
  
-call CalcAgeLR(-SA,kA, -SB,kB, 0,2, ALR(5))
+call CalcAgeLR(-SA,kA, -SB,kB, 0,2, .TRUE., ALR(5))
 if (ALR(5) /= 777) then 
   if(complx>0)  call ParentHFS(0, SA, kA, SB, kB,3, LLg(5))  ! SB FA of A's 
                               
@@ -6056,17 +6376,17 @@ ALRx = 0
 do x=1,4               
   if (x==1 .or. x==2) then
     if (complx==0) cycle
-    call CalcAgeLR(-SA,kA, -SB,kB, x,3, ALRx(x))
+    call CalcAgeLR(-SA,kA, -SB,kB, x,3, .TRUE., ALRx(x))
     if (ALRx(x) /= 777) then
       call ParentHFS(0, SA, kA, SB, kB, x, LLx(x))
     endif
   else if (x==3) then
-    call CalcAgeLR(-SA,kA, -SB,kB, 3-kB,4, ALRx(x))
+    call CalcAgeLR(-SA,kA, -SB,kB, 3-kB,4, .TRUE., ALRx(x))
     if (ALRx(x) /= 777) then
       call dummyGP(SA, SB, kA, kB, LLx(3))  ! SB GGP of A's
     endif      
   else if (x==4) then
-    call CalcAgeLR(-SB,kB, -SA,kA, 3-kA,4, ALRx(x))
+    call CalcAgeLR(-SB,kB, -SA,kA, 3-kA,4, .TRUE., ALRx(x))
     if (ALRx(x) /= 777) then
       call dummyGP(SB, SA, kB, kA, LLx(4))  ! SA GGP of B's
     endif 
@@ -6096,7 +6416,7 @@ do x=1,2
     if (LLz(x,2)/=777) then    
       call CalcU(-SB, kB, GpID(x,SA,kA), x, LLz(x,1))
       call PairUA(-SB, GpID(x,SA,kA), kB, 3, LLz(x,2))
-      call CalcAgeLR(-SB,kB, GpID(x,SA,kA),x,0,2, ALRx(4+x))
+      call CalcAgeLR(-SB,kB, GpID(x,SA,kA),x,0,2, .TRUE., ALRx(4+x))
     endif
     if (LLz(x,2) < 0 .and. ALRx(4+x)/=777) then
       LLx(4+x) = LL(7) + LLz(x,2) - LLz(x,1)
@@ -6150,8 +6470,8 @@ if (kA == kB .and. focal==1 .and. (ABS(MaxLL(LL) - LL(1))<TA .or. &
     call CalcU(Par(1), 3-kA, Par(2), 3-kA, LLMo(1))  ! more accurate
     call MergeSibs(-par(1), -par(2), 3-kA, LLMo(2)) 
   endif
-  if (Complx==0) then
-    LL(1) = LLM(4) ! FS merge only
+  if (Complx==0) then   ! FS merge only
+    LL(1) = LLM(4)
     if (InclAge) LL(1) = LL(1) + ALR(1) 
     FSM = .TRUE.
   endif
@@ -6246,7 +6566,7 @@ do i=1, nS(SA,kA)
   endif
 enddo
 
-if (.not. strict) then ! > 2/3rds by same opp. parent?
+if (.not. strict) then ! > half by same opp. parent?
   Par = 0
   do i=1, nS(SA,kA)
     if (COUNT(ParV == ParV(i)) > nS(SA,kA)/2.d0) then
@@ -6519,8 +6839,7 @@ integer, intent(IN) :: A, SB, k
 integer :: i, n, j
 
 if (nS(SB,k) +1 >= maxSibSize) then
-  call Erstop("reached maxSibSize")  !rexit
-  return
+  call Erstop("reached MaxSibshipSize, please increase") 
 endif
 
 Parent(A, k) = -SB
@@ -6581,13 +6900,11 @@ if (SA/=0) then
 endif
 if (valid .eqv. .FALSE.) then
   call Erstop("Pedigree loop created")
-  return 
 endif
 
 if (SA/=0) then
   if (nS(SA,k) + nS(SB,k) >= maxSibSize) then
     call Erstop("reached maxSibSize")
-    return
   endif    
   do n=1,nS(SA,k)    ! check for FS
     i = SibID(n,SA,k)
@@ -6699,7 +7016,7 @@ else if (ParB < 0 .and. ParA == 0) then
 ! else not implemented yet
 endif
 
- call DoMerge(SA, SB, k, OK)
+ call DoMerge(SA, SB, k, OK)  ! takes care of MakeFS
 
 end subroutine DoFSMerge
 
@@ -6716,6 +7033,7 @@ integer :: i, k, m, s
 
 nOff = 0
 Off = 0
+if (P==0) return                
 do k=1,2
   if (P>0 .and. kP/=1 .and. kP/=2) then
     if (Sex(P)/=3 .and. Sex(P)/=k) cycle
@@ -6728,6 +7046,9 @@ do k=1,2
       Off(nOff) = i
       sxOff(nOff) = Sex(i)
     endif
+    if (nOff == maxSibSize) then
+      call rexit("reached MaxSibshipSize, please increase")
+    endif                            
   enddo
   if (dums) then
     do m=1,2
@@ -6737,6 +7058,9 @@ do k=1,2
           Off(nOff) = -s
           sxOff(nOff) = m 
         endif
+        if (nOff == maxSibSize) then
+          call rexit("reached MaxSibshipSize, please increase")
+        endif 
       enddo
     enddo
   endif
@@ -7146,7 +7470,7 @@ integer, intent(IN) :: A, B, kA, kB, cat, Ai, Bj
 double precision, intent(OUT) :: LL
 integer, allocatable, dimension(:) :: AA, BB
 integer :: nA, nB, l,x,y, v, i, j, z,m, f, e, u, DoneA(maxSibSize), &
-  catA(maxSibSize), catB(maxSibSize), GA(2), GB(2), g, Ei, AB(maxSibSize)
+  catA(maxSibSize), catB(maxSibSize), GA(2), GB(2), g, Ei, AB(2*maxSibSize)
 double precision :: PrL(nSnp,2), PrGA(3,2), PrGB(3,2), PrGGP(3), &
   PrUZ(3,3, 3,3,3,3,2), PrE(3), PrH(3), PrW(3)
 integer, allocatable, dimension(:) :: UseEE, MateABpar, TypeEE
@@ -7371,8 +7695,7 @@ do l=1, nSnp
         if (catB(j)==1 .or. catB(j)==2 .or. catB(j)==3) then
           PrE = 1
         else if (catB(j)==6) then  
-          call ParProb(l, GpID(3-kA,-Parent(BB(j), 3-kB), 3-kB),&
-           3-kA, 0, 0, PrH)
+          call ParProb(l, GpID(3-kA,-Parent(BB(j),3-kB),3-kB),3-kA, 0, 0, PrH)
           do e=1,3
             PrE(e) = SUM(AKA2P(e,x,:) * PrH) 
           enddo
@@ -7491,8 +7814,7 @@ do l=1, nSnp
         if (catA(i)>1 .and. catA(i)<4) then  ! catA==1 already done
           PrE = 1
         else if (catA(i)==6) then ! Parent(AA(i), 3-kA) <0
-          call ParProb(l, GpID(3-kA,-Parent(AA(i),3-kA), 3-kA),&
-           3-kA, 0, 0, PrH)
+          call ParProb(l, GpID(3-kA,-Parent(AA(i),3-kA), 3-kA), 3-kA, 0, 0, PrH)
           do e=1,3
             PrE(e) = SUM(AKA2P(e,x,:) * PrH) 
           enddo
@@ -7563,7 +7885,7 @@ do l=1, nSnp
           if (Ai/=0 .and. FSID(f, AA(i))/=Ai) cycle 
           if (Genos(l,FSID(f, AA(i)))==-9) cycle
           PrE = PrE * OKA2P(Genos(l,FSID(f,AA(i))), x, :)
-          DoneA(i)=2  ! for printing only 
+          DoneA(i)=2 
         enddo
         
         if (catA(i)==2) then
@@ -7615,10 +7937,10 @@ implicit none
 integer, intent(IN) :: nA, nB, k
 integer, intent(INOUT) :: AB(nA+nB)
 integer, intent(OUT) :: UseEE(nA+nB), MatePar(nA+nB)
-integer :: i, j,x, nAB(2), Mate(MAX(nA,nB), 2), GGK(2), Order(maxSibSize),&
+integer :: i, j,x, nAB(2), Mate(MAX(nA,nB), 2), GGK(2), Order(2*maxSibSize),&
   ABM(MAX(nA,nB),2), UseM(MAX(nA,nB),2), MateI
 logical :: reorder, OrderAgain
-double precision :: EEtmp(maxSibSize)
+double precision :: EEtmp(2*maxSibSize)
 
 UseEE = 0
 MatePar = 0
@@ -7958,7 +8280,7 @@ double precision, intent(OUT) :: LL
 integer :: l,x,y, r,v, Bj, Ai, i, G(2), m, Ei, e,f, j, &
   AncA(2,mxA), AncB(2,mxA), catG, catB(ns(SB,k)), catA(ns(SA,k)), &
   nAB(2), AB(2,maxSibsize), catGG(2), z, GGP
-double precision :: PrL(nSnp), PrG(3,2), PrXY(3,3,3), PrE(3), PrH(3)
+double precision :: PrL(nSnp, 2), PrG(3,2), PrXY(3,3,3,2), PrE(3), PrH(3)
 
 LL = 999D0
 G = 0  
@@ -7997,7 +8319,7 @@ if (ANY(G/=0)) then
       if (nFS(AB(j,i))==0) cycle
       if (Parent(AB(j,i), 3-k)==0) cycle
       if (Parent(AB(j,i), 3-k) == G(3-k)) then
-        catG = AB(j,i)
+        if (catG==0)  catG = AB(j,i)
       endif
       do m=1,2
         if (G(m)==0) cycle
@@ -8049,7 +8371,9 @@ do l=1,nSnp
   enddo
   do x=1,3
     do y=1,3
-      PrXY(x,y,:) = AKA2P(x, y, :) * PrG(y,3-k) * PrG(:,k)
+      do z=1,3
+        PrXY(x,y,z,:) = AKA2P(x, y, z) * PrG(y,3-k) * PrG(z,k)
+      enddo
     enddo
   enddo
   
@@ -8060,7 +8384,7 @@ do l=1,nSnp
     do j=1,2
       do r=1, nAB(j)
         if (j==2) then
-          if (catB(r)==1) cycle ! done as FS of A
+          if (catB(r)==1) cycle ! done as FS of an A
         endif
         Ai = AB(j,r)
         if (NFS(Ai) == 0) cycle
@@ -8092,6 +8416,7 @@ do l=1,nSnp
               PrE = PrE * OcA(Genos(l, Parent(Ai,3-k)), :)
             endif
           endif
+          PrE = PrE/SUM(PrE)                                     
         else
           call ParProb(l, Parent(Ai,3-k), 3-k, -1, 0, PrE)
         endif
@@ -8110,9 +8435,18 @@ do l=1,nSnp
               PrE(e) = PrE(e) * SUM(PrH)
             enddo
           enddo
-          if (SUM(PrE)<3) then
-            PrE = PrE / SUM(PrE)
-          endif
+        endif
+        
+        if (SUM(PrE)<3) then
+          if (ANY(catGG/=0)) then
+            PrXY(x,y,z,1) = PrXY(x,y,z,1) * SUM(PrE)
+          else if (catG==Ai) then
+            do e=1,3
+              PrXY(x,e,:,1) = PrXY(x,e,:,1) * PrE(e)
+            enddo
+          else 
+            PrXY(x,:,:,1) = PrXY(x,:,:,1) * SUM(PrE)
+          endif                                 
         endif
 
         do f=1, nFS(Ai)
@@ -8130,14 +8464,16 @@ do l=1,nSnp
           endif
         endif
 
-        if (catG==Ai) then
-          do e=1,3
-            PrXY(x,e,:) = PrXY(x,e,:) * PrE(e)
-          enddo
-        else if (ANY(catGG/=0)) then                               
-          PrXY(x,y,z) = PrXY(x,y,z) * SUM(PrE)              
-        else
-          PrXY(x,:,:) = PrXY(x,:,:) * SUM(PrE)
+        if (SUM(PrE)<3) then
+          if (ANY(catGG/=0)) then
+            PrXY(x,y,z,2) = PrXY(x,y,z,2) * SUM(PrE)
+          else if (catG==Ai) then
+            do e=1,3
+              PrXY(x,e,:,2) = PrXY(x,e,:,2) * PrE(e)
+            enddo                                                                             
+          else 
+            PrXY(x,:,:,2) = PrXY(x,:,:,2) * SUM(PrE)
+          endif
         endif
       enddo  ! r
     enddo  ! j
@@ -8145,9 +8481,11 @@ do l=1,nSnp
   enddo  ! y (catGG>0 only)
   enddo  ! z (catGG>0 only)
 
-  PrL(l) = LOG10(SUM(PrXY)) 
+  do m=1,2
+    PrL(l,m) = LOG10(SUM(PrXY(:,:,:,m)))! - LOG10(SUM(PrXY(:,:,:,1)))
+  enddo
 enddo
-LL = SUM(PrL)
+LL = SUM(PrL(:,2)) - SUM(PrL(:,1))
 
 do m=1,2
   if (catGG(m)/=0) then
@@ -8201,7 +8539,7 @@ if (A/=0) then
   else if (ANY(AncB == A)) then 
     LL = 777
   else
-    call CalcAgeLR(A, sex(A), -SB, kB, kB, 1, ALR)
+    call CalcAgeLR(A, sex(A), -SB, kB, kB, 1, .TRUE., ALR)
     if (ALR == 777)  LL = 777
   endif
   if (Parent(A,3-kB)==GpID(3-kB,SB,kB) .and. Parent(A,3-kB)/=0) then
@@ -8213,7 +8551,7 @@ if (GpID(kB, SA, kA)/=0 .and. GpID(kB, SA, kA)/=-SB) then
   else if (ANY(AncB(kA, 2:mxA) == -SA)) then
     LL = 777
   else
-    call CalcAgeLR(-SA, kA, -SB, kB, kB, 1, ALR)
+    call CalcAgeLR(-SA, kA, -SB, kB, kB, 1, .TRUE., ALR)
     if (ALR == 777)  LL = 777
   endif
 endif
@@ -8256,10 +8594,10 @@ do f=1, nS(SB,kB)
       else if (Parent(Bj, 3-kB) == A) then
         MaybeFS(f) = 0
       else if (Parent(Bj, 3-kB)/=0) then
-        call CalcAgeLR(A, Sex(A), Parent(Bj, 3-kB), 3-kB, 3-kB, 1, ALR)
+        call CalcAgeLR(A, Sex(A), Parent(Bj, 3-kB), 3-kB, 3-kB, 1, .TRUE., ALR)
         if (ALR==777)  MaybeFS(f) = 0
       endif
-      call CalcAgeLR(A, Sex(A), Bj, Sex(Bj), kB, 2, ALR)
+      call CalcAgeLR(A, Sex(A), Bj, Sex(Bj), kB, 2, .TRUE., ALR)
       if (ALR==777)  MaybeFS(f) = 0
       
     else if (SA/=0) then
@@ -8268,10 +8606,10 @@ do f=1, nS(SB,kB)
         LL = 444   ! TODO: implement. 
         cycle
       else if (Parent(Bj, 3-kB)/=0) then
-        call CalcAgeLR(-SA, kA, Parent(Bj, 3-kB), 3-kB, 3-kB, 1, ALR)
+        call CalcAgeLR(-SA, kA, Parent(Bj, 3-kB), 3-kB, 3-kB, 1, .TRUE., ALR)
         if (ALR==777)  MaybeFS(f) = 0
       endif
-      call CalcAgeLR(-SA, kA, Bj, Sex(Bj), kB, 2, ALR)
+      call CalcAgeLR(-SA, kA, Bj, Sex(Bj), kB, 2, .TRUE., ALR)
       if (ALR==777)  MaybeFS(f) = 0
     endif
     if (Bj == PA .or. (A/=0 .and. A == Parent(Bj, 3-kB))) then
@@ -8344,7 +8682,7 @@ if (ALL(MaybeFS==0 .or. MaybeFS==-1)) then
 endif
 
 dLL = 999D0
-if (InbrX > -2) then                                               
+if (InbrX > -2) then  ! not: PO or GP-GO mating                                               
 do l=1,nSnp
   do f=1, nS(SB,kB)
     if (MaybeFS(f) < 1) cycle
@@ -8603,20 +8941,22 @@ if (LL==777) return
 
  cat = 0
  catG = 0      
-if (Parent(A, 3-k)==GpID(3-k,SB,k) .and. Parent(A, 3-k) < 0) then                                        
+if (Parent(A, 3-k)==GpID(3-k,SB,k) .and. Parent(A, 3-k) /= 0) then                                        
   cat = 1
 else
   do i=1,nS(SB,k)         
     if (nFS(SibID(i,SB,k))==0) cycle
-    if (Parent(SibID(i, SB, k), 3-k) >= 0) cycle
+    if (Parent(SibID(i, SB, k), 3-k) == 0) cycle
     if (Parent(SibID(i, SB, k), 3-k) == Parent(A, 3-k)) then
       catG = i
     else if (Parent(SibID(i, SB, k), 3-k) == GpID(3-k,SB,k)) then
       cat = 1
       exit
-    else if (GpID(k, -Parent(SibID(i,SB,k),3-k), 3-k) == -SB) then
-      cat = 2
-      exit
+    else if (Parent(SibID(i,SB,k),3-k) < 0) then
+      if (GpID(k, -Parent(SibID(i,SB,k),3-k), 3-k) == -SB) then
+        cat = 2
+        exit
+      endif
     endif
   enddo
 endif                                                              
@@ -8890,6 +9230,11 @@ else
     endif
   enddo
 endif
+if (GpID(3-m,SB,k) /= 0) then
+  if(ANY(Parent(SibID(1:ns(SB,k),SB,k), 3-k) == GpID(3-m,SB,k))) then
+    LL = 444  ! inbreeding loops, approx. below invalid
+  endif
+endif    
 if (LL /= 999) return
 
 PrL = 0D0
@@ -8933,18 +9278,30 @@ double precision :: PrG(3,2), PrL(nSnp, 2), PrXV(3,3,3,3,3,2), PrPA(3, 2),&
 logical :: BallFS
  
 LLm = 999D0  
- if (A/=0) then
+if (A/=0) then
+  do m=1,2
+    if (Parent(A,m)/=GpID(m,SB,kB) .and. parent(A,m)/=0 .and. GpID(m,SB,kB)/=0) then
+      LL = 777
+      return
+    endif
+  enddo
   call GetAncest(A, kA, AncA)
   nA = 1
   AA(1) = A
 else
+  do m=1,2
+    if (GpID(m,SA,kA)/=GpID(m,SB,kB) .and. GpID(m,SA,kA)/=0 .and. GpID(m,SB,kB)/=0) then
+      LL = 777
+      return
+    endif
+  enddo 
   call GetAncest(-SA, kA, AncA)
   nA = nS(SA,kA)
   AA(1:nA) = SibID(1:nA, SA, kA)
 endif
- call GetAncest(-SB, kB, AncB)
+call GetAncest(-SB, kB, AncB)
  
- G = 0
+G = 0
 GA = 0
 GB = 0       
 do m=1,2
@@ -8984,15 +9341,15 @@ do m=1,2
   endif
     if (A>0) then
     if (hf < 3) then
-      call CalcAgeLR(A, Sex(A), -SB, kB, m, 3, ALR)     
+      call CalcAgeLR(A, Sex(A), -SB, kB, m, 3, .TRUE., ALR)     
     else
-      call CalcAgeLR(A, Sex(A), -SB, kB, 0, 2, ALR)    
+      call CalcAgeLR(A, Sex(A), -SB, kB, 0, 2, .TRUE., ALR)    
     endif
   else if (SA/=0) then
     if (hf < 3) then
-      call CalcAgeLR(-SA, kA, -SB, kB, m, 3, ALR)
+      call CalcAgeLR(-SA, kA, -SB, kB, m, 3, .TRUE., ALR)
     else
-      call CalcAgeLR(-SA, kA, -SB, kB, 0, 2, ALR)
+      call CalcAgeLR(-SA, kA, -SB, kB, 0, 2, .TRUE., ALR)
     endif
   endif
   if (ALR == 777)  LLm = 777
@@ -9180,7 +9537,7 @@ do l=1,nSnp
       enddo
       
       DoneA = 0            
-      if (ALL(catA==0) .and. ALL(catB==0)) then
+      if (ALL(catA==0) .and. ALL(catB==0) .and. nS(SB,kB)>2) then
         if (SA/=0) then
           PrXV(x,y,:,:,:,2) = PrXV(x,y,:,:,:,2) * XPr(1,x,l, SA,kA) *&
            XPr(1,y,l, SB,kB)
@@ -9592,13 +9949,14 @@ end subroutine DummyGP
 !       Age priors  
 ! #####################################################################
 
-subroutine EstBY(s, k, A, LPBY)     
+subroutine EstBY(s, k, A, DumRel, LPBY)     
 ! age prior for dummy parent, based on offspring & GP BY. 
 ! updates DumBY(:, s, k) as side effect
 use Global
 implicit none
 
 integer, intent(IN) :: s, k, A
+logical, intent(IN) :: DumRel                             
 double precision, intent(OUT) :: LPBY(nAgeClasses+ maxAgePO)
 integer :: i, y, m, x,nOff, Offspr(maxSibSize), sxOff(maxSibSize), GG(2)
 double precision :: zero, BYS(maxSibSize, nAgeClasses+ maxAgePO), &
@@ -9614,14 +9972,14 @@ if (nAgeClasses==1 .and. A==0) then
 else if (A/=0) then
   LPBY = LOG10(1.D0/(nAgeClasses+ maxAgePO))  ! CHECK
   ParHasBY = .FALSE.
-  call getOff(A,sex(A),.FALSE.,nOff, Offspr, sxOff)
+  call getOff(A,sex(A),DumRel, nOff, Offspr, sxOff)
   if (noff==0 .or. ALL(BY(offspr(1:nOff))<0)) then
     if(ALL(Parent(A,:)==0)) then
       return
     else 
       do m=1,2
         if (Parent(A,m) > 0) then
-          if (BY(Parent(A,m)) > 0)   ParHasBY = .TRUE.
+          if (BY(Parent(A,m)) >= 0)   ParHasBY = .TRUE.
         endif
       enddo
       if (.not. ParHasBY)   return
@@ -9631,9 +9989,9 @@ endif
 
 BYS = 0.0D0  ! number of offspring born in year y
 if (s/=0) then
- call getOff(-s,k,.TRUE.,nOff, Offspr, sxOff)
+ call getOff(-s,k,DumRel,nOff, Offspr, sxOff)
 else if (A/=0) then
-  call getOff(A,sex(A),.TRUE.,nOff, Offspr, sxOff)
+  call getOff(A,sex(A),DumRel,nOff, Offspr, sxOff)
 endif
 GG = 0
 if (s/=0) then
@@ -9644,10 +10002,10 @@ endif
 
 do i=1, nOff
   if (Offspr(i)>0) then
-    if (BY(Offspr(i))>0) then
+    if (BY(Offspr(i))>=0) then
       BYS(i, BY(Offspr(i)) +maxAgePO) = 1D0
     endif
-  else if (Offspr(i)<0) then
+  else if (Offspr(i)<0 .and. DumRel) then
     BYS(i, :) = 10**DumBY(:, -Offspr(i), sxOff(i))
   endif
 enddo
@@ -9655,10 +10013,10 @@ enddo
 BYGP = 0.0D0
 do m=1,2
   if (GG(m)>0) then
-    if (BY(GG(m))>0) then
+    if (BY(GG(m))>=0) then
       BYGP(m, BY(GG(m)) +maxAgePO) = 1D0
     endif
-  else if (GG(m)<0) then
+  else if (GG(m)<0 .and. DumRel) then
     BYGP(m,:) = 10**DumBY(:, -GG(m), m)
   endif  
 enddo
@@ -9735,19 +10093,52 @@ end subroutine CalcALRmerge
 
 ! #####################################################################
 
-subroutine CalcAgeLR(A, kA, B, kB, m, focal, ALR) ! m: mat/pat relatives
+subroutine CalcAgeLR(A, kA, B, kB, m, focal, DumRel, ALR) ! m: mat/pat relatives
 use Global
 implicit none
 
 integer, intent(IN) :: A, kA, B, kB, m, focal
+logical, intent(IN) :: DumRel                             
 double precision, intent(OUT) :: ALR
 integer :: x, y, z, gcat
 double precision :: BYLR(nAgeClasses+ maxAgePO, 2), zero, &
   ALRtmp(nAgeClasses+ maxAgePO, nAgeClasses+ maxAgePO)
 
+gcat = 0
+if (focal==4) then
+  if (m==1 .and. kB==1) then
+    gcat = 3
+  else if (m==2 .and. kB==2) then
+    gcat = 4
+  else
+    gcat = 5
+  endif
+endif
+
 if (A==0 .or. B==0) then
   ALR = 0
-  return
+  return  
+else if (A>0 .and. B>0) then
+  if (AgeDiff(A,B)/=999) then
+    if (focal == 1 .or. focal==4) then
+      if (AgeDiff(A,B) <=0) then
+        ALR = 777
+        return
+      endif
+    endif
+    if (focal == 1) then
+      ALR = LOG10(AgePriorM(AgeDiff(A,B)+1, 6+kB))
+    else if (focal == 2) then
+      ALR = LOG10(AgePriorM(ABS(AgeDiff(A,B))+1, 9))
+    else if (focal == 3) then
+      ALR = LOG10(AgePriorM(ABS(AgeDiff(A,B))+1, m))
+    else if (focal == 4) then
+      ALR = LOG10(AgePriorM(AgeDiff(A,B)+1, gcat))
+    else if (focal == 5 .or. focal==6) then  !FA / HA
+      ALR = LOG10(AgePriorM(ABS(AgeDiff(A,B))+1, 6))
+    endif
+    return
+  endif
 endif
   
 ! allocate(DumBY(nAgeClasses +maxAgePO, nInd/2, 2)) 
@@ -9755,10 +10146,10 @@ zero = 0.0
 BYLR = LOG10(zero)  ! likelihood ratio to be born in year X 
 ALRtmp = LOG10(zero)
 if (A < 0) then
-  call EstBY(-A, kA, 0, BYLR(:, 1))
+  call EstBY(-A, kA, 0, DumRel, BYLR(:, 1))
 else if (A>0) then
   if (BY(A) < 0) then  ! unknown BY  - use offspring & parent BY
-    call EstBY(0, 0, A, BYLR(:, 1))
+    call EstBY(0, 0, A, DumRel, BYLR(:, 1))
     if (ALL(BYLR(:, 1) <= LOG10(1.D0/(nAgeClasses+ maxAgePO)))) then
       ALR = 0  ! no age info available
       return
@@ -9768,10 +10159,10 @@ else if (A>0) then
   endif
 endif
 if (B < 0) then
-  call EstBY(-B, kB, 0, BYLR(:,2))
+  call EstBY(-B, kB, 0, DumRel, BYLR(:,2))
 else if (B>0) then
   if (BY(B) < 0) then 
-    call EstBY(0, 0, B, BYLR(:, 2))
+    call EstBY(0, 0, B, DumRel, BYLR(:, 2))
     if (ALL(BYLR(:, 2) <= LOG10(1.D0/(nAgeClasses+ maxAgePO)))) then
       ALR = 0  ! no age info available
       return
@@ -9792,17 +10183,6 @@ if (focal==1 .or. focal==4) then  ! quick check
       exit
     endif
   enddo
-endif
-
-gcat = 0
-if (focal==4) then
-  if (m==1 .and. kB==1) then
-    gcat = 3
-  else if (m==2 .and. kB==2) then
-    gcat = 4
-  else
-    gcat = 5
-  endif
 endif
 
 do y=1,nAgeClasses + maxAgePO  ! B
@@ -9989,22 +10369,26 @@ implicit none
 
 integer, intent(IN) :: i
 integer :: l, x, y, k, z, FSi(MaxSibSize), nFSi, j, &
-  Inbr(2), Anc(2,mxA), PIK
-double precision :: PrL(nSnp), Px(3,2), PrXYZ(3,3,3), PrX(3), PrG(3)
+  Inbr(2), Anc(2,mxA), PIK, nOff, Off(MaxSibSize), sxOff(MaxSibSize), r
+double precision :: PrL(nSnp), Px(3,2), PrXYZ(3,3,3), PrX(3), PrG(3), &
+  PrE(3)
 logical :: doFS
 
+if (COUNT(Genos(:,i)/=-9) < nSnp/2.0) then
+  return
+endif
+
+nFSi = 1
+doFS = .FALSE.
 if (Parent(i,1)<0 .or. Parent(i,2)<0) then
+  doFS = .TRUE.
   if (nFS(i)>0) then
     nFSi = nFS(i)
     FSi = FSID(:, i)
-    doFS = .TRUE.
   else if (nFS(i)==0) then
     nFSi = nFS(FSID(maxSibSize,i))
     FSi = FSID(:, FSID(maxSibSize,i))
-    doFS = .TRUE.
   endif
-else
-  doFS = .FALSE.
 endif
 
 ! PO- and GP-mating
@@ -10025,6 +10409,11 @@ do k=1,2
     PIK = 0
   endif
 enddo
+
+nOff = 0
+if (sex(i)/=3) then
+  call getOff(i, sex(i), .FALSE., nOff, Off, sxOff)
+endif
 
 PrL = 0D0
 do l=1,nSnp
@@ -10056,21 +10445,35 @@ do l=1,nSnp
       endif
     enddo
   enddo
+  
   do x=1,3
     PrX(x) = SUM(PrXYZ(x,:,:))/SUM(PrXYZ)
-    if (Genos(l,i)/=-9) then
-      PrX(x) = OcA(Genos(l,i), x) * PrX(x)     
-    endif
   enddo
+  PrX = PrX / SUM(PrX)
+  if (Genos(l,i)/=-9) then
+    PrX = OcA(Genos(l,i), :) * PrX     
+  endif   
   PrL(l) = LOG10(SUM(PrX))
   LindX(:,l, i) = PrX
+  
+  if (nOff > 2 .and. .not. Hermaphrodites) then
+    do x=1,3   ! TODO inbred offspring
+      do j=1, nOff
+        if (nFS(Off(j)) == 0) cycle            
+        call ParProb(l, Parent(Off(j), 3-sex(i)), 3-sex(i), Off(j), -1, PrE)
+        do r=1, nFS(Off(j))
+          if (Genos(l, FSID(r, Off(j)))==-9) cycle
+          PrX(x) = PrX(x) * SUM(OKA2P(Genos(l, FSID(r, Off(j))), x, :) * PrE)
+        enddo
+      enddo
+    enddo
+  endif
   LindG(:, l, i) = PrX / SUM(PrX)  ! used in parprob
 enddo
 Lind(i) = SUM(PrL)
 
  if (Lind(i)< -99999 .or. Lind(i)> 0 .or. Lind(i)/=Lind(i)) then
-  call Erstop("Invalid invid LL")
-  return
+  call Erstop("Invalid LL")
 endif                                                              
 end subroutine CalcLind
 
@@ -10299,14 +10702,14 @@ double precision :: PrP(3, 2), PrY(3)
  if (i == 0) then  ! no parent
   prob = AHWE(:, l)
 else if (i > 0) then  ! real parent
-  if (A==-4 .or. B==-4 .or. B==-5) then
+  if ((A==-4 .or. B==-4 .or. B==-5) .and. Lind(i)/=0) then
     if (Genos(l,i)/=-9) then
       prob = OcA(Genos(l,i),:)
     else
       prob = 1
     endif
   else
-    prob = LindG(:, l, i)
+    prob = LindG(:, l, i)  ! =AHWE if Lind(i) not yet calculated
   endif
 else if (i < 0) then  ! dummy parent
   if (A==0) then   ! probability
@@ -10457,14 +10860,13 @@ integer, intent(OUT) :: Anc(2, mxA)  ! 32 = 5 generations
 integer :: m, j, i, k
 
 if (A==0) return
- if (kIN<1 .or. kIN>2) then
+k = kIN
+if (kIN<1 .or. kIN>2) then
   if (A>0) then
     k = 1
-  else
-    call Erstop("invalid call to getAncest")
+!  else
+!    call Erstop("invalid call to getAncest")
   endif
-else
-  k = kIN
 endif
 
 Anc = 0
@@ -10495,10 +10897,10 @@ enddo
 
 if ((A>0 .and. ANY(Anc(:, 2:mxA)==A)) .or. (A<0 .and. &
  ANY(Anc(k,3:mxA)==A))) then
-  call Erstop("individual is its own ancestor")
   call intpr ( "Female ancestors: ", -1, Anc(1,1:8), 8)
   call intpr ( "Male ancestors: ", -1, Anc(2,1:8), 8)
-  return
+  call Erstop("individual is its own ancestor")
+!  return
 endif
 
 end subroutine GetAncest
@@ -10516,6 +10918,8 @@ double precision :: LLA(7), LLtmp(2,2,2), LLAA(7)
 logical :: FSM
 
 do i=1, nInd
+  if (Error/=0) return
+  if (MODULO(i,200)==0) call rchkusr()
   if (quiet==0 .and. ANY(nC>0) .and. nInd>1500) then
     if (MODULO(i,500)==0)  call intpr(" ", 1, i, 1)
   endif
@@ -10672,16 +11076,16 @@ implicit none
 integer, intent(IN) :: A
 integer :: op, np, i, j
 
+op = A   ! needs initialising to avoid compiler warning, not used.
+np = op
 if (nFS(A) == 1) then
   return
-else 
-  if (nFS(A) > 1) then
-    op = A
-    np = MINVAL(FSID(1:nFS(A), A), MASK=(FSID(1:nFS(A),A)/=A)) 
-  else if (nFS(A) == 0) then
-    op = FSID(maxSibSize, A)  ! 'primary' sib
-    np = op
-  endif
+else if (nFS(A) > 1) then
+  op = A
+  np = MINVAL(FSID(1:nFS(A), A), MASK=(FSID(1:nFS(A),A)/=A)) 
+else if (nFS(A) == 0) then
+  op = FSID(maxSibSize, A)  ! 'primary' sib
+  np = op
 endif
 
 i = 2  ! 1st one stays op
@@ -10746,91 +11150,73 @@ endif
  
 end subroutine RemoveSib
 
+
 ! #####################################################################
 
 ! @@@@   INPUT & PRECALC PROB.   @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 ! #####################################################################
 
-subroutine PrepData(X)
+subroutine PrepData
 use Global
 implicit none
 
-integer, intent(IN) :: X
 integer :: i,j,k,l
-!integer, allocatable, dimension(:,:) :: GenosR
-! character(len=2000) :: dumC  
- 
-!=================
 
-!if (GKind == 2) then 
-!  allocate(GenosR(nInd,nSnp))
-!Genos = -9
-!  open (unit=101,file=trim(GenoFileName),status="old")
-  !read (101, *)  ! if header
-!  do i=1,nInd
-!    read (101,*)  dumC, GenosR(i,:)
-!    do l=1,nSnp
-!      if (GenosR(i,l)/=-9) then
-!        Genos(l,i) = GenosR(i,l)+1
-!      endif
-!    enddo
-!  enddo
-!  close (101)
-!  deallocate(GenosR)
-!endif
- 
 !=================
 ! allele frequencies
 allocate(AF(nSNP))
 do l=1,nSnp
-  AF(l)=float(SUM(Genos(l,:)-1, MASK=Genos(l,:)/=-9))/& !(2*nInd)
-    (COUNT(Genos(l,:)/=-9)*2)
+	if (ANY(Genos(l,:)/=-9)) then
+		AF(l)=float(SUM(Genos(l,:)-1, MASK=Genos(l,:)/=-9))/& !(2*nInd)
+			(COUNT(Genos(l,:)/=-9)*2)
+	else
+		AF(l) = 1
+	endif
 enddo
 
 !=================
-!if (X>0) then
-  BY1 = MINVAL(BY, MASK=BY>=0)
-  WHERE (BY /= -999) BY = BY - BY1 +1
+BY1 = MINVAL(BY, MASK=BY>=0)
+WHERE (BY /= -999) BY = BY - BY1 +1
 
-  allocate(AgeDiff(nInd,nInd))
-  AgeDiff=999
+allocate(AgeDiff(nInd,nInd))
+AgeDiff=999
 
-  do i=1, nInd
-    do j=1, nInd
-      if (BY(i)/=-999 .and. BY(j)/=-999) then
-        AgeDiff(i,j) = BY(i) - BY(j)   ! if >0, then j older than i
-      endif   
-    enddo
+do i=1, nInd
+  do j=1, nInd
+    if (BY(i)/=-999 .and. BY(j)/=-999) then
+      AgeDiff(i,j) = BY(i) - BY(j)   ! if >0, then j older than i
+    endif   
   enddo
+enddo
 
-    !=================   
-  maxAgePO = 1  ! maximum PO age difference (needed for dummy parents)
-  do k = 1, nAgeClasses
-    if (AgePriorM(k, 7)>0 .or. AgePriorM(k, 8)>0) then
-      maxAgePO = k - 1  ! first k is agediff of 0
-    endif
-  enddo
+  !=================   
+maxAgePO = 1  ! maximum PO age difference (needed for dummy parents)
+do k = 2, nAgeClasses
+  if (AgePriorM(k, 7)>0 .or. AgePriorM(k, 8)>0) then
+    maxAgePO = k - 1  ! first k is agediff of 0
+  endif
+enddo
 
-  !=================
-  ! allocate arrays
-  allocate(Lind(nInd))
-  Lind = 0
-  allocate(LindX(3, nSnp, nInd))
-  LindX = 0
-  allocate(FSID(MaxSibSize, nInd))
-  FSID(1, :) = (/ (i, i=1, nInd) /)
-  allocate(NFS(nInd))
-  NFS = 1
-  allocate(Parent(nInd,2))
-  Parent = 0
-  allocate(DumP(3,nSnp, nInd/2,2))
-  DumP = 0
-  allocate(XPr(3,3,nSNP, nInd/2,2))
-  XPr = 0  
-  allocate(GpID(2, nInd/2,2))
-  GpID = 0 
-!endif
+!=================
+! allocate arrays
+allocate(Lind(nInd))
+Lind = 0
+allocate(LindX(3, nSnp, nInd))
+LindX = 0
+allocate(FSID(MaxSibSize, nInd))
+FSID(1, :) = (/ (i, i=1, nInd) /)
+allocate(NFS(nInd))
+NFS = 1
+allocate(Parent(nInd,2))
+Parent = 0
+allocate(DumP(3,nSnp, nInd/2,2))
+DumP = 0
+allocate(XPr(3,3,nSNP, nInd/2,2))
+XPr = 0  
+allocate(GpID(2, nInd/2,2))
+GpID = 0 
+
  
 end subroutine PrepData
 
@@ -10847,7 +11233,7 @@ double precision :: DBYP(nAgeClasses +maxAgePO), cumProp
 EstDumBY = -9
 do k=1,2
   do s=1,nC(k)
-    call EstBY(s, k, 0, DBYP)
+    call EstBY(s, k, 0, .TRUE., DBYP)
     DBYP = 10**DBYP                   
     mx = MAXLOC(DBYP, DIM=1)
     cumProp = DBYP(mx)
@@ -10877,7 +11263,7 @@ do k=1,2
     enddo
   enddo
 enddo
-EstDumBY = EstDumBY + BY1 -1 -maxAgePO
+EstDumBY = EstDumBY -maxAgePO +BY1 -1
 
 end subroutine DumBYrange
 

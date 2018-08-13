@@ -45,9 +45,9 @@ herm_clone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
 herm_unclone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
   hermID <- as.character(LH$ID[which(LH$Sex==4)])
   names(Ped)[1:3] <- c("id", "dam", "sire")
-  hermPed.1 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_f" &
+  hermPed.1 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id)) == paste0("_",herm.suf[1]) &
                            chop(Ped$id, herm.suf[1]) %in% hermID), ]
-  hermPed.2 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id))=="_m" &
+  hermPed.2 <- Ped[which(substr(Ped$id, nchar(Ped$id)-1, nchar(Ped$id)) == paste0("_",herm.suf[2]) &
                            chop(Ped$id, herm.suf[2]) %in% hermID), ]
   hermPed.1$id.orig <- chop(hermPed.1$id, herm.suf[1])
   hermPed.2$id.orig <- chop(hermPed.2$id, herm.suf[2])

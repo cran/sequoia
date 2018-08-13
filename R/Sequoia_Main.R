@@ -54,8 +54,8 @@
 #' @param DummyPrefix character vector of length 2 with prefixes for dummy
 #'   dams (mothers) and sires (fathers); maximum 20 characters each.
 #' @param Complex  either "full" (default), "simp" (simplified, no explicit
-#'  consideration of inbred relationships; not fully implemented yet) or
-#'  "mono" (monogamous).
+#'  consideration of inbred relationships; not fully implemented yet), "mono"
+#'  (monogamous) or "herm" (hermaphrodites, otherwise like 'full').
 #' @param UseAge  either "yes" (default), "no", or "extra" (additional rounds
 #'   with extra reliance on ageprior, may boost assignments but increased risk
 #'   of erroneous assignments); used during full reconstruction only.
@@ -79,6 +79,10 @@
 #' \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
 #'   history dataframe. For convenience only, but may signal a problem. The
 #'   first entry is used.}
+#' \item{ExcludedInd}{Individuals in GenoM which were excluded because of a
+#'   too low genotyping success rate (<50\%).}
+#' \item{ExcludedSNPs}{Column numbers of SNPs in GenoM which were excluded
+#'   because of a too low genotyping success rate (<10\%).}
 #' \item{LifeHist}{Provided dataframe with sex and birth year data.}
 #' \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
 #'   parent-offspring than unrelated, but which could not be phased due to
@@ -99,7 +103,6 @@
 #' \item{TotLikSib}{Numeric vector, Total likelihood of the genotype data
 #'   at initiation and after each iteration during Sibship clustering.}
 #'
-#'
 #' List elements PedigreePar and Pedigree both have the following columns:
 #'  \item{id}{Individual ID}
 #'  \item{dam}{Assigned mother, or NA}
@@ -111,6 +114,7 @@
 #'  \item{LLRpair}{LLR for the parental pair, versus the next most likely
 #'   configuration between the three individuals (with one or neither parent
 #'   assigned)}
+#'
 #' In addition, PedigreePar has the columns
 #'  \item{OHdam}{Number of loci at which the offspring and mother are
 #'    opposite homozygotes}
@@ -166,9 +170,7 @@ sequoia <- function(GenoM = NULL,
                     CalcLLR = TRUE,
                     quiet = FALSE)
 {
-  if (is.null(GenoM)) stop("please provide 'GenoM'")
-  if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
-  if (is.null(rownames(GenoM))) stop("'GenoM' has no rownames, these should be the individual IDs")
+  Excl <- CheckGeno(GenoM)
   if (!"Specs" %in% names(SeqList)) {
     if (is.null(LifeHistData)) {
       warning("no LifeHistData provided, expect lower assignment rate",
@@ -234,6 +236,7 @@ sequoia <- function(GenoM = NULL,
             				 FindMaybeRel = FindMaybeRel,
             				 CalcLLR = CalcLLR)
   }
+  utils::flush.console()
 
   if ("AgePriors" %in% names(SeqList)) {
     if(!quiet)  message("using ageprior in SeqList")
@@ -249,35 +252,41 @@ sequoia <- function(GenoM = NULL,
       return(DupList)
     }
   } else DupList <- NULL
+  utils::flush.console()
 
   if (any(LifeHistData$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
+    message("detected hermaphrodites (sex=4), changing Complex to 'herm'")
     GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
     LifeHistData <- herm_clone_LH(LifeHistData, herm.suf=c("f", "m"))
     Specs[1, "NumberIndivGenotyped"] <- nrow(GenoM)
+    Specs[1, "Complexity"] <- "herm"
   }
-
 
   if ("PedigreePar" %in% names(SeqList)) {
     PedParents <- SeqList$PedigreePar  #[, c("id", "dam", "sire")]
     for (x in 1:3)  PedParents[, x] <- as.character(PedParents[, x])
     if (any(LifeHistData$Sex==4)) {  # hermaphrodites
-      PedParents <- herm_clone_Ped(PedParents, LifeHistData, herm.suf=c("f", "m"))
+      PedParents <- herm_clone_Ped(Ped = PedParents, LH = LifeHistData, herm.suf=c("f", "m"))
     }
+
     if (MaxSibIter>0) {
       if(!quiet) message("using parents in SeqList")
       if (!"AgePriors" %in% names(SeqList) && !is.null(LifeHistData)) {
         AgePriors <- MakeAgeprior(UseParents = TRUE,
                                   nAgeClasses = FacToNum(Specs[,"nAgeClasses"]),
-                                  Parents = PedParents[,1:3],
+                                  Parents = ParList$PedigreePar[, 1:3],
                                   LifeHistData = LifeHistData)
       }
       ParList <- list(PedigreePar = PedParents)
       if ("TotLikParents" %in% names(SeqList)) {
-        ParList <- c(ParList, SeqList[c("MaybeParent", "TotLikParents")])
+        ParList <- c(ParList, SeqList["TotLikParents"])
       }
-    } else if (MaxSibIter==0) {  # 'hidden' for now: re-run parentage with pedigree-prior
+      if ("MaybeParent" %in% names(SeqList)) {
+        ParList <- c(ParList, SeqList["MaybeParent"])
+      }
+    } else if (MaxSibIter==0) {  # re-run parentage with pedigree-prior
       ParList <- SeqParSib("par", Specs, GenoM, LifeHistData,
-                         AgePriors, Parents=PedParents[,1:3], quiet)
+                         AgePriors, Parents=PedParents, quiet)
 
     } # else keep old parents
 
@@ -287,21 +296,26 @@ sequoia <- function(GenoM = NULL,
     if (!is.null(LifeHistData)) {
       AgePriors <- MakeAgeprior(UseParents = TRUE,
                                 nAgeClasses = FacToNum(Specs[,"nAgeClasses"]),
-                                Parents = ParList$PedigreePar[,1:3],
+                                Parents = ParList$PedigreePar[, 1:3],
                                 LifeHistData = LifeHistData)  # update agepriors
     }
   } else if (MaxSibIter <0) ParList <- NULL
+  utils::flush.console()
 
   if (MaxSibIter>0) {
     SibList <- SeqParSib(ParSib = "sib", Specs = Specs, GenoM = GenoM,
                          LhIN = LifeHistData, AgePriors = AgePriors,
-                         Parents = ParList$PedigreePar[, 1:3], quiet = quiet)
+                         Parents = ParList$PedigreePar, quiet = quiet)
+    if (any(LifeHistData$Sex==4)) {
+      ParList$PedigreePar <- herm_unclone_Ped(Ped = ParList$PedigreePar, LH = LifeHistData, herm.suf=c("f", "m"))
+    }
   } else SibList <- NULL
 
 
   #=====================
   OUT <- list()
   OUT[["Specs"]] <- Specs
+  if (length(Excl)>0)  OUT <- c(OUT, Excl)
   OUT[["AgePriors"]] <- AgePriors
   OUT[["LifeHist"]] <- LifeHistData
   OUT <- c(OUT, DupList, ParList)

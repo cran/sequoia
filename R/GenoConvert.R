@@ -86,6 +86,12 @@ GenoConvert <- function(InFile = NULL,
   if (OutFormat == "seq") {
     if (InFormat == "raw") {
       TmpL    <- strsplit(GenoTmp[-1], split = " ")  # skip row w marker names
+      if (length(TmpL[[1]])==1) {
+        TmpL <- strsplit(GenoTmp[-1], split = "\t")
+      }
+      if (length(TmpL[[1]])==1) {
+        stop("Unknown column separator, expecting space or tab")
+      }
       GenoOUT <- plyr::ldply(TmpL, function(x) x[-c(1, 3:6)])
       GenoTmp2 <- apply(GenoOUT[, -1], 2,
                         function(x) as.numeric(gsub("NA", "-9", x)))
@@ -104,16 +110,35 @@ GenoConvert <- function(InFile = NULL,
 
     } else if (InFormat == "col") {
       TmpL    <- strsplit(GenoTmp, split = " ")
+      if (length(TmpL[[1]])==1) {
+        TmpL <- strsplit(GenoTmp, split = "\t")
+      }
+      if (length(TmpL[[1]])==1) {
+        TmpL <- strsplit(GenoTmp, split = ",")
+      }
+      if (length(TmpL[[1]])==1) {
+        TmpL <- strsplit(GenoTmp, split = ";")
+      }
+      if (length(TmpL[[1]])==1) {
+        stop("Unknown column separator, expecting ' ' (space), '\t' (tab), ',' or ';'")
+      }
       GC <- plyr::ldply(TmpL)
       IDs_geno <- GC[, 1]
       GC <- as.matrix(GC[, -1])
-      GCM <- matrix(NA, nrow(GC), ncol(GC))
-      for (i in 1:ncol(GC)) {
-        GCM[,i] <- as.numeric(as.factor(GC[, i]))-1
-      }
+      GC[GC==0] <- NA
+
       GCA <- array(dim=c(2, nrow(GC), ncol(GC)/2))
-      GCA[1,,] <- GCM[, seq(1,ncol(GC)-1,2)]
-      GCA[2,,] <- GCM[, seq(2,ncol(GC),2)]
+      GCA[1,,] <- GC[, seq(1,ncol(GC)-1,2)]
+      GCA[2,,] <- GC[, seq(2,ncol(GC),2)]
+
+      Alleles <- apply(GCA, 3, function(x) unique(stats::na.exclude(as.character(x))))
+      if(any(sapply(Alleles, length)>2)) stop("Some SNPs have >2 alleles")
+      if(any(sapply(Alleles, length)==1)) warning("Some SNps are monomorphic")
+
+      GCF <- array(dim=dim(GCA))
+      for (i in 1:dim(GCA)[[3]]) {
+        GCF[,,i] <- as.numeric(as.factor(GCA[,,i]))-1
+      }
       GS <- apply(GCA, 2:3, sum)
       GS[is.na(GS)] <- -9
       row.names(GS) <- IDs_geno
@@ -234,7 +259,7 @@ LHConvert <- function(InFile = NULL, UseFID = FALSE,
       warning(paste("There are", sum(chk$BY.x != chk$BY.y, na.rm=T),
                     "birth year mismatches"))
     }
-    LH <- Merge(LH, LHIN, by="id", overwrite=TRUE, all=TRUE)
+    LH <- MergeFill(LH, LHIN, by="id", overwrite=TRUE, all=TRUE)
   }
 
   LH

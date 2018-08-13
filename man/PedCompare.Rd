@@ -30,7 +30,7 @@ A list with
 \item{ConsensusPed}{A consensus pedigree, with Pedigree 2 taking priority
   over Pedigree 1}
 \item{DummyMatch}{Dataframe with all dummy IDs in Pedigree 2 (id), and the
- best-matching individual in Pedigree 1 (id.r).}
+ best-matching individual in Pedigree 1 (id.r)}
 \item{Mismatch}{A subset of MergedPed with mismatches between Ped1 and Ped2,
  as defined below. The two additional columns are Cat (category, 'GG', 'GD',
  'DG' or 'DD', as described below) and Parent ('dam' or 'sire' indicating

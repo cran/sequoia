@@ -7,8 +7,8 @@
 sequoia(GenoM = NULL, LifeHistData = NULL, SeqList = NULL,
   MaxSibIter = 10, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
   Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complex = "full", UseAge = "yes", FindMaybeRel = TRUE, CalcLLR = TRUE,
-  quiet = FALSE)
+  Complex = "full", UseAge = "yes", FindMaybeRel = TRUE,
+  CalcLLR = TRUE, quiet = FALSE)
 }
 \arguments{
 \item{GenoM}{numeric matrix with genotype data: One row per individual, and
@@ -62,8 +62,8 @@ values result in more conservative assignments. Must be zero or positive.}
 dams (mothers) and sires (fathers); maximum 20 characters each.}
 
 \item{Complex}{either "full" (default), "simp" (simplified, no explicit
-consideration of inbred relationships; not fully implemented yet) or
-"mono" (monogamous).}
+consideration of inbred relationships; not fully implemented yet), "mono"
+(monogamous) or "herm" (hermaphrodites, otherwise like 'full').}
 
 \item{UseAge}{either "yes" (default), "no", or "extra" (additional rounds
 with extra reliance on ageprior, may boost assignments but increased risk
@@ -92,6 +92,10 @@ A list with some or all of the following components:
 \item{DupLifeHistID}{Dataframe, rownumbers of duplicated IDs in life
   history dataframe. For convenience only, but may signal a problem. The
   first entry is used.}
+\item{ExcludedInd}{Individuals in GenoM which were excluded because of a
+  too low genotyping success rate (<50\%).}
+\item{ExcludedSNPs}{Column numbers of SNPs in GenoM which were excluded
+  because of a too low genotyping success rate (<10\%).}
 \item{LifeHist}{Provided dataframe with sex and birth year data.}
 \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
   parent-offspring than unrelated, but which could not be phased due to
@@ -112,7 +116,6 @@ A list with some or all of the following components:
 \item{TotLikSib}{Numeric vector, Total likelihood of the genotype data
   at initiation and after each iteration during Sibship clustering.}
 
-
 List elements PedigreePar and Pedigree both have the following columns:
  \item{id}{Individual ID}
  \item{dam}{Assigned mother, or NA}
@@ -124,6 +127,7 @@ List elements PedigreePar and Pedigree both have the following columns:
  \item{LLRpair}{LLR for the parental pair, versus the next most likely
   configuration between the three individuals (with one or neither parent
   assigned)}
+
 In addition, PedigreePar has the columns
  \item{OHdam}{Number of loci at which the offspring and mother are
    opposite homozygotes}

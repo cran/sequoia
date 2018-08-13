@@ -1,7 +1,7 @@
 ### R code from vignette source 'sequoia.Rnw'
 
 ###################################################
-### code chunk number 1: sequoia.Rnw:30-63 (eval = FALSE)
+### code chunk number 1: sequoia.Rnw:29-62 (eval = FALSE)
 ###################################################
 ## install.packages("sequoia")  # only required first time
 ## library(sequoia)             # load the package
@@ -46,19 +46,19 @@
 
 
 ###################################################
-### code chunk number 3: sequoia.Rnw:115-116 (eval = FALSE)
+### code chunk number 3: sequoia.Rnw:116-117 (eval = FALSE)
 ###################################################
-## system("cmd", input = "plink --file mydata --maf 0.4 --indep 50 5 2")
+## system("cmd", input = "plink --file mydata --maf 0.3 --indep 50 5 2")
 
 
 ###################################################
-### code chunk number 4: sequoia.Rnw:130-131 (eval = FALSE)
+### code chunk number 4: sequoia.Rnw:131-132 (eval = FALSE)
 ###################################################
 ## GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw")
 
 
 ###################################################
-### code chunk number 5: sequoia.Rnw:203-216 (eval = FALSE)
+### code chunk number 5: sequoia.Rnw:211-224 (eval = FALSE)
 ###################################################
 ## load("Sequoia_output_date.RData")  # if it was saved to disk
 ## ParOUT$Specs
@@ -76,13 +76,13 @@
 
 
 ###################################################
-### code chunk number 6: sequoia.Rnw:220-221 (eval = FALSE)
+### code chunk number 6: sequoia.Rnw:228-229 (eval = FALSE)
 ###################################################
 ## SeqOUT <- sequoia(SeqList = ParOUT)
 
 
 ###################################################
-### code chunk number 7: sequoia.Rnw:290-297 (eval = FALSE)
+### code chunk number 7: sequoia.Rnw:299-306 (eval = FALSE)
 ###################################################
 ## AP <- as.matrix(SeqOUT1$AgePriors)
 ## AP[AP>0] <- 0
@@ -94,7 +94,7 @@
 
 
 ###################################################
-### code chunk number 8: sequoia.Rnw:442-447 (eval = FALSE)
+### code chunk number 8: sequoia.Rnw:451-456 (eval = FALSE)
 ###################################################
 ## TLL <- c(SeqOUT$TotLikParents, SeqOUT$TotLikSib)
 ## xv <- c(paste("p", 1:length(SeqOUT$TotLikParents)-1),
@@ -104,32 +104,32 @@
 
 
 ###################################################
-### code chunk number 9: sequoia.Rnw:460-461 (eval = FALSE)
+### code chunk number 9: sequoia.Rnw:469-470 (eval = FALSE)
 ###################################################
 ## save(SeqList, LHdata, Geno, file="Sequoia_output_date.RData")
 
 
 ###################################################
-### code chunk number 10: sequoia.Rnw:465-467 (eval = FALSE)
+### code chunk number 10: sequoia.Rnw:474-476 (eval = FALSE)
 ###################################################
 ## load("Sequoia_output_date.RData")
 ## # 'SeqList' and 'LHdata' will appear in R environment
 
 
 ###################################################
-### code chunk number 11: sequoia.Rnw:472-473 (eval = FALSE)
+### code chunk number 11: sequoia.Rnw:481-482 (eval = FALSE)
 ###################################################
 ## writeSeq(SeqList, GenoM = Geno, folder=paste("Sequoia_OUT", Sys.Date()))
 
 
 ###################################################
-### code chunk number 12: sequoia.Rnw:478-479 (eval = FALSE)
+### code chunk number 12: sequoia.Rnw:487-488 (eval = FALSE)
 ###################################################
 ## writeSeq(SeqList, OutFormat="xls", file="Sequoia_OUT.xlsx")
 
 
 ###################################################
-### code chunk number 13: sequoia.Rnw:482-485 (eval = FALSE)
+### code chunk number 13: sequoia.Rnw:491-494 (eval = FALSE)
 ###################################################
 ## library(xlsx)
 ## write.xlsx(Geno, file = "Sequoia_OUT.xlsx", sheetName="Genotypes",
@@ -137,13 +137,13 @@
 
 
 ###################################################
-### code chunk number 14: sequoia.Rnw:494-495 (eval = FALSE)
+### code chunk number 14: sequoia.Rnw:503-504 (eval = FALSE)
 ###################################################
 ## compareOUT <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
 
 
 ###################################################
-### code chunk number 15: sequoia.Rnw:502-510 (eval = FALSE)
+### code chunk number 15: sequoia.Rnw:511-519 (eval = FALSE)
 ###################################################
 ## compareOUT2 <- PedCompare(Ped1 = Ped_HSg5, Ped2 = ParOUT$Pedigree)
 ## compareOUT2$Counts["GG",,]
@@ -156,7 +156,7 @@
 
 
 ###################################################
-### code chunk number 16: sequoia.Rnw:524-559 (eval = FALSE)
+### code chunk number 16: sequoia.Rnw:533-568 (eval = FALSE)
 ###################################################
 ## data(LH_HSg5, Ped_HSg5)
 ## 
@@ -196,7 +196,7 @@
 
 
 ###################################################
-### code chunk number 17: sequoia.Rnw:564-571 (eval = FALSE)
+### code chunk number 17: sequoia.Rnw:573-580 (eval = FALSE)
 ###################################################
 ## # error rate:
 ## (4+1+5+0)/(2*960)
@@ -208,7 +208,7 @@
 
 
 ###################################################
-### code chunk number 18: sequoia.Rnw:575-586 (eval = FALSE)
+### code chunk number 18: sequoia.Rnw:584-595 (eval = FALSE)
 ###################################################
 ## comp$Mismatch
 ##  #     id  dam.1 sire.1 dam.2 sire.2   id.r  dam.r  sire.r Cat Parent
@@ -224,7 +224,7 @@
 
 
 ###################################################
-### code chunk number 19: sequoia.Rnw:593-598 (eval = FALSE)
+### code chunk number 19: sequoia.Rnw:602-607 (eval = FALSE)
 ###################################################
 ## SeqX$DummyIDs[SeqX$DummyIDs$id=="F0003", ]
 ## #      id   dam  sire LLRdam LLRsire LLRpair sex BY.est BY.min BY.max NumOff     O1
@@ -234,7 +234,7 @@
 
 
 ###################################################
-### code chunk number 20: sequoia.Rnw:601-606 (eval = FALSE)
+### code chunk number 20: sequoia.Rnw:610-615 (eval = FALSE)
 ###################################################
 ## Ped_HSg5[Ped_HSg5$id %in% c("a04001", "a04004", "b04002"), ]
 ## #         id    dam   sire
@@ -244,7 +244,7 @@
 
 
 ###################################################
-### code chunk number 21: sequoia.Rnw:612-620 (eval = FALSE)
+### code chunk number 21: sequoia.Rnw:621-629 (eval = FALSE)
 ###################################################
 ## PedM <- comp$MergedPed  # just to save typing
 ## #
@@ -257,7 +257,7 @@
 
 
 ###################################################
-### code chunk number 22: sequoia.Rnw:626-640 (eval = FALSE)
+### code chunk number 22: sequoia.Rnw:635-649 (eval = FALSE)
 ###################################################
 ## PedM[which(PedM$sire.1=="b04164"), ]
 ## #         id  dam.1 sire.1  dam.2 sire.2 id.r  dam.r  sire.r
@@ -276,7 +276,7 @@
 
 
 ###################################################
-### code chunk number 23: sequoia.Rnw:649-659 (eval = FALSE)
+### code chunk number 23: sequoia.Rnw:658-668 (eval = FALSE)
 ###################################################
 ## PedM[which(PedM$dam.1=="a03173"), ]
 ## #         id  dam.1 sire.1 dam.2 sire.2   id.r  dam.r sire.r
@@ -291,7 +291,7 @@
 
 
 ###################################################
-### code chunk number 24: sequoia.Rnw:666-672 (eval = FALSE)
+### code chunk number 24: sequoia.Rnw:675-681 (eval = FALSE)
 ###################################################
 ## DyadCompare(Ped_HSg5, SeqX$PedigreePar)
 ## #     RC.2
@@ -302,7 +302,7 @@
 
 
 ###################################################
-### code chunk number 25: sequoia.Rnw:680-684 (eval = FALSE)
+### code chunk number 25: sequoia.Rnw:689-693 (eval = FALSE)
 ###################################################
 ## BestConfig <- read.table("Colony/file/file.BestConfig",
 ##                          header=T, sep="", comment.char="")
@@ -311,7 +311,7 @@
 
 
 ###################################################
-### code chunk number 26: sequoia.Rnw:700-717 (eval = FALSE)
+### code chunk number 26: sequoia.Rnw:709-726 (eval = FALSE)
 ###################################################
 ## data(SimGeno_example, LH_HSg5, package="sequoia")
 ## SeqOUT <- sequoia(GenoM = SimGeno_example[, 1:100],
@@ -333,7 +333,7 @@
 
 
 ###################################################
-### code chunk number 27: sequoia.Rnw:723-736 (eval = FALSE)
+### code chunk number 27: sequoia.Rnw:732-745 (eval = FALSE)
 ###################################################
 ## PedC <- PedCompare(Ped1 = Ped_HSg5,
 ##                    Ped2 = SeqOUT$Pedigree)$ConsensusPed
@@ -351,7 +351,7 @@
 
 
 ###################################################
-### code chunk number 28: sequoia.Rnw:745-774 (eval = FALSE)
+### code chunk number 28: sequoia.Rnw:754-783 (eval = FALSE)
 ###################################################
 ## Rel.snp <- read.table("GT.grm.gz")
 ## Rel.id <- read.table("GT.grm.id", stringsAsFactors=FALSE)
@@ -385,11 +385,23 @@
 
 
 ###################################################
-### code chunk number 29: sequoia.Rnw:814-818 (eval = FALSE)
+### code chunk number 29: sequoia.Rnw:823-839 (eval = FALSE)
 ###################################################
-## cdam <- read.table("Candidate_dams.txt", header=TRUE, stringsAsFactors=FALSE)
+## cand.dams <- read.table("Candidate_dams.txt", header=TRUE,
+##                         stringsAsFactors=FALSE)
 ## # cdam has columns 'id' and 'dam', and does not need entries for all ids
-## seq.euc2 <- sequoia(GenoM = Geno, LifeHistData = LH_X, MaxSibIter=0,
-##                     SeqList = list(PedigreePar = cbind(cdam, sire=NA)))
+## cand.par <- cbind(cand.dams, sire=NA)
+## 
+## par.herm <- sequoia(GenoM = Geno,
+##                     LifeHistData = LH,
+##                     SeqList = list(PedigreePar = cand.par),
+##                     MaxSibIter=0)
+## # In combination with maxSibIter=0, PedigreePar is a pedigree prior
+## 
+## # re-use all settings (including the newly assigned parents):
+## seq.herm <- sequoia(GenoM = Geno,
+##                     LifeHistData = LH,
+##                     SeqList = par.herm,
+##                     MaxSibIter = 10)
 
 

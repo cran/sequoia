@@ -5,8 +5,8 @@
 \title{Simulated genotypes}
 \usage{
 SimGeno(Ped = NULL, nSnp = 400, ParMis = 0.4, MAF = NULL,
-  OutFile = NA, nGen = 20, PropLQ = 0, MisHQ = 0.005, MisLQ = 0.3,
-  ErHQ = 5e-04, ErLQ = 0.005, quiet = FALSE)
+  OutFile = NA, nGen = 20, PropLQ = 0, MisHQ = 0.005,
+  MisLQ = 0.3, ErHQ = 5e-04, ErLQ = 0.005, quiet = FALSE)
 }
 \arguments{
 \item{Ped}{Dataframe, pedigree with columns ID - dam - sire; additional

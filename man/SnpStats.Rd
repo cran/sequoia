@@ -20,7 +20,7 @@ a matrix with a number of rows equal to the number of SNPs
  (=number of columns of GenoM) and columns
 \item{AF}{Allele frequency of the 'second allele' (the one for which the
   homozygote is coded 2)}
-\item{Mis}{Proportion of missing calles}
+\item{Mis}{Proportion of missing calls}
 \item{ER}{(only when Ped provided) number of Mendelian errors in parent-
  offspring pairs and parent-parent-offspring trios, e.g.parent is AA and
  offspring is aa.}

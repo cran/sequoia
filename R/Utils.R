@@ -61,7 +61,7 @@ writeColumns <- function(x, file="", row.names=TRUE,
 #'
 #' @export
 
-Merge <- function(df1, df2, by, overwrite=FALSE, ...) {
+MergeFill <- function(df1, df2, by, overwrite=FALSE, ...) {
   commonNames <- names(df1)[which(colnames(df1) %in% colnames(df2))]
   commonNames <- commonNames[!commonNames %in% by]
   dfmerged <- merge(df1,df2,by=by,...)
@@ -137,17 +137,17 @@ is.wholenumber <-
 # Partial pedigree fix
 AddParPed <- function(PedIN) {
   Ped <- unique(PedIN)
-  UID <- unique(c(as.character(Ped[,1]),
-                  as.character(Ped[,2]),
-                  as.character(Ped[,3])))
-  UID <- stats::na.exclude(UID)
+  Ped[which(Ped==0), 1:3] <- NA
+  Ped <- unique(Ped[!is.na(Ped[,1]), ])
+  for (x in 1:3)  Ped[,x] <- as.character(Ped[,x])
+  UID <- stats::na.exclude(unique(unlist(Ped[,1:3])))
   if (length(UID) > nrow(Ped)) {
     AddPed <- data.frame(id=setdiff(UID, Ped[,1]),
                          dam=NA,
                          sire=NA,
                          stringsAsFactors=FALSE)
     names(AddPed)[1:3] <- names(PedIN)[1:3]
-    Ped <- merge(AddPed, PedIN, all=TRUE)  # presume ancestors
+    Ped <- merge(AddPed, Ped, all=TRUE)  # presume ancestors
   }
   Ped
 }

@@ -68,6 +68,9 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
         file="README.txt")
 
   if (!is.null(GenoM)) {
+    if (any(SeqList$LifeHist$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
+      GenoM <- herm_clone_Geno(GenoM, SeqList$LifeHist, herm.suf=c("f", "m"))
+    }
     if(nrow(GenoM)!= SeqList$Specs$NumberIndivGenotyped) {
       ANS <- readline(prompt = paste("Number of individuals according to Specs differs from number of rows in GenoM (", SeqList$Specs$NumberIndivGenotyped, "/", nrow(GenoM), ").\n Press Y to continue and fix manually in `SequoiaSpecs.txt' "))
       if (!substr(ANS, 1, 1) %in% c("Y", "y")) stop()
@@ -81,7 +84,7 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
                     "LHfile" = "LifeHist.txt",
                     "nIndLH" = nrow(SeqList$LifeHist),
                     SeqList$Specs)
-  SpecsOUT$Complexity <- c("full"=2, "simp"=1, "mono"=0)[SpecsOUT$Complexity]
+  SpecsOUT$Complexity <- c("full"=2, "simp"=1, "mono"=0, "herm"=4)[SpecsOUT$Complexity]
   SpecsOUT$UseAge <- c("extra"=2, "yes"=1, "no"=0)[SpecsOUT$UseAge]
   SpecsOUT$FindMaybeRel <- as.numeric(SpecsOUT$FindMaybeRel)
   SpecsOUT$CalcLLR <- as.numeric(SpecsOUT$CalcLLR)
@@ -94,23 +97,15 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
               sep = "\t,\t", quote = FALSE, col.names = FALSE)
   writeColumns(SeqList$AgePrior, "AgePriors.txt", row.names=FALSE)
   writeColumns(SeqList$LifeHist, "LifeHist.txt", row.names=FALSE)
+
   if ("PedigreePar" %in% names(SeqList)) {
-    Par <- SeqList$PedigreePar
-    for (x in c("dam", "sire")) Par[is.na(Par[, x]), x] <- "NA"
-    for (x in c("id", "dam", "sire")) {
-      Par[, paste0("row", x)] <- as.numeric(factor(Par[,x], levels=rownames(GenoM)))
-      Par[is.na(Par[, paste0("row", x)]), paste0("row", x)] <- 0
-    }
-    for (x in c("LLRdam", "LLRsire", "LLRpair", "OHdam", "OHsire")) {
-      Par[is.na(Par[, x]), x] <- -9
-    }
-    if (any(is.na(Par$id))) stop("Some id's in PedigreePar do not occur in GenoM!")
-    writeColumns(Par, "Parents.txt", row.names=FALSE)
+    write.parents(ParentDF = SeqList$PedigreePar, LifeHistData = SeqList$LifeHist, GenoM = GenoM)
   }
 
   if ("Pedigree" %in% names(SeqList)) {
     writeColumns(SeqList$Pedigree, "Pedigree.txt", row.names=FALSE)
   }
+
   if ("DummyIDs" %in% names(SeqList)) {
     if ("DummyMatch" %in% names(PedComp)) {
       Dummies <- merge(PedComp$DummyMatch, SeqList$DummyIDs)
@@ -137,6 +132,42 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
   } else {
     stop("OutFormat not supported.")
   }
+}
+
+
+#==========================================================================
+write.parents <- function(ParentDF, LifeHistData, GenoM) {
+  names(ParentDF)[1:3] <- c("id", "dam", "sire")
+  names(LifeHistData) <- c("ID", "Sex", "BY")
+
+  if (!is.null(LifeHistData) & any(LifeHistData$Sex==4)) {
+    GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
+    Par <- herm_clone_Ped(Ped = ParentDF, LH = LifeHistData, herm.suf=c("f", "m"))
+  } else {
+    Par <- ParentDF
+  }
+  Par <- MergeFill(Par,
+               data.frame(id = rownames(GenoM),
+                          LLRdam = NA, LLRsire = NA, LLRpair = NA,
+                          OHdam = NA, OHsire = NA,
+                          rowid = NA, rowdam = NA, rowsire = NA,
+                          stringsAsFactors=FALSE),
+               by = "id", all = TRUE)
+  rownames(Par) <- as.character(Par$id)
+  Par <- Par[rownames(GenoM), ]    # merge ignores sort=FALSE
+  for (x in c("dam", "sire")) Par[is.na(Par[, x]), x] <- "NA"
+  for (x in c("LLRdam", "LLRsire", "LLRpair")) {
+    Par[is.na(Par[, x]), x] <- -999
+  }
+  for (x in c("OHdam", "OHsire")) {
+    Par[is.na(Par[, x]), x] <- -9
+  }
+  for (x in c("id", "dam", "sire")) {
+    Par[, paste0("row", x)] <- as.numeric(factor(Par[,x], levels=rownames(GenoM)))
+    Par[is.na(Par[, paste0("row", x)]), paste0("row", x)] <- 0
+  }
+  if (any(is.na(Par$id))) stop("Some id's in PedigreePar do not occur in GenoM!")
+  writeColumns(Par, "Parents.txt", row.names=FALSE)
 }
 
 

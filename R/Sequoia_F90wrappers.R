@@ -39,7 +39,7 @@ SeqDup <- function(Specs=NULL, GenoM = NULL, LhIN=NULL, quiet=FALSE)
   SMax <- FacToNum(Specs[,"MaxSibshipSize"])
   gID <- rownames(GenoM)
   GenoV <- as.integer(GenoM)
-  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0)
+  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0, herm = 4)
   UAge <- switch(Specs[,"UseAge"], extra = 2, yes = 1, no = 0)
   PrSb <- 0
   nAmbMax <- 0
@@ -172,7 +172,7 @@ SeqParSib <- function(ParSib = "par",
   } else {
     PedPar <- rep(0, Ng*2)
   }
-  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0)
+  Complex <- switch(Specs[,"Complexity"], full = 2, simp = 1, mono = 0, herm = 4)
   UAge <- switch(Specs[,"UseAge"], extra = 2, yes = 1, no = 0)
   PrSb <- switch(ParSib, par = 1, sib = 2)
   nAmbMax <- 7*Ng  # max no. of non-assigned relative pairs to return
@@ -251,7 +251,7 @@ SeqParSib <- function(ParSib = "par",
                          VtoM(TMP$LrRF, nc=3),
                          stringsAsFactors=FALSE)
   names(Pedigree) <- c("id", "dam", "sire", "LLRdam", "LLRsire", "LLRpair")
-  Pedigree$LLRdam[is.na(Pedigree$dam)]  <- NA  # not sure why sometimes '0' - TODO CHECK
+  Pedigree$LLRdam[is.na(Pedigree$dam)]  <- NA
   Pedigree$LLRsire[is.na(Pedigree$sire)]  <- NA
   for (k in 1:2) Pedigree[, k+1] <- NumToID(Pedigree[, k+1], k, gID, dID)
 
