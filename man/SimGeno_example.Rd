@@ -18,5 +18,5 @@ Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}
 }
-\keyword{datasets,}
+\keyword{datasets}
 \keyword{sequoia}

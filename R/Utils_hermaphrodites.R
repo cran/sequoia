@@ -23,20 +23,25 @@ herm_clone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
 }
 
 
-
 #=============================================================
 herm_clone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
   Ped <- AddParPed(Ped)
   hermID <- as.character(LH$ID[which(LH$Sex==4 & LH$ID %in% Ped$id)])
   these <- which(Ped$id %in% hermID)
-  Ped.herm2 <- Ped[these, ]
-  Ped$id[these] <- paste(Ped$id[these], herm.suf[1], sep="_")
-  Ped.herm2$id <- paste(Ped.herm2$id, herm.suf[2], sep="_")
-  Ped <- rbind(Ped, Ped.herm2)
-  these.dams <- which(Ped$dam %in% hermID)
-  Ped$dam[these.dams] <- paste(Ped$dam[these.dams], herm.suf[1], sep="_")
-  these.sires <- which(Ped$sire %in% hermID)
-  Ped$sire[these.sires] <- paste(Ped$sire[these.sires], herm.suf[2], sep="_")
+  if (length(these)>0) {
+    Ped.herm2 <- Ped[these, ]
+    Ped$id[these] <- paste(Ped$id[these], herm.suf[1], sep="_")
+    Ped.herm2$id <- paste(Ped.herm2$id, herm.suf[2], sep="_")
+    Ped <- rbind(Ped, Ped.herm2)
+    these.dams <- which(Ped$dam %in% hermID)
+    if (length(these.dams)>0) {
+      Ped$dam[these.dams] <- paste(Ped$dam[these.dams], herm.suf[1], sep="_")
+    }
+    these.sires <- which(Ped$sire %in% hermID)
+    if (length(these.sires)>0) {
+      Ped$sire[these.sires] <- paste(Ped$sire[these.sires], herm.suf[2], sep="_")
+    }
+  }
   Ped
 }
 
@@ -92,7 +97,7 @@ herm_unclone_MaybeRel <- function(MR, Ped, LH, herm.suf=c("f", "m")) {
   MR$Sex1[H1] <- 4
   MR$Sex2[H2] <- 4
   tmp <- merge(MR, Ped[, 1:3], by.x="ID1", by.y="id")
-  if(any(!is.na(tmp$dam) | !is.na(tmp$sire))) {
+  if(any(tmp$ID2==tmp$dam | tmp$ID2==tmp$sire, na.rm=TRUE)) {
     MR <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MR)])
   } else {
     MR <- tmp[, names(MR)]

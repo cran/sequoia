@@ -5,18 +5,18 @@
 \alias{LH_HSg5}
 \title{Example life history file}
 \format{A data frame with 1000 rows and 3 variables: ID, Sex (1=female,
-2=male), and BY (birth year, here cohort)}
+2=male), and BirthYear}
 \usage{
 data(LH_HSg5)
 }
 \description{
-This is the lifehistory file associated with Ped_HSg5, which
- is Pedigree II in the paper.
+This is the lifehistory file associated with Ped_HSg5, which is
+  Pedigree II in the paper.
 }
 \references{
-Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. Molecular Ecology Resources
-  17:1009--1024.
+Huisman, J. (2017) Pedigree reconstruction from SNP data:
+  Parentage assignment, sibship clustering, and beyond. Molecular Ecology
+  Resources 17:1009--1024.
 }
 \seealso{
 \code{\link{Ped_HSg5} \link{sequoia}}
@@ -24,5 +24,5 @@ Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}
 }
-\keyword{datasets,}
+\keyword{datasets}
 \keyword{sequoia}

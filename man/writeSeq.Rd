@@ -31,14 +31,13 @@ OutFormat='txt'.}
 }
 \description{
 The various list elements returned by \code{sequoia} are each
-written to
- text files in the specified folder, or to separate sheets in a single
- excel file (requires library \pkg{xlsx}).
+  written to text files in the specified folder, or to separate sheets in a
+  single excel file (requires library \pkg{xlsx}).
 }
 \details{
 The text files can be used as input for the stand-alone Fortran
-version of #'   sequoia, e.g. when the genotype data is too large for R. See
-  \code{vignette('sequoia')} for further details.
+  version of #'   sequoia, e.g. when the genotype data is too large for R.
+  See \code{vignette('sequoia')} for further details.
 }
 \examples{
 \dontrun{

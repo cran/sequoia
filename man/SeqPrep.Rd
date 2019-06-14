@@ -30,21 +30,21 @@ SeqPrep(GenoM = NULL, LifeHistData = NULL, nAgeClasses = 1,
 \item{MaxMismatch}{Maximum number of loci at which candidate parent and
 offspring are allowed to be opposite homozygotes, or be excluded.}
 
-\item{Tfilter}{Threshold log-likelihood ratio between a proposed
-relationship versus unrelated, to select candidate relatives. Typically a
-negative value, related to the fact that unconditional likelihoods are
-calculated during the filtering steps. More negative values may decrease
+\item{Tfilter}{Threshold log-likelihood ratio between a proposed relationship
+versus unrelated, to select candidate relatives. Typically a negative
+value, related to the fact that unconditional likelihoods are calculated
+during the filtering steps. More negative values may decrease
 non-assignment, but will increase computational time.}
 
 \item{Tassign}{Minimum log-likelihood ratio required for acceptance of
 proposed relationship, relative to next most likely relationship. Higher
 values result in more conservative assignments.}
 
-\item{MaxSibshipSize}{Maximum number of offspring for a single individual
-(a generous safety margin is advised).}
+\item{MaxSibshipSize}{Maximum number of offspring for a single individual (a
+generous safety margin is advised).}
 
-\item{DummyPrefix}{character vector of length 2 with prefixes for dummy
-dams (mothers) and sires (fathers); maximum 20 characters each.}
+\item{DummyPrefix}{character vector of length 2 with prefixes for dummy dams
+(mothers) and sires (fathers); maximum 20 characters each.}
 
 \item{Complexity}{Either "full" (default), "simp" (no explicit consideration
 of inbred relationships), "mono" (monogamous breeding system), or "herm"
@@ -64,6 +64,6 @@ Check parameter values and save as named vector.
 }
 \details{
 Please do not increasing the number of SNPs or individuals beyond
- the numbers present in the datasets, as this may cause R to crash.
+  the numbers present in the datasets, as this may cause R to crash.
 }
 \keyword{internal}

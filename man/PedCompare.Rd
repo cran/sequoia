@@ -23,9 +23,8 @@ genotyped.}
 \item{SNPd}{character vector with IDs of genotyped individuals.}
 }
 \value{
-A list with
-\item{Counts}{A 7 x 5 x 2 named numeric array with the number of matches and
-  mismatches}
+A list with \item{Counts}{A 7 x 5 x 2 named numeric array with the
+  number of matches and mismatches}
 \item{MergedPed}{A side-by-side comparison of the two pedigrees}
 \item{ConsensusPed}{A consensus pedigree, with Pedigree 2 taking priority
   over Pedigree 1}
@@ -99,19 +98,18 @@ In 'ConsensusPed', the priority used is parent.r (if not "nomatch) >
 }
 \description{
 Compare an inferred pedigree (Ped2) to a previous or simulated
-pedigree
- (Ped1), including comparison of sibship clusters and sibship grandparents.
+  pedigree (Ped1), including comparison of sibship clusters and sibship
+  grandparents.
 }
 \details{
 The comparison is divided into different classes of `assignable'
-parents.
-This includes cases where the focal individual and parent according to Ped1
-are both Genotyped (G-G), as well as cases where the non-genotyped parent
-according to Ped1 can be lined up with a sibship Dummy parent in Ped2 (G-D),
-or where the non-genotyped focal individual in Ped1 can be matched to a
-dummy individual in Ped2 (D-G and D-D). If SNPd is NULL (the default), and
- DumPrefix is set to NULL, the intersect between the IDs in Pedigrees 1 and
-  2 is taken as the vector of genotyped individuals.
+  parents. This includes cases where the focal individual and parent
+  according to Ped1 are both Genotyped (G-G), as well as cases where the
+  non-genotyped parent according to Ped1 can be lined up with a sibship Dummy
+  parent in Ped2 (G-D), or where the non-genotyped focal individual in Ped1
+  can be matched to a dummy individual in Ped2 (D-G and D-D). If SNPd is NULL
+  (the default), and DumPrefix is set to NULL, the intersect between the IDs
+  in Pedigrees 1 and 2 is taken as the vector of genotyped individuals.
 }
 \examples{
 \dontrun{
@@ -131,7 +129,7 @@ with(PedM, PedM[which(is.na(dam.2) & !is.na(dam.1) &
 }
 }
 \seealso{
-\code{\link{DyadCompare}, \link{sequoia}}.
+\code{\link{DyadCompare}, \link{sequoia}, \link{EstConf}}.
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

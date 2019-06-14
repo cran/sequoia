@@ -3,18 +3,17 @@
 #' @title Compare two Pedigrees
 #'
 #' @description Compare an inferred pedigree (Ped2) to a previous or simulated
-#' pedigree
-#'  (Ped1), including comparison of sibship clusters and sibship grandparents.
+#'   pedigree (Ped1), including comparison of sibship clusters and sibship
+#'   grandparents.
 #'
 #' @details The comparison is divided into different classes of `assignable'
-#' parents.
-#' This includes cases where the focal individual and parent according to Ped1
-#' are both Genotyped (G-G), as well as cases where the non-genotyped parent
-#' according to Ped1 can be lined up with a sibship Dummy parent in Ped2 (G-D),
-#' or where the non-genotyped focal individual in Ped1 can be matched to a
-#' dummy individual in Ped2 (D-G and D-D). If SNPd is NULL (the default), and
-#'  DumPrefix is set to NULL, the intersect between the IDs in Pedigrees 1 and
-#'   2 is taken as the vector of genotyped individuals.
+#'   parents. This includes cases where the focal individual and parent
+#'   according to Ped1 are both Genotyped (G-G), as well as cases where the
+#'   non-genotyped parent according to Ped1 can be lined up with a sibship Dummy
+#'   parent in Ped2 (G-D), or where the non-genotyped focal individual in Ped1
+#'   can be matched to a dummy individual in Ped2 (D-G and D-D). If SNPd is NULL
+#'   (the default), and DumPrefix is set to NULL, the intersect between the IDs
+#'   in Pedigrees 1 and 2 is taken as the vector of genotyped individuals.
 #'
 #' @param  Ped1 original pedigree, dataframe with columns id-dam-sire; only the
 #'   first 3 columns will be used.
@@ -26,9 +25,8 @@
 #'   genotyped.
 #' @param SNPd character vector with IDs of genotyped individuals.
 #'
-#' @return A list with
-#' \item{Counts}{A 7 x 5 x 2 named numeric array with the number of matches and
-#'   mismatches}
+#' @return A list with \item{Counts}{A 7 x 5 x 2 named numeric array with the
+#'   number of matches and mismatches}
 #' \item{MergedPed}{A side-by-side comparison of the two pedigrees}
 #' \item{ConsensusPed}{A consensus pedigree, with Pedigree 2 taking priority
 #'   over Pedigree 1}
@@ -102,7 +100,7 @@
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @seealso \code{\link{DyadCompare}, \link{sequoia}}.
+#' @seealso \code{\link{DyadCompare}, \link{sequoia}, \link{EstConf}}.
 #'
 #' @examples
 #' \dontrun{
@@ -140,8 +138,8 @@ PedCompare <- function(Ped1 = NULL,
   if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
   Ped1 <- Ped1[!is.na(Ped1$id), 1:3]
   Ped2 <- Ped2[!is.na(Ped2$id), 1:3]
-  Ped1 <- AddParPed(Ped1)
-  Ped2 <- AddParPed(Ped2)
+  Ped1 <- AddParPed(Ped1, ZeroToNA=TRUE)
+  Ped2 <- AddParPed(Ped2, ZeroToNA=TRUE)
   if (is.null(DumPrefix) & is.null(SNPd)) {
     SNPd <- intersect(Ped2$id, Ped1$id)
   } else if (is.null(SNPd)) {
@@ -508,16 +506,15 @@ rc <- function(x, Ped) {
 #' @title Compare dyads
 #'
 #' @description Count the number of half and full sibling pairs correctly and
-#'  incorrectly
-#' assigned
+#'   incorrectly assigned
 #'
 #' @param  Ped1 Original pedigree, dataframe with 3 columns: id-dam-sire
 #' @param  Ped2 Second (inferred) pedigree
 #' @param  na1  the value for missing parents in Ped1.
 #'
 #' @return A 3x3 table with the number of pairs assigned as full siblings (FS),
-#'   half siblings (HS) or unrelated (U, including otherwise related) in the
-#'   two pedigrees, with the classification in Ped1 on rows and that in Ped2 in
+#'   half siblings (HS) or unrelated (U, including otherwise related) in the two
+#'   pedigrees, with the classification in Ped1 on rows and that in Ped2 in
 #'   columns
 #'
 #' @seealso \code{\link{PedCompare}}

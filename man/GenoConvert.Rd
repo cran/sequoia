@@ -2,55 +2,101 @@
 % Please edit documentation in R/GenoConvert.R
 \name{GenoConvert}
 \alias{GenoConvert}
-\title{Convert genotype file}
+\title{Convert genotype data}
 \usage{
 GenoConvert(InFile = NULL, InFormat = "raw", OutFile = NA,
-  OutFormat = "seq", UseFID = FALSE, FIDsep = "__", quiet = FALSE)
+  OutFormat = "seq", InData = NULL, Missing = c("-9", "??", "?",
+  "NA", "NULL", c("0")[InFormat \%in\% c("col", "ped")]), sep = c(" ",
+  "\\t", ",", ";"), header = NA, IDcol = NA, FIDcol = NA,
+  FIDsep = "__", dropcol = NA, quiet = FALSE)
 }
 \arguments{
 \item{InFile}{character string with name of genotype file to be converted}
 
-\item{InFormat}{One of "raw", "col" or "seq", see Details.}
+\item{InFormat}{One of 'single', 'double', 'col', 'ped', 'raw', or 'seq', see
+Details.}
 
 \item{OutFile}{character string with name of converted file. If NA, return
-matrix with genotypes in console; if NULL, write to "GenoForSequoia.txt".}
+matrix with genotypes in console (default); if NULL, write to
+'GenoForSequoia.txt' in current working directory.}
 
-\item{OutFormat}{as InFormat. Currently raw -> seq, col -> seq and seq ->
-col are implemented.}
+\item{OutFormat}{as InFormat, currently only 'seq' and 'col' are implemented.}
 
-\item{UseFID}{Use the family ID column in the PLINK file. The
-resulting ids (rownames of GenoM) will be in the form FID__IID.}
+\item{InData}{dataframe or matrix with genotypes to be converted}
 
-\item{FIDsep}{characters inbetween FID and IID in composite-ID. By default a
-double underscore is used, to avoid problems when some IIDs contain an
- underscore. Only used when UseFID=TRUE.}
+\item{Missing}{vector with symbols interpreted as missing data.}
 
-\item{quiet}{suppress messages}
+\item{sep}{vector with field separator strings that will be tried on
+\code{InFile}. The OutFile separator uses the write.table default, i.e. one
+blank space}
+
+\item{header}{a logical value indicating whether the file contains the names
+of the variables as its first line. If NA (default), set to TRUE for 'raw',
+and FALSE otherwise.}
+
+\item{IDcol}{single number giving the column which contains the individual
+IDs; 0 indicates the rownames (for InData only). If NA (default), set to 2
+for InFormat 'raw' and 'ped', and otherwise to 1 for InFile and 0
+(rownames) for InData, except when InData has a column labeled 'ID'.}
+
+\item{FIDcol}{column which contains the individual IDs, if any are wished to
+be used. This is column 1 for InFormat 'raw' and 'seq', but those are by
+default not used.}
+
+\item{FIDsep}{string used to paste FID and IID together into a composite-ID
+(value passed to \code{paste}'s \code{collapse}).}
+
+\item{dropcol}{columns to exclude from the output data, on top of IDcol and
+FIDcol (which become rownames). When NA, defaults to columns 3-6 for
+InFormat 'raw' and 'seq'. Can also be used to drop some SNPs, see example
+below on how to do this for the 2-columns-per-SNP input formats.}
+
+\item{quiet}{suppress messages and warnings}
 }
 \value{
 A genotype matrix in the specified output format. If 'OutFile' is
   specified, the matrix is written to this file and nothing is returned
-  inside R.
+  inside R. When converting to 0/1/2 format, 2 is the homozygote for the
+  minor allele, and 0 the homozygote for the major allele.
 }
 \description{
-Convert a genotype file from PLINK's .raw, or Colony's
-2-column-per-marker format, to sequoia's 1-column-per-marker format.
+Convert genotype data in various formats to sequoia's
+  1-column-per-marker format or Colony's 2-column-per-marker format.
 }
-\details{
-The following formats can be specified by 'InFormat' and
-'OutFormat':
- \itemize{
-  \item{col: }{No header row, 1 descriptive column, genotypes are coded as
-   numeric values, missing as 0, in 2 columns per marker.}
-   \item{ped: }{No header row, 6 descriptive columns, genotypes are coded as
-   A, C, T, G, missing as 0, in 2 columns per marker. NOTE: not yet
-   implented, use PLINK's --recodeA to convert this format to "raw".}
-   \item{raw: }{Header row with SNP names, 6 descriptive columns,
-    genotypes are coded as 0, 1, 2, missing as NA, in 1 column per marker.}
-   \item{seq: }{No header row, 1 descriptive column genotypes are coded as
-   0, 1, 2, missing as -9, in 1 column per marker.}
- }
+\section{Input formats}{
+
+The following formats can be specified by \code{InFormat}:
+\describe{
+  \item{single}{1 column per marker, otherwise unspecified}
+  \item{double}{2 columns per marker, otherwise unspecified}
+  \item{col}{(Colony) genotypes are coded as numeric values, missing as 0, in
+  2 columns per marker. Column 1 contains IDs.}
+  \item{ped}{(PLINK) genotypes are coded as A, C, T, G, missing as 0, in 2
+  columns per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
+  6 ignored). }
+  \item{raw}{(PLINK) genotypes are coded as 0, 1, 2, missing as NA, in 1
+  column per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
+  6 ignored), and there is a header row.}
+  \item{seq}{(sequoia) genotypes are coded as 0, 1, 2, missing as \eqn{-9},
+  in 1 column per marker. Column 1 contains IDs, there is no header row.}
+  }
+
+ For each InFormat, its default values for \code{Missing, header, IDcol,
+ FIDcol}, and \code{dropcol} can be overruled by specifying the corresponding
+ input parameters.
 }
+
+\section{Error messages}{
+ An occassional error when reading in a file with
+  GenoConvert is that 'rows have unequal length'. GenoConvert makes use of
+  \code{\link{readLines}} and \code{\link{strsplit}}, which is much faster
+  than \code{\link{read.table}} for large datafiles, but also more sensitive
+  to unusual line endings, unusual end-of-file characters, or invisible
+  characters (spaces or tabs) after the end of some lines. In these cases,
+  try to read the data from file using read.table or read.csv, and then use
+  GenoConvert on the matrix, see example.
+}
+
 \examples{
 \dontrun{
 # Requires PLINK installed & in system PATH:
@@ -58,16 +104,30 @@ The following formats can be specified by 'InFormat' and
 # tinker with window size, window overlap and VIF to get a set of
 # 400 - 800 markers (100-200 enough for just parentage):
 system("cmd", input = "plink --file mydata --indep 50 5 2")
-
 system("cmd", input = "plink --file mydata --extract plink.prune.in
   --recodeA --out PlinkOUT")
 
 GenoM <- GenoConvert(InFile = "PlinkOUT.raw")
+
+# save time on file conversion next time:
+write.table(GenoM, file="Geno_for_sequoia.txt", quote=FALSE,
+  col.names=FALSE)
+GenoM <- read.table("Geno_for_sequoia.txt", row.names=1, header=FALSE)
+
+# drop some SNPs, e.g. after a warning of >2 alleles:
+dropSNP <- c(5,68,101,128)
+GenoM <- GenoConvert(ColonyFile, InFormat = "col",
+                     dropcol = 1 + c(2*dropSNP-1, 2*dropSNP) )
+
+# circumvent a 'rows have unequal length' error:
+GenoTmp <- as.matrix(read.table("mydata.txt", header=TRUE, row.names=1))
+GenoM <- GenoConvert(InData=GenoTmp, InFormat="single", IDcol=0)
 }
 
 }
 \seealso{
-\code{\link{LHConvert}, \link{PedStripFID}}
+\code{\link{SnpStats}, \link{LHConvert}, and \link{PedStripFID}} to
+  reverse joining FID and IID
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

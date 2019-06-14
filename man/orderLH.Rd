@@ -22,6 +22,6 @@ orderLH(LH = NULL, gID = NULL)
 }
 \description{
 Order lifehistory data to match order of IDs in genotype data,
-filling in gaps with missing values
+  filling in gaps with missing values
 }
 \keyword{internal}

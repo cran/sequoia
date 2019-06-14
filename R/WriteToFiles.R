@@ -1,27 +1,26 @@
 #' @title write sequoia output to excel or text files
 #'
 #' @description The various list elements returned by \code{sequoia} are each
-#' written to
-#'  text files in the specified folder, or to separate sheets in a single
-#'  excel file (requires library \pkg{xlsx}).
+#'   written to text files in the specified folder, or to separate sheets in a
+#'   single excel file (requires library \pkg{xlsx}).
 #'
 #' @details The text files can be used as input for the stand-alone Fortran
-#' version of #'   sequoia, e.g. when the genotype data is too large for R. See
-#'   \code{vignette('sequoia')} for further details.
+#'   version of #'   sequoia, e.g. when the genotype data is too large for R.
+#'   See \code{vignette('sequoia')} for further details.
 #'
 #' @param SeqList the list returned by \code{\link{sequoia}}, to be written out.
 #' @param GenoM  the matrix with genetic data (optional). Ignored if
-#'  OutFormat='xls', as the resulting file could become too large for excel.
+#'   OutFormat='xls', as the resulting file could become too large for excel.
 #' @param PedComp a list with results from \code{\link{PedCompare}} (optional).
-#'  \code{SeqList$DummyIDs} is combined with \code{PedComp$DummyMatch} if both
-#'  are provided.
+#'   \code{SeqList$DummyIDs} is combined with \code{PedComp$DummyMatch} if both
+#'   are provided.
 #' @param OutFormat 'xls' or 'txt'.
 #' @param folder the directory where the text files will be written; will be
 #'   created if it does not already exists. Relative to the current working
 #'   directory, or NULL for current working directory. Ignored if
 #'   OutFormat='xls'.
 #' @param file the name of the excel file to write to, ignored if
-#'  OutFormat='txt'.
+#'   OutFormat='txt'.
 #' @param quiet suppress messages.
 #'
 #'
@@ -41,6 +40,8 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
                       OutFormat="txt",
                       folder="Sequoia-OUT",
                       file="Sequoia-OUT.xlsx", quiet=FALSE) {
+  if (!OutFormat %in% c("xls", "xlsx", "txt"))  stop("Invalid OutFormat")
+  if (!is.list(SeqList))  stop("SeqList should be a list")
   if (OutFormat == "xlsx") OutFormat <- "xls"
   if (OutFormat == "xls") {
     if (!requireNamespace("xlsx", quietly = TRUE)) {
@@ -49,33 +50,41 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
         if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
       }
       utils::install.packages("xlsx")
-   }
-   write.seq.xls(SeqList, file=file, PedComp=PedComp, quiet=quiet)
+    }
+
+    write.seq.xls(SeqList, file=file, PedComp=PedComp, quiet=quiet)
 
   } else if (OutFormat == "txt") {
-
   curdir <- getwd()
   if (is.null(folder)) folder = curdir
   dir.create(folder, showWarnings = FALSE)
   setwd(folder)
-  if (any(file.exists("Geno.txt","Specs.txt", "AgePriors.txt", "PedigreePar.txt")) &
+  if (any(file.exists("Geno.txt", "Specs.txt", "AgePriors.txt", "PedigreePar.txt")) &
       interactive() & !quiet) {
     ANS <- readline(prompt = paste("Writing data to '", folder,
                                    "' will overwrite existing files. Continue Y/N? "))
-    if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
+    if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) {
+      setwd(curdir)
+      stop()
+    }
   }
   write(paste("These files were created by R package sequoia on ", date()),
         file="README.txt")
 
   if (!is.null(GenoM)) {
+    if (!is.matrix(GenoM) & !is.data.frame(GenoM))  stop("GenoM should be a matrix")
     if (any(SeqList$LifeHist$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
       GenoM <- herm_clone_Geno(GenoM, SeqList$LifeHist, herm.suf=c("f", "m"))
     }
     if(nrow(GenoM)!= SeqList$Specs$NumberIndivGenotyped) {
       ANS <- readline(prompt = paste("Number of individuals according to Specs differs from number of rows in GenoM (", SeqList$Specs$NumberIndivGenotyped, "/", nrow(GenoM), ").\n Press Y to continue and fix manually in `SequoiaSpecs.txt' "))
-      if (!substr(ANS, 1, 1) %in% c("Y", "y")) stop()
+      if (!substr(ANS, 1, 1) %in% c("Y", "y")) {
+        setwd(curdir)
+        stop()
+      }
     }
     if(ncol(GenoM)!= SeqList$Specs$NumberSnps) {
+      setwd(curdir)
       stop(paste("Number of SNPs according to Specs differs from number of rows in GenoM (", SeqList$Specs$NNumberSnps, "vs", ncol(GenoM), ")"))
     }
   }
@@ -88,6 +97,7 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
   SpecsOUT$UseAge <- c("extra"=2, "yes"=1, "no"=0)[SpecsOUT$UseAge]
   SpecsOUT$FindMaybeRel <- as.numeric(SpecsOUT$FindMaybeRel)
   SpecsOUT$CalcLLR <- as.numeric(SpecsOUT$CalcLLR)
+  if (SpecsOUT$MaxSibIter <= 0)  SpecsOUT$MaxSibIter <- 10
 
   OPT <- options()
   options(scipen = 10)
@@ -100,6 +110,7 @@ writeSeq <- function(SeqList, GenoM=NULL, PedComp=NULL,
 
   if ("PedigreePar" %in% names(SeqList)) {
     write.parents(ParentDF = SeqList$PedigreePar, LifeHistData = SeqList$LifeHist, GenoM = GenoM)
+		# compatable to be read in by stand-alone sequoia
   }
 
   if ("Pedigree" %in% names(SeqList)) {
@@ -149,7 +160,7 @@ write.parents <- function(ParentDF, LifeHistData, GenoM) {
   Par <- MergeFill(Par,
                data.frame(id = rownames(GenoM),
                           LLRdam = NA, LLRsire = NA, LLRpair = NA,
-                          OHdam = NA, OHsire = NA,
+                          OHdam = NA, OHsire = NA, MEpair = NA,
                           rowid = NA, rowdam = NA, rowsire = NA,
                           stringsAsFactors=FALSE),
                by = "id", all = TRUE)
@@ -159,7 +170,7 @@ write.parents <- function(ParentDF, LifeHistData, GenoM) {
   for (x in c("LLRdam", "LLRsire", "LLRpair")) {
     Par[is.na(Par[, x]), x] <- -999
   }
-  for (x in c("OHdam", "OHsire")) {
+  for (x in c("OHdam", "OHsire", "MEpair")) {
     Par[is.na(Par[, x]), x] <- -9
   }
   for (x in c("id", "dam", "sire")) {
@@ -169,7 +180,6 @@ write.parents <- function(ParentDF, LifeHistData, GenoM) {
   if (any(is.na(Par$id))) stop("Some id's in PedigreePar do not occur in GenoM!")
   writeColumns(Par, "Parents.txt", row.names=FALSE)
 }
-
 
 
 

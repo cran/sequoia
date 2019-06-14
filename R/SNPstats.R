@@ -9,6 +9,11 @@
 #' provided as an aid to inspect the relationship between AF, missingness
 #' and error to find a suitable combination of thresholds to use.
 #'
+#' The error count includes both the number of parent-offspring pairs that are
+#' opposing homozygotes (parent is AA and offspring is aa), as Mendelian errors
+#' in parent-parent-offspring trios (e.g. parents AA and aa, but offspring not
+#' Aa).
+#'
 #' The underlying genotyping error can not be easily estimated from the number
 #' of Mendelian errors, as many errors may go undetected and a single error in
 #'  a prolific individual can result in a high number of Mendelian errors.
@@ -21,21 +26,26 @@
 #' @param Ped  a dataframe with 3 columns: ID - parent1 - parent2. Additional
 #'  columns and non-genotyped individuals are ignored. Only used to estimate
 #'  the error rate.
+#' @param Plot  show histograms of the results?
 #'
 #' @return a matrix with a number of rows equal to the number of SNPs
-#'  (=number of columns of GenoM) and columns
+#'  (=number of columns of GenoM) and 2 or 3 columns:
 #' \item{AF}{Allele frequency of the 'second allele' (the one for which the
 #'   homozygote is coded 2)}
 #' \item{Mis}{Proportion of missing calls}
 #' \item{ER}{(only when Ped provided) number of Mendelian errors in parent-
-#'  offspring pairs and parent-parent-offspring trios, e.g.parent is AA and
-#'  offspring is aa.}
+#'  offspring pairs (i.e. the number of opposing homozygotes, 'OHdam' &
+#'   'OHsire' in pedigree) and parent-parent-offspring trios ('MEpairs' in
+#'   pedigree).}
 #'
 #' @seealso  \code{\link{GenoConvert}}
 #'
 #' @export
 
-SnpStats <- function(GenoM, Ped=NULL) {
+SnpStats <- function(GenoM,
+                     Ped = NULL,
+                     Plot = TRUE)
+{
   Mis <- apply(GenoM, 2, function(x) sum(x==-9))/nrow(GenoM)
   AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
 
@@ -52,7 +62,36 @@ SnpStats <- function(GenoM, Ped=NULL) {
   } else {
     OUT <- cbind(AF, Mis)
   }
-  OUT
+
+  if (Plot) {
+    if (is.null(Ped)) {
+      op <- par(mfrow=c(1,3), mai=c(.8,.8,.5,.1))
+    } else {
+      op <- par(mfrow=c(2,2), mai=c(.8,.8,.5,.1))
+    }
+    hist(OUT[,"AF"], breaks=ncol(GenoM)/5, col="grey", main="Frequency '1' allele",
+         xlab="", cex.main=1.2)
+    hist(OUT[,"Mis"], breaks=ncol(GenoM)/5, col="grey", main="Missingness",
+         xlab="", cex.main=1.2)
+    MAF <- ifelse(OUT[,"AF"] <= 0.5, OUT[,"AF"], 1-OUT[,"AF"])
+    if (!is.null(Ped)) {
+      hist(OUT[,"ER"], breaks=c(0:(max(OUT[,"ER"])+2))-.5, col="grey", main="Mendelian Errors",
+         xlab="", cex.main=1.2)
+    }
+    plot(MAF, OUT[,"Mis"], pch=16, cex=1.2, xlim=c(0,0.5), xlab="Minor Allele Frequency",
+         ylab="Missingness", cex.lab=1.3)
+    if (!is.null(Ped)) {
+      if (any(OUT[,"ER"] > 0)) {
+        q95 <- OUT[,"ER"] > stats::quantile(OUT[,"ER"], prob=0.95)
+        points(MAF[q95], OUT[q95, "Mis"], pch=16, col="red")
+        legend("topleft", "5% highest ER", pch=16, col="red", inset=.01)
+      }
+    }
+    par(op)
+  }
+
+  rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT), width=ifelse(nrow(OUT)<1000, 3, 4), flag="0"))
+  return( OUT )
 }
 
 

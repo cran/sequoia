@@ -4,63 +4,93 @@
 \alias{EstConf}
 \title{Estimate confidence probability}
 \usage{
-EstConf(Ped = NULL, LifeHistData = NULL, Specs = NULL, Full = TRUE,
-  nSim = 10, ParMis = 0.4, args.sim = NULL, return.PC = FALSE,
+EstConf(Ped = NULL, LifeHistData = NULL, args.sim = list(nSnp = 400,
+  SnpError = 0.001, ParMis = c(0.4, 0.4)), args.seq = list(MaxSibIter =
+  10, Err = 1e-04, Tassign = 0.5), nSim = 10, return.PC = FALSE,
   quiet = TRUE)
 }
 \arguments{
-\item{Ped}{Reference pedigree from which to simulate, dataframe with
-columns id-dam-sire. Additional columns are ignored}
+\item{Ped}{Reference pedigree from which to simulate, dataframe with columns
+id-dam-sire. Additional columns are ignored}
 
-\item{LifeHistData}{Dataframe with id, sex (1=female, 2=male, 3=unknown),
-and birth year.}
+\item{LifeHistData}{Dataframe with id, sex (1=female, 2=male, 3=unknown), and
+birth year.}
 
-\item{Specs}{Parameter values for running sequoia, as named vector.}
+\item{args.sim}{list of arguments to pass to \code{\link{SimGeno}}, such as
+\code{nSnp} (number of SNPs), \code{SnpError} (genotyping error rate) and
+\code{ParMis} (proportion of non-genotyped parents). Set to NULL to use all
+default values.}
 
-\item{Full}{Full pedigree reconstruction (TRUE) or only parentage assignment
-(FALSE)}
+\item{args.seq}{list of arguments to pass to \code{\link{sequoia}}, such as
+\code{MaxSibIter} (max no. sibship clustering iterations, '0' for parentage
+assignment only) and \code{Err} (assumed genotyping error rate). May
+include (part of) SeqList, the list of sequoia output (i.e. as a
+list-within-a-list). Set to NULL to use all default values.}
 
-\item{nSim}{number of simulations to perform.}
-
-\item{ParMis}{proportion of parents assumed to have a fully missing genotype.}
-
-\item{args.sim}{list of additional arguments to pass to \code{\link{SimGeno}}}
+\item{nSim}{number of rounds of simulations to perform.}
 
 \item{return.PC}{return all \code{\link{PedCompare}} \code{Counts}?}
 
-\item{quiet}{suppress messages. `very' also suppresses simulation counter}
+\item{quiet}{suppress messages. `very' also suppresses simulation counter,
+TRUE merely runs SimGeno and sequoia quietly.}
 }
 \value{
-A 2x2 matrix for parentage assignment, or a 2x7x2 array for
- full pedigree reconstruction, with for dams and sires and per category (see
- \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
- Mismatch + P2only).
+A 2x2 matrix for parentage assignment, or a 2x7x2 array for full
+  pedigree reconstruction, with for dams and sires and per category (see
+  \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
+  Mismatch + P2only).
 
-When return.PC is TRUE, a list is returned with two arrays: ConfProb
-contains the average confidence probability across simulations, and
-SimCounts all counts of matches, mismatches, Pedigree1-only and pedigree2-
-only per simulation.
+When return.PC is TRUE, a list is returned with two arrays: ConfProb contains
+the average confidence probability across simulations, and SimCounts all
+counts of matches, mismatches, Pedigree1-only and pedigree2- only per
+simulation.
 }
 \description{
-Estimate the assignment error rate by repeatedly simulating
-data from
-a reference pedigree using \code{\link{SimGeno}}, reconstruction a pedigree
-from this using \code{\link{sequoia}}, and counting the number of mismatches
-using \code{\link{PedCompare}}.
+Estimate the assignment error rate by repeatedly simulating data
+  from a reference pedigree using \code{\link{SimGeno}}, reconstruction a
+  pedigree from this using \code{\link{sequoia}}, and counting the number of
+  mismatches using \code{\link{PedCompare}}.
 }
 \details{
 The confidence probability is taken as the number of correct
-(matching)
-assignments, divided by all assignments made. A confidence of '1' should be
-interpreted as '> 1 - 1/(sum(!is.na(Ped$dam)) * nSim)'
+  (matching) assignments, divided by all assignments made. A confidence of
+  '1' should be interpreted as '> 1 - 1/(sum(!is.na(Ped$dam)) * nSim)'
 }
 \examples{
 \dontrun{
 data(SimGeno_example, LH_HSg5, package="sequoia")
-SeqOUT <- sequoia(GenoM = SimGeno_example,
-                  LifeHistData = LH_HSg5, MaxSibIter = 0)
-ConfPr <- EstConf(Ped = SeqOUT$PedigreePar, LifeHistData = LH_HSg5,
-                 Specs = SeqOUT$Specs, Full = FALSE, nSim = 10)
+
+conf.A <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+   args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+   args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5),
+   nSim = 3, return.PC = TRUE)
+
+# effect of tweaking AgePriors
+# (only some effect due to low no. SNPs & high error rate,
+#  effect of increasing no. SNPs is much larger)
+AP <- MakeAgePrior(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+                   Flatten = FALSE, Smooth = FALSE)
+conf.B <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+   args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+   args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5,
+                   SeqList = list(AgePriors = AP)),
+   nSim = 3, return.PC = TRUE)
+
+# with sibship clustering
+conf.C <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+   args.sim = list(nSnp = 200, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+   args.seq = list(MaxSibIter = 10, Err=1e-4, Tassign=0.5),
+   nSim = 3, return.PC = TRUE)
+conf.C$ConfProb[,"GG",]  # Genotyped individuals, Genotyped parent
+conf.C$ConfProb[,"GD",]  # Genotyped individuals, Dummy parent
+AR <- apply(conf.C$SimCounts, 1, function(M) M["TT","Match", ]/M["TT","Total", ])
+ER <- apply(conf.C$SimCounts, 1,
+       function(M) (M["TT","Mismatch", ] + M["TT","P2only", ])/M["TT","Total", ])
+apply(ER, 1, mean)  # separate error rate dams & sires
+mean(ER)            # overall error rate
 }
 
+}
+\seealso{
+\code{\link{SimGeno}, \link{sequoia}, \link{PedCompare}}
 }

@@ -4,7 +4,7 @@
 \alias{SnpStats}
 \title{SNP summary statistics}
 \usage{
-SnpStats(GenoM, Ped = NULL)
+SnpStats(GenoM, Ped = NULL, Plot = TRUE)
 }
 \arguments{
 \item{GenoM}{Genotype matrix, in sequoia's format: 1 column per SNP, 1 row
@@ -14,16 +14,19 @@ IDs.}
 \item{Ped}{a dataframe with 3 columns: ID - parent1 - parent2. Additional
 columns and non-genotyped individuals are ignored. Only used to estimate
 the error rate.}
+
+\item{Plot}{show histograms of the results?}
 }
 \value{
 a matrix with a number of rows equal to the number of SNPs
- (=number of columns of GenoM) and columns
+ (=number of columns of GenoM) and 2 or 3 columns:
 \item{AF}{Allele frequency of the 'second allele' (the one for which the
   homozygote is coded 2)}
 \item{Mis}{Proportion of missing calls}
 \item{ER}{(only when Ped provided) number of Mendelian errors in parent-
- offspring pairs and parent-parent-offspring trios, e.g.parent is AA and
- offspring is aa.}
+ offspring pairs (i.e. the number of opposing homozygotes, 'OHdam' &
+  'OHsire' in pedigree) and parent-parent-offspring trios ('MEpairs' in
+  pedigree).}
 }
 \description{
 Estimate allele frequency (AF), missingness and Mendelian
@@ -35,6 +38,11 @@ SNPs with low minor allele freuqency or high missigness should be filtered
 out using PLINK prior to pedigree reconstruction. This function is merely
 provided as an aid to inspect the relationship between AF, missingness
 and error to find a suitable combination of thresholds to use.
+
+The error count includes both the number of parent-offspring pairs that are
+opposing homozygotes (parent is AA and offspring is aa), as Mendelian errors
+in parent-parent-offspring trios (e.g. parents AA and aa, but offspring not
+Aa).
 
 The underlying genotyping error can not be easily estimated from the number
 of Mendelian errors, as many errors may go undetected and a single error in

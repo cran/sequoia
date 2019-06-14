@@ -13,9 +13,9 @@ MergeFill(df1, df2, by, overwrite = FALSE, ...)
 
 \item{by}{columns used for merging, required.}
 
-\item{overwrite}{If FALSE (the default), NA's in df1 are replaced by
-values from df2. If TRUE, all values in df1 are overwritten by values from
-df2, except where df2 has NA.}
+\item{overwrite}{If FALSE (the default), NA's in df1 are replaced by values
+from df2. If TRUE, all values in df1 are overwritten by values from df2,
+except where df2 has NA.}
 
 \item{...}{additional arguments to merge, such as \code{all}.}
 }
@@ -23,3 +23,4 @@ df2, except where df2 has NA.}
 As regular merge, but combine data from columns with the same
  name
 }
+\keyword{internal}

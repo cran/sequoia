@@ -15,14 +15,13 @@ DyadCompare(Ped1 = NULL, Ped2 = NULL, na1 = c(NA, "0"))
 }
 \value{
 A 3x3 table with the number of pairs assigned as full siblings (FS),
-  half siblings (HS) or unrelated (U, including otherwise related) in the
-  two pedigrees, with the classification in Ped1 on rows and that in Ped2 in
+  half siblings (HS) or unrelated (U, including otherwise related) in the two
+  pedigrees, with the classification in Ped1 on rows and that in Ped2 in
   columns
 }
 \description{
 Count the number of half and full sibling pairs correctly and
- incorrectly
-assigned
+  incorrectly assigned
 }
 \examples{
 \dontrun{

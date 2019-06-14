@@ -4,25 +4,25 @@
 \alias{LHConvert}
 \title{Extract sex and birthyear from PLINK file}
 \usage{
-LHConvert(InFile = NULL, UseFID = FALSE, SwapSex = TRUE,
-  FIDsep = "__", LHIN = NULL)
+LHConvert(PlinkFile = NULL, UseFID = FALSE, SwapSex = TRUE,
+  FIDsep = "__", LifeHistData = NULL)
 }
 \arguments{
-\item{InFile}{character string with name of genotype file to be converted}
+\item{PlinkFile}{character string with name of genotype file to be converted}
 
-\item{UseFID}{Use the family ID column. The resulting ids (rownames of
-GenoM) will be in the form FID__IID}
+\item{UseFID}{Use the family ID column. The resulting ids (rownames of GenoM)
+will be in the form FID__IID}
 
 \item{SwapSex}{change the coding from PLINK default (1=male, 2=female) to
 sequoia default (1=female, 2=male); any other numbers are set to NA}
 
 \item{FIDsep}{characters inbetween FID and IID in composite-ID. By default a
 double underscore is used, to avoid problems when some IIDs contain an
- underscore. Only used when UseFID=TRUE.}
+underscore. Only used when UseFID=TRUE.}
 
-\item{LHIN}{dataframe with additional sex and birth year info. In case of
-conflicts, LHIN takes priority, with a warning. If UseFID=TRUE, ids are
-assumed to be as FID__IID.}
+\item{LifeHistData}{dataframe with additional sex and birth year info. In
+case of conflicts, LifeHistData takes priority, with a warning. If
+UseFID=TRUE, IDs in LifeHistData are assumed to be already as FID__IID.}
 }
 \value{
 a dataframe with id, sex and birth year, which can be used as input
@@ -38,7 +38,16 @@ The first 6 columns of PLINK .fam, .ped and .raw files are by
 default FID - IID - father ID (ignored) - mother ID (ignored) - sex -
 phenotype.
 
-Use with caution, as not extensively tested yet.
+When additionally a
+}
+\examples{
+\dontrun{
+# combine FID and IID in dataframe with additional sex & birth years
+ExtraLH$FID_IID <- paste(ExtraLH$FID, ExtraLH$IID, sep = "__")
+LH.new <- LHConvert(PlinkFile, UseFID = TRUE, FIDsep = "__",
+                    LifeHistData = ExtraLH)
+}
+
 }
 \seealso{
 \code{\link{GenoConvert}}, \code{\link{PedStripFID}} to reverse

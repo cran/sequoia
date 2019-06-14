@@ -1,0 +1,6 @@
+Changes in version 1.3: 
+- numerous edits to fortran source code to better handle certain (rarer) types of relatives
+- various bug fixes in fortran source code
+- several functions have become user-visible: CheckGeno, MkGenoErrors, GetMaybeRel, GetRelCat
+- plotting functions added: PlotAgePrior and summarySeq
+- extended vignette with function overview & FAQ

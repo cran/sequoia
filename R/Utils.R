@@ -6,6 +6,10 @@ FacToNum <- function(x) as.numeric(as.character(x))
 
 
 #======================================================================
+fc <- function(x, w=2)  formatC(x, width=w, flag="0")
+
+
+#======================================================================
 # transform vector to matrix
 VtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
   if(Ng_odd) {
@@ -54,12 +58,12 @@ writeColumns <- function(x, file="", row.names=TRUE,
 #' @param df1  first dataframe (lowest priority if overwrite=TRUE)
 #' @param df2  second dataframe (highest priority if overwrite=TRUE)
 #' @param by  columns used for merging, required.
-#' @param overwrite  If FALSE (the default), NA's in df1 are replaced by
-#'   values from df2. If TRUE, all values in df1 are overwritten by values from
-#'   df2, except where df2 has NA.
+#' @param overwrite  If FALSE (the default), NA's in df1 are replaced by values
+#'   from df2. If TRUE, all values in df1 are overwritten by values from df2,
+#'   except where df2 has NA.
 #' @param ...  additional arguments to merge, such as \code{all}.
 #'
-#' @export
+#' @keywords internal
 
 MergeFill <- function(df1, df2, by, overwrite=FALSE, ...) {
   commonNames <- names(df1)[which(colnames(df1) %in% colnames(df2))]
@@ -135,9 +139,11 @@ is.wholenumber <-
 
 #======================================================================
 # Partial pedigree fix
-AddParPed <- function(PedIN) {
+AddParPed <- function(PedIN, ZeroToNA=TRUE, NAToZero=FALSE) {
+  if (ZeroToNA & NAToZero)  stop("ZeroToNA and NAToZero can't both be TRUE")
   Ped <- unique(PedIN)
-  Ped[which(Ped==0), 1:3] <- NA
+  if (ZeroToNA) Ped[which(Ped[,1:3]==0), 1:3] <- NA
+  if (NAToZero) Ped[is.na(Ped[,1:3]), 1:3] <- 0
   Ped <- unique(Ped[!is.na(Ped[,1]), ])
   for (x in 1:3)  Ped[,x] <- as.character(Ped[,x])
   UID <- stats::na.exclude(unique(unlist(Ped[,1:3])))
@@ -146,7 +152,7 @@ AddParPed <- function(PedIN) {
                          dam=NA,
                          sire=NA,
                          stringsAsFactors=FALSE)
-    names(AddPed)[1:3] <- names(PedIN)[1:3]
+    names(AddPed) <- names(PedIN)[1:3]
     Ped <- merge(AddPed, Ped, all=TRUE)  # presume ancestors
   }
   Ped
@@ -156,31 +162,73 @@ AddParPed <- function(PedIN) {
 #===============================
 # replace numbers by names
 NumToID <- function(x, k=NULL, GenoNames=NULL, dumID=NULL) {
-  type <- ifelse(x>0, "r", ifelse(x<0, "d", "n"))
+  type <- ifelse(is.na(x), "n",
+               ifelse(x>0, "r",
+                  ifelse(x<0, "d", "n")))
   ID <- rep(NA, length(x))
-  ID[type=="r"] <- GenoNames[x[type=="r"]]
-  ID[type=="d"] <- dumID[-x[type=="d"], k]
-  ID
+  if (any(type=="r"))  ID[type=="r"] <- GenoNames[x[type=="r"]]
+  if (any(type=="d"))  ID[type=="d"] <- dumID[-x[type=="d"], k]
+  return( ID )
 }
 
 
-IDToNum <- function(NamePed, GenoNames) {  # GenoNames = rownames(GenoM)
+IDToNum <- function(NamePed, GenoNames, DumPrefix=c("F0", "M0")) {  # GenoNames = rownames(GenoM)
+  GenoNums <- 1:length(GenoNames)
+  names(GenoNums) <- GenoNames
+  DumPrefixNchar <- nchar(DumPrefix[1])
+
   names(NamePed) <- c("id", "dam", "sire")
   if (!all(GenoNames %in% NamePed$id)) {
     NamePed <- rbind(NamePed, data.frame(id = GenoNames[!GenoNames %in% NamePed$id],
                                          dam = NA, sire = NA))
   }
-  rownames(NamePed) <- NamePed$id
-  NamePed <- NamePed[GenoNames, ]
-  GenoNums <- 1:length(GenoNames)
-  names(GenoNums) <- GenoNames
-  NumPed <- data.frame(id = GenoNums,
-                       dam = GenoNums[NamePed$dam],
-                       sire = GenoNums[NamePed$sire])
-  for(i in 2:3) NumPed[is.na(NumPed[,i]), i] <- 0
-  NumPed
+  DumNameToID <- function(x, ncp=1) -as.numeric(substr(x,ncp+1,nchar(x)))
+
+  NumPed <- matrix(0, nrow(NamePed), 3,
+                   dimnames=list(NamePed$id, c("id", "dam", "sire")))
+  for (x in 1:3) {
+    type <- getGDO(NamePed[,x], GenoNames, DumPrefix)
+    NumPed[type=="Genotyped", x] <- GenoNums[NamePed[type=="Genotyped", x]]
+    NumPed[type=="Dummy", x] <- DumNameToID(NamePed[type=="Dummy", x], DumPrefixNchar)
+  }
+  return( NumPed )
 }
 
 
+getGDO <- function(id, SNPd = NULL, DumPrefix = c("F0", "M0")) {
+  GDO <- rep("Genotyped", length(id))
+  GDO[is.na(id)] <- "None"
+  if (!is.null(DumPrefix)) {
+    for (p in 1:2) {
+      GDO[substr(id,1,nchar(DumPrefix[p])) == DumPrefix[p]] <- "Dummy"
+    }
+  }
+  if (!is.null(SNPd)) {
+    GDO[(!id %in% SNPd) & GDO=="Genotyped"] <- "Observed"
+  }
+  GDO <- factor(GDO, levels=c("Genotyped", "Dummy", "Observed", "None"), ordered=TRUE)
+}
 
+
+#===============================
+CountAgeDif <- function(BY, BYrange = range(BY)) {
+	BYf <- factor(BY, levels=c(BYrange[1]:BYrange[2]))
+	BYM <- matrix(0, length(BYf), nlevels(BYf),
+								dimnames = list(1:length(BY), levels(BYf)))
+	BYM[cbind(1:length(BYf), BYf)] <- 1
+	BYM[rowSums(BYM)==0, ] <- NA
+
+	AA <- outer(as.numeric(levels(BYf)), as.numeric(levels(BYf)), "-")
+	BY.cnt <- apply(BYM, 2, sum, na.rm=TRUE)
+	tmp <- outer(BY.cnt, BY.cnt, "*")
+	A.cnt <- setNames(rep(0, max(AA)+1), 0:max(AA))
+	for (a in 0:max(AA)) {
+		A.cnt[a+1] <- sum(tmp[AA == a])
+	}
+	A.cnt["0"] <- A.cnt["0"] -sum(!is.na(BYM[,1]))   # self
+	return( A.cnt )
+}
+
+
+#===============================
 

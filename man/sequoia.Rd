@@ -7,8 +7,9 @@
 sequoia(GenoM = NULL, LifeHistData = NULL, SeqList = NULL,
   MaxSibIter = 10, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
   Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complex = "full", UseAge = "yes", FindMaybeRel = TRUE,
-  CalcLLR = TRUE, quiet = FALSE)
+  Complex = "full", UseAge = "yes", args.AP = list(Flatten = TRUE,
+  Smooth = TRUE), FindMaybeRel = FALSE, CalcLLR = TRUE,
+  quiet = FALSE)
 }
 \arguments{
 \item{GenoM}{numeric matrix with genotype data: One row per individual, and
@@ -17,33 +18,34 @@ one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
 --recodeA or in Colony's 2-column format to this format.}
 
 \item{LifeHistData}{Dataframe with 3 columns:
-\itemize{
-\item{ID: }{max. 30 characters long,}
-\item{Sex: }{1 = females, 2 = males, other = unkown, except 4 = hermaphrodite,}
-\item{BY: }{(birth or hatching year) Integer, negative numbers are
-  interpreted as missing values.}}
-If the species has multiple generations per year, use an integer coding
- such that the candidate parents' `Birth year' is at least one smaller than
- their putative offspring's.}
+ \itemize{
+ \item{ID: }{max. 30 characters long,}
+ \item{Sex: }{1 = females, 2 = males, other = unkown, except 4 =
+   hermaphrodite,}
+\item{BirthYear: }{(birth or hatching year) Integer, negative numbers are
+interpreted as missing values.}} If the species has multiple generations per
+year, use an integer coding such that the candidate parents' `Birth year' is
+at least one smaller than their putative offspring's. Column names are
+ignored, so ensure column order is ID - sex - birth year.}
 
 \item{SeqList}{list with output from a previous run, containing the elements
 `Specs', `AgePriors' and/or `PedigreePar', as described below, to be used
- in the current run. If \code{SeqList$Specs} is provided, all other input
- parameter values except \code{MaxSibIter} are ignored.}
+in the current run. If \code{SeqList$Specs} is provided, all other input
+parameter values except \code{MaxSibIter} are ignored.}
 
 \item{MaxSibIter}{number of iterations of sibship clustering, including
 assignment of grandparents to sibships and avuncular relationships between
-sibships. Set to 0 to not (yet) perform this step, which is by far the
-most time consuming and may take several hours for large datasets.
-Clustering continues until convergence or until MaxSibIter is reached.}
+sibships. Set to 0 to not (yet) perform this step, which is by far the most
+time consuming and may take several hours for large datasets. Clustering
+continues until convergence or until MaxSibIter is reached.}
 
-\item{Err}{estimated genotyping error rate. The error model aims to deal
-with scoring errors typical for SNP arrays.}
+\item{Err}{estimated genotyping error rate. The error model aims to deal with
+scoring errors typical for SNP arrays.}
 
 \item{MaxMismatch}{maximum number of loci at which candidate parent and
 offspring are allowed to be opposite homozygotes. Setting a more liberal
-threshold can improve performance if the error rate is high, at the cost
-of decreased speed.}
+threshold can improve performance if the error rate is high, at the cost of
+decreased speed.}
 
 \item{Tfilter}{threshold log10-likelihood ratio (LLR) between a proposed
 relationship versus unrelated, to select candidate relatives. Typically a
@@ -51,40 +53,46 @@ negative value, related to the fact that unconditional likelihoods are
 calculated during the filtering steps. More negative values may decrease
 non-assignment, but will increase computational time.}
 
-\item{Tassign}{minimum LLR required for acceptance of
-proposed relationship, relative to next most likely relationship. Higher
-values result in more conservative assignments. Must be zero or positive.}
+\item{Tassign}{minimum LLR required for acceptance of proposed relationship,
+relative to next most likely relationship. Higher values result in more
+conservative assignments. Must be zero or positive.}
 
-\item{MaxSibshipSize}{maximum number of offspring for a single individual
-(a generous safety margin is advised).}
+\item{MaxSibshipSize}{maximum number of offspring for a single individual (a
+generous safety margin is advised).}
 
-\item{DummyPrefix}{character vector of length 2 with prefixes for dummy
-dams (mothers) and sires (fathers); maximum 20 characters each.}
+\item{DummyPrefix}{character vector of length 2 with prefixes for dummy dams
+(mothers) and sires (fathers); maximum 20 characters each.}
 
 \item{Complex}{either "full" (default), "simp" (simplified, no explicit
-consideration of inbred relationships; not fully implemented yet), "mono"
-(monogamous) or "herm" (hermaphrodites, otherwise like 'full').}
+consideration of inbred relationships), "mono" (monogamous) or "herm"
+(hermaphrodites, otherwise like "full").}
 
 \item{UseAge}{either "yes" (default), "no", or "extra" (additional rounds
-with extra reliance on ageprior, may boost assignments but increased risk
+  with extra reliance on ageprior, may boost assignments but increased risk
 of erroneous assignments); used during full reconstruction only.}
 
+\item{args.AP}{list with arguments to be passed on to
+\code{\link{MakeAgePrior}}.}
+
 \item{FindMaybeRel}{identify pairs of non-assigned likely relatives after
-pedigree reconstruction. Can be time-consuming in large datasets.}
+pedigree reconstruction. Can be time-consuming in large datasets. NOTE:
+from v1.2 default changed from TRUE to FALSE; \code{\link{GetMaybeRel}} can
+now be called separately.}
 
-\item{CalcLLR}{calculate log-likelihood ratios for all assigned parents (
-is parent vs. is otherwise related). Time-consuming in large datasets.}
+\item{CalcLLR}{calculate log-likelihood ratios for all assigned parents (is
+parent vs. is otherwise related). Time-consuming in large datasets.}
 
-\item{quiet}{suppress messages.}
+\item{quiet}{suppress messages: TRUE/FALSE/"verbose".}
 }
 \value{
 A list with some or all of the following components:
-\item{AgePriors}{Matrix with age-difference based prior probability ratios,
- used for full pedigree reconstruction.}
+  \item{AgePriors}{Matrix with age-difference based prior probability ratios,
+used for full pedigree reconstruction. See \code{\link{MakeAgePrior}} for
+details.}
 \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
-  their sex, estimated birth year (point estimate, upper and lower bound of
-  95\% confidence interval), number of offspring, and offspring IDs
- (genotyped offspring only).}
+their sex, estimated birth year (point estimate, upper and lower bound of
+95\% confidence interval), number of offspring, and offspring IDs (genotyped
+offspring only).}
 \item{DupGenotype}{Dataframe, duplicated genotypes (with different IDs,
  duplicate IDs are not allowed). The specified number of maximum mismatches
   is used here too. Note that this dataframe may include pairs of closely
@@ -121,32 +129,35 @@ List elements PedigreePar and Pedigree both have the following columns:
  \item{dam}{Assigned mother, or NA}
  \item{sire}{Assigned father, or NA}
  \item{LLRdam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
-   versus the next most likely relationship between the focal individual and
-   this female (see Details for relationships considered)}
+ versus the next most likely relationship between the focal individual and
+ this female (see Details for relationships considered)}
  \item{LLRsire}{idem, for male parent}
  \item{LLRpair}{LLR for the parental pair, versus the next most likely
   configuration between the three individuals (with one or neither parent
   assigned)}
-
-In addition, PedigreePar has the columns
  \item{OHdam}{Number of loci at which the offspring and mother are
    opposite homozygotes}
  \item{OHsire}{idem, for father}
+ \item{MEpair}{Number of Mendelian errors between the offspring and the
+   parent pair, includes OH as well as e.g. parents being opposing
+   homzygotes, but the offspring not being a heterozygote. The offspring
+   being OH with both parents is counted as 2 errors.}
 }
 \description{
-Perform pedigree reconstruction based on SNP data, including parentage
-assignment and sibship clustering.
+Perform pedigree reconstruction based on SNP data, including
+  parentage assignment and sibship clustering.
 }
 \details{
-For each pair of candidate relatives, the likelihoods are calculated of them
- being parent-offspring (PO), full siblings (FS), half siblings (HS),
- grandparent-grandoffspring (GG), full avuncular (niece/nephew - aunt/uncle;
- FA), half avuncular/great-grandparental/cousins (HA), or unrelated (U).
- Assignments are made if the likelihood ratio (LLR) between the focal
- relationship and the most likely alternative exceed the threshold Tassign.
+For each pair of candidate relatives, the likelihoods are calculated
+  of them being parent-offspring (PO), full siblings (FS), half siblings
+  (HS), grandparent-grandoffspring (GG), full avuncular (niece/nephew -
+  aunt/uncle; FA), half avuncular/great-grandparental/cousins (HA), or
+  unrelated (U). Assignments are made if the likelihood ratio (LLR) between
+  the focal relationship and the most likely alternative exceed the threshold
+  Tassign.
 
-Further explanation of the various options and interpretation of the output
- is provided in the vignette.
+  Further explanation of the various options and interpretation of the output
+  is provided in the vignette.
 }
 \section{Disclaimer}{
 
@@ -156,6 +167,7 @@ correct. Use of sequoia is entirely at your own risk.
 }
 
 \examples{
+# == EXAMPLE 1 ==
 data(SimGeno_example, LH_HSg5, package="sequoia")
 head(SimGeno_example[,1:10])
 head(LH_HSg5)
@@ -163,25 +175,35 @@ SeqOUT <- sequoia(GenoM = SimGeno_example,
                   LifeHistData = LH_HSg5, MaxSibIter = 0)
 names(SeqOUT)
 SeqOUT$PedigreePar[34:42, ]
+
 \dontrun{
 SeqOUT2 <- sequoia(GenoM = SimGeno_example,
                   LifeHistData = LH_HSg5, MaxSibIter = 10)
 SeqOUT2$Pedigree[34:42, ]
 
-# reading in data from text files:
-GenoM <- as.matrix(read.table("MyGenoData.txt", row.names=1, header=FALSE))
-LH <- read.table("MyLifeHistData.txt", header=TRUE)
-MySeqOUT <- sequoia(GenoM = GenoM, LifeHistData = LH)
+# == EXAMPLE 2 ==
+# ideally, select 400-700 SNPs: high MAF & low LD
+# save in 0/1/2/NA format (PLINK's --recodeA)
+GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw")
+SNPSTATS <- SnpStats(GenoM)
+# perhaps after some data-cleaning:
+write.table(GenoM, file="MyGenoData.txt", row.names=T, col.names=F)
+# later:
+GenoM <- as.matrix(read.table("MyGenoData.txt", row.names=1, header=F))
+LHdata <- read.table("LifeHistoryData.txt", header=T) # ID-Sex-birthyear
+SeqOUT <- sequoia(GenoM, LHdata, Err=0.005, MaxMismatch=10)
+SummarySeq(SeqOUT)
+writeSeq(SeqOUT, OutFormat = "xls")  # needs library xlsx
 }
 }
 \references{
-Huisman, J. (2017) Pedigree reconstruction from SNP data: Parentage
-  assignment, sibship clustering, and beyond. Molecular Ecology Resources
-  17:1009--1024.
+Huisman, J. (2017) Pedigree reconstruction from SNP data:
+  Parentage assignment, sibship clustering, and beyond. Molecular Ecology
+  Resources 17:1009--1024.
 }
 \seealso{
-\code{\link{GenoConvert}, \link{EstConf}, \link{writeSeq}},
- vignette("sequoia")
+\code{\link{GenoConvert}, \link{SnpStats}, \link{GetMaybeRel},
+  \link{EstConf}, \link{SummarySeq}, \link{writeSeq}}, vignette("sequoia")
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

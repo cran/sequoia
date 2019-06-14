@@ -4,17 +4,6 @@
 #include <stdlib.h> // for NULL
 #include <R_ext/Rdynload.h>
 
-static R_NativePrimitiveArgType dupType[] = {
-  INTSXP,  // 1 Ng
-  INTSXP,  // 2 SpecsInt
-  REALSXP, // 3 SpecsDbl
-  INTSXP,  // 4 GenoFR
-  INTSXP,  // 5 nDupGenos
-  INTSXP,  // 6 DupGenosFR
-  INTSXP,  // 7 nMisMFR
-  REALSXP, // 8 DupGenoLR
-};
-
 static R_NativePrimitiveArgType psType[] = {
   INTSXP,  // 1 Ng
   INTSXP,  // 2 SpecsInt
@@ -22,51 +11,78 @@ static R_NativePrimitiveArgType psType[] = {
   INTSXP,  // 4 GenoFR
   INTSXP,  // 5 SexRF
   INTSXP,  // 6 BYRF
-  REALSXP,  // 7 APRF
+  REALSXP, // 7 APRF
   INTSXP,  // 8 parentsRF
   REALSXP, // 9 LrRF
   INTSXP,  // 10 OhRF
-  INTSXP,  // 11 nAmb
-  INTSXP,  // 12 AmbigID
-  INTSXP,  // 13 AmbigSex
-  INTSXP,  // 14 AmbigAgeDif
-  INTSXP,  // 15 AmbigRel
-  REALSXP, // 16 AmbigLR
-  INTSXP,  // 17 AmbigOH
-  INTSXP,  // 18 Nd
-  INTSXP,  // 19 DumParRF
-  REALSXP, // 20 DumLrRF
-  INTSXP,  // 21 DumBYRF
-  INTSXP,  // 22 DumNoff
-  INTSXP,  // 23 DumOff  
-  REALSXP, // 24 TotLL
-  INTSXP,  // 25 nTrio
-  INTSXP,  // 26 trioID
-  REALSXP, // 27 trioLR
+  INTSXP,  // 11 Nd
+  INTSXP,  // 12 DumParRF
+  REALSXP, // 13 DumLrRF
+  INTSXP,  // 14 DumBYRF
+  REALSXP, // 15 TotLL
+	INTSXP,  // 16 nDupGenos
+  INTSXP,  // 17 DupGenosFR
+  INTSXP,  // 18 nMisMFR
+  REALSXP, // 19 DupGenoLR
 };
 
-extern void F77_NAME(duplicates)(int *Ng, int *SpecsInt, float *SpecsDbl,
-  int *GenoFR, int *nDupGenos, int *DupGenosFR, int *nMisMFR, float *DupGenoLR);
+static R_NativePrimitiveArgType ambigType[] = {
+  INTSXP,  // 1 Ng
+  INTSXP,  // 2 SpecsInt
+  REALSXP, // 3 SpecsDbl
+  INTSXP,  // 4 GenoFR
+	INTSXP,  // 5 SexRF
+  INTSXP,  // 6 BYRF
+  REALSXP, // 7 APRF
+  INTSXP,  // 8 parentsRF
+	INTSXP,  // 9 Nd
+  INTSXP,  // 10 DumParRF
+	INTSXP,  // 11 nAmb
+  INTSXP,  // 12 AmbigID
+  INTSXP,  // 13 AmbigRel
+  REALSXP, // 14 AmbigLR
+  INTSXP,  // 15 AmbigOH
+	INTSXP,  // 16 nTrio
+  INTSXP,  // 17 trioID
+  REALSXP, // 18 trioLR
+	INTSXP,  // 19 trioOH
+};
+
+static R_NativePrimitiveArgType eType[] = {
+	INTSXP,  
+  INTSXP, 
+	INTSXP,
+  REALSXP,
+};
 
 extern void F77_NAME(makeped)(int *Ng, int *SpecsInt, float *SpecsDbl,
   int *GenoFR, int *SexRF, int *BYRF, int *APRF, int *parentsRF, 
-  float *LrRF, int *OhRF, int *nAmb, int *AmbigID, int *AmbigSex, 
-  int *AmbigAgeDif, int *AmbigRel, float *AmbigLR, int *AmbigOH,
-  int *Nd, int *DumParRF, float *DumLrRF, int *DumBYRF, int *DumNoff, 
-  int *DumOff,  float *TotLL, int *nTrio, int *trioID, float *trioLR);  
+	float *LrRF, int *OhRF, int *Nd, int *DumParRF, float *DumLrRF, 
+	int *DumBYRF, float *TotLL,
+	int *nDupGenos, int *DupGenosFR, int *nMisMFR, float *DupGenoLR);  
+
+extern void F77_NAME(findambig)(int *Ng, int *SpecsInt, float *SpecsDbl,
+  int *GenoFR, int *SexRF, int *BYRF, int *APRF, int *parentsRF, 
+	int *Nd, int *DumParRF,
+	int *nAmb, int *AmbigID, int *AmbigRel, float *AmbigLR, int *AmbigOH,
+	int *nTrio, int *trioID, float *trioLR, int *trioOH);
 
 extern void F77_NAME(deallocall)();
 
+extern void F77_NAME(mkerrors)(int *Nind, int *nSnp, int *GenoFR,
+	float *EProbFR);
 
+	
 static const R_FortranMethodDef FortranEntries[] = {
-  {"duplicates", (DL_FUNC) &F77_NAME(duplicates), 8, dupType},
-  {"makeped", (DL_FUNC) &F77_NAME(makeped), 27, psType},
+	{"makeped", (DL_FUNC) &F77_NAME(makeped), 19, psType},
+  {"findambig", (DL_FUNC) &F77_NAME(findambig), 19, ambigType},
   {"deallocall", (DL_FUNC) &F77_NAME(deallocall), 0},
-  {NULL, NULL, 0}
+	{"mkerrors", (DL_FUNC) &F77_NAME(mkerrors), 4, eType},
+  {NULL, NULL, 0, NULL}
 };
 
 
-void R_init_sequoia(DllInfo *info)
+void R_init_sequoia(DllInfo *info)  // attribute_visible -> error
 {
   R_registerRoutines(info,
                      NULL,          // .C
@@ -74,4 +90,5 @@ void R_init_sequoia(DllInfo *info)
                      FortranEntries, // .Fortran
                      NULL);         // .External
   R_useDynamicSymbols(info, FALSE);
+//	R_forceSymbols(info, TRUE);  available from R 3.0.0 
 }

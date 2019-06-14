@@ -2,110 +2,151 @@
 #============================================================================
 #' @title Estimate confidence probability
 #'
-#' @description Estimate the assignment error rate by repeatedly simulating
-#' data from
-#' a reference pedigree using \code{\link{SimGeno}}, reconstruction a pedigree
-#' from this using \code{\link{sequoia}}, and counting the number of mismatches
-#' using \code{\link{PedCompare}}.
+#' @description Estimate the assignment error rate by repeatedly simulating data
+#'   from a reference pedigree using \code{\link{SimGeno}}, reconstruction a
+#'   pedigree from this using \code{\link{sequoia}}, and counting the number of
+#'   mismatches using \code{\link{PedCompare}}.
 #'
 #' @details The confidence probability is taken as the number of correct
-#' (matching)
-#' assignments, divided by all assignments made. A confidence of '1' should be
-#' interpreted as '> 1 - 1/(sum(!is.na(Ped$dam)) * nSim)'
+#'   (matching) assignments, divided by all assignments made. A confidence of
+#'   '1' should be interpreted as '> 1 - 1/(sum(!is.na(Ped$dam)) * nSim)'
 #'
-#' @param Ped Reference pedigree from which to simulate, dataframe with
-#'  columns id-dam-sire. Additional columns are ignored
-#' @param LifeHistData Dataframe with id, sex (1=female, 2=male, 3=unknown),
-#'  and birth year.
-#' @param Specs Parameter values for running sequoia, as named vector.
-#' @param Full Full pedigree reconstruction (TRUE) or only parentage assignment
-#'   (FALSE)
-#' @param nSim number of simulations to perform.
-#' @param ParMis proportion of parents assumed to have a fully missing genotype.
-#' @param args.sim  list of additional arguments to pass to \code{\link{SimGeno}}
+#' @param Ped Reference pedigree from which to simulate, dataframe with columns
+#'   id-dam-sire. Additional columns are ignored
+#' @param LifeHistData Dataframe with id, sex (1=female, 2=male, 3=unknown), and
+#'   birth year.
+#' @param args.sim  list of arguments to pass to \code{\link{SimGeno}}, such as
+#'   \code{nSnp} (number of SNPs), \code{SnpError} (genotyping error rate) and
+#'   \code{ParMis} (proportion of non-genotyped parents). Set to NULL to use all
+#'   default values.
+#' @param args.seq  list of arguments to pass to \code{\link{sequoia}}, such as
+#'   \code{MaxSibIter} (max no. sibship clustering iterations, '0' for parentage
+#'   assignment only) and \code{Err} (assumed genotyping error rate). May
+#'   include (part of) SeqList, the list of sequoia output (i.e. as a
+#'   list-within-a-list). Set to NULL to use all default values.
+#' @param nSim number of rounds of simulations to perform.
 #' @param return.PC  return all \code{\link{PedCompare}} \code{Counts}?
-#' @param quiet suppress messages. `very' also suppresses simulation counter
+#' @param quiet suppress messages. `very' also suppresses simulation counter,
+#'   TRUE merely runs SimGeno and sequoia quietly.
 #'
-#' @return A 2x2 matrix for parentage assignment, or a 2x7x2 array for
-#'  full pedigree reconstruction, with for dams and sires and per category (see
-#'  \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
-#'  Mismatch + P2only).
+#' @return A 2x2 matrix for parentage assignment, or a 2x7x2 array for full
+#'   pedigree reconstruction, with for dams and sires and per category (see
+#'   \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
+#'   Mismatch + P2only).
 #'
-#' When return.PC is TRUE, a list is returned with two arrays: ConfProb
-#' contains the average confidence probability across simulations, and
-#' SimCounts all counts of matches, mismatches, Pedigree1-only and pedigree2-
-#' only per simulation.
+#' When return.PC is TRUE, a list is returned with two arrays: ConfProb contains
+#' the average confidence probability across simulations, and SimCounts all
+#' counts of matches, mismatches, Pedigree1-only and pedigree2- only per
+#' simulation.
+#'
+#' @seealso \code{\link{SimGeno}, \link{sequoia}, \link{PedCompare}}
 #'
 #' @examples
 #' \dontrun{
 #' data(SimGeno_example, LH_HSg5, package="sequoia")
-#' SeqOUT <- sequoia(GenoM = SimGeno_example,
-#'                   LifeHistData = LH_HSg5, MaxSibIter = 0)
-#' ConfPr <- EstConf(Ped = SeqOUT$PedigreePar, LifeHistData = LH_HSg5,
-#'                  Specs = SeqOUT$Specs, Full = FALSE, nSim = 10)
+#'
+#' conf.A <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+#'    args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+#'    args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5),
+#'    nSim = 3, return.PC = TRUE)
+#'
+#' # effect of tweaking AgePriors
+#' # (only some effect due to low no. SNPs & high error rate,
+#' #  effect of increasing no. SNPs is much larger)
+#' AP <- MakeAgePrior(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+#'                    Flatten = FALSE, Smooth = FALSE)
+#' conf.B <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+#'    args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+#'    args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5,
+#'                    SeqList = list(AgePriors = AP)),
+#'    nSim = 3, return.PC = TRUE)
+#'
+#' # with sibship clustering
+#' conf.C <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+#'    args.sim = list(nSnp = 200, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
+#'    args.seq = list(MaxSibIter = 10, Err=1e-4, Tassign=0.5),
+#'    nSim = 3, return.PC = TRUE)
+#' conf.C$ConfProb[,"GG",]  # Genotyped individuals, Genotyped parent
+#' conf.C$ConfProb[,"GD",]  # Genotyped individuals, Dummy parent
+#' AR <- apply(conf.C$SimCounts, 1, function(M) M["TT","Match", ]/M["TT","Total", ])
+#' ER <- apply(conf.C$SimCounts, 1,
+#'        function(M) (M["TT","Mismatch", ] + M["TT","P2only", ])/M["TT","Total", ])
+#' apply(ER, 1, mean)  # separate error rate dams & sires
+#' mean(ER)            # overall error rate
 #' }
 #'
 #' @export
 
 EstConf <- function(Ped = NULL,
                     LifeHistData = NULL,
-                    Specs = NULL,
-                    Full = TRUE,
-                    # todo: use previous ageprior
+                    args.sim = list(nSnp = 400, SnpError = 1e-3, ParMis=c(0.4, 0.4)),
+                    args.seq = list(MaxSibIter = 10, Err=1e-4, Tassign=0.5),   # todo: pass ageprior
                     nSim = 10,
-                    ParMis = 0.4,
-                    args.sim = NULL,
                     return.PC = FALSE,
                     quiet=TRUE)
 {
-  PedA <- Ped[,1:3]
-  SpecsA <- Specs
-  seq.quiet <- ifelse(is.logical(quiet), quiet,
-                    ifelse(quiet == "very", TRUE, FALSE))
-
-  if (is.null(Specs))  stop("Please provide Specs")
   if (is.null(Ped))  stop("Please provide Ped")
-  if (Full & Specs["MaxSibIter"]==0)  stop("Please specify Specs['MaxSibIter'] >0 or Full=FALSE")
+  if (is.null(LifeHistData))  stop("Please provide LifeHistData")
+  if (!is.null(args.sim) & !is.list(args.sim))  stop("args.sim should be a list or NULL")
+  if (!is.null(args.seq) & !is.list(args.seq))  stop("args.seq should be a list or NULL")
+
+  PedA <- Ped[,1:3]
   if (any(substr(PedA$id,1,2) %in% c("F0", "M0"))) {
     PedA$id <- addpref(PedA$id)
     PedA$dam <- addpref(PedA$dam)
     PedA$sire <- addpref(PedA$sire)
   }
-  SpecsA["FindMaybeRel"] <- FALSE
-  SpecsA["CalcLLR"] <- FALSE
-  if (!Full) SpecsA["MaxSibIter"] <- 0
 
-  if (!Full) {
-    PC <- array(dim=c(nSim, 5, 2),
+  args.seq["FindMaybeRel"] <- FALSE
+  args.seq["CalcLLR"] <- FALSE
+  if ("MaxSibIter" %in% names(args.seq)) {
+    ParSib <- ifelse(args.seq$MaxSibIter > 0, "sib", "par")
+  } else {
+    ParSib <- "sib"   # default MaxSibIter=10
+  }
+  if (quiet != "very") {
+    if (ParSib == "par") {
+      message("MaxSibIter=0: Simulating parentage assignment only ...")
+      PC <- array(dim=c(nSim, 5, 2),
                 dimnames=list(1:nSim, c("Total", "Match", "Mismatch", "P1only", "P2only"),
                               c("dam", "sire")))
-  } else {
-    PC <- array(dim=c(nSim, 7, 5, 2),
+    } else {
+      message("MaxSibIter>0: Simulating full pedigree reconstruction ...")
+      PC <- array(dim=c(nSim, 7, 5, 2),
                   dimnames=list(1:nSim, c("GG", "GD", "GT", "DG", "DD", "DT", "TT"),
                                 c("Total", "Match", "Mismatch", "P1only", "P2only"),
                                  c("dam", "sire")))
+    }
   }
+  utils::flush.console()
+  seq.quiet <- ifelse(is.logical(quiet), quiet,
+                    ifelse(quiet == "very", TRUE, FALSE))
+
+  #~~~~~~~~~~~
   for (i in 1:nSim) {
-    if (quiet != "very")  cat("\n\n i=", i, "\t", format(Sys.time(), "%H:%M:%S"), "\t\t")
-    GM <- SimGeno(Ped = PedA, nSnp = SpecsA[, "NumberSnps"],
-                  ParMis=ParMis, quiet=seq.quiet)  # TODO: pass list of arguments
-    Seq.i <- sequoia(GenoM = GM,
-                     LifeHistData = LifeHistData,
-                     SeqList = list(Specs = SpecsA),
-                     MaxSibIter = SpecsA[, "MaxSibIter"],
-                     quiet = seq.quiet)
-    if (!Full) {
+    if (quiet != "very")  cat("\n i=", i, "\t", format(Sys.time(), "%H:%M:%S"), "\t\t")
+
+    GM <- do.call(SimGeno, c(list(Ped=Ped), args.sim))
+
+    Seq.i <- do.call(sequoia, c(list(GenoM = GM,
+                                     LifeHistData = LifeHistData,
+                                     quiet = seq.quiet),
+                                     args.seq) )
+
+
+    if (ParSib=="par") {
       PC[i,,] <- PedCompare(Ped1 = PedA, Ped2 = Seq.i$PedigreePar)$Counts["GG",,]
-      cat("AR: ", round(sum(PC[i,"Match",])/sum(PC[i,"Total",]),3), "\t",
+      if (quiet != "very")  cat("AR: ", round(sum(PC[i,"Match",])/sum(PC[i,"Total",]),3), "\t",
           "# ER:", sum(PC[i,c("Mismatch", "P2only"),]), "\n")
     } else {
       PC[i,,,] <- PedCompare(Ped1 = PedA, Ped2 = Seq.i$Pedigree)$Counts
-      cat("AR: ", round(sum(PC[i,"TT","Match",])/sum(PC[i,"TT","Total",]),3), "\t",
+      if (quiet != "very")  cat("AR: ", round(sum(PC[i,"TT","Match",])/sum(PC[i,"TT","Total",]),3), "\t",
           "# ER:", sum(PC[i,"TT",c("Mismatch", "P2only"),]), "\n")
     }
   }
+  #~~~~~~~~~~~
 
-  if (!Full) {
+  if (ParSib=="par") {
     ECP <- matrix(NA,2,2, dimnames=list(c("dam", "sire"), c("mean","min")))
     for (s in 1:2) {
       tmp <- PC[,"Match",s]/apply(PC[,c("Match", "Mismatch", "P2only"),s],1,sum)
