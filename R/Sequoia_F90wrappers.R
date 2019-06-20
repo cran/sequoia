@@ -91,6 +91,7 @@ SeqParSib <- function(ParSib = "par",
                   Sex = as.integer(LHL$Sex),
                   BY = as.integer(LHL$BY),
                   AP = as.double(AP),
+									
                   parentsRF = as.integer(PedPar),
                   LrRF = double(3*Ng),
                   OhRF = integer(3*Ng),
@@ -98,8 +99,6 @@ SeqParSib <- function(ParSib = "par",
                   DumParRF = integer(2*Ng),
                   DumLrRF = double(3*Ng),
                   DumBYRF = integer(3*Ng),
- #                 DumNoff = integer(Ng),
- #                 DumOff = integer(SMax*Ng),
                   TotLik = double(42),
 
 									nDupGenos = as.integer(0),
@@ -311,7 +310,7 @@ GetMaybeRel <- function(GenoM = NULL,
     names(Ped)[1:3] <- c("id","dam","sire")
     if(!all(gID %in% Ped$id))  stop("Not all genotyped individuals in Ped or SeqList pedigree")
     DPnc <- nchar(DumPrefix)[1]
-    PedNum <- IDToNum(Ped, gID, DumPrefix)
+    PedNum <- IDToNum(Ped[,1:3], gID, DumPrefix)
     PedPar <- as.matrix(PedNum[gID, 2:3])   # not dummy indivs
     PedPar[is.na(PedPar)] <- 0   # in case not all genotyped indivs in Ped
   } else {
@@ -391,7 +390,7 @@ GetMaybeRel <- function(GenoM = NULL,
       SibshipGPs <- array(0, dim=c(2,max(Nd),2),
                           dimnames=list(c("grandma", "granddad"), 1:max(Nd), c("mat", "pat")))
       for (k in 1:2) {
-        SibshipGPs[,1:Nd[k],k] <- as.matrix(PedNum[substr(Ped$id,1,DPnc)==DumPrefix[k], 2:3])
+        SibshipGPs[,1:Nd[k],k] <- t(as.matrix(PedNum[substr(Ped$id,1,DPnc)==DumPrefix[k], 2:3]))
       }
       for (k in 1:2) {
         for (s in 1:Nd[k]) {
@@ -419,7 +418,7 @@ GetMaybeRel <- function(GenoM = NULL,
                   BY = as.integer(LHL$BY),
 									AP = as.double(AP),
 									ParentsRF = as.integer(PedPar),
-									Nd = as.integer(Nd),
+#									Nd = as.integer(Nd),   
                   DumParRF = as.integer(DumParRF),
 
 									nAmb = as.integer(0),

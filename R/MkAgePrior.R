@@ -435,7 +435,7 @@ MakeAgePrior <- function(Ped = NULL,
                  LR.RU.A = LR.RU.A )
 
   if (Plot) {
-		PlotAgePrior( APlist = OUT )
+		PlotAgePrior( AP = OUT )
   }
 
   if (Return == "all") {
@@ -451,24 +451,43 @@ MakeAgePrior <- function(Ped = NULL,
 #'
 #' @description visualise the age-difference based prior probability ratios
 #'
-#' @param AP  matrix with age priors of dimension nAgeclasses by 9, as ' AgePriors' in Sequoia output
-#' @param APlist output list from MakeAgePriors when called with Return='all', i.e. including
-#'  various intermediate output.
+#' @param AP  matrix with age priors of dimension nAgeclasses rows by 9 columns,
+#'   OR a list returned by \code{\link{MakeAgePrior}} when called with
+#'   Return='all', OR a list returned by \code{\link{sequoia}} containing an
+#'   element 'AgePriors'.
+#' @param GPlines  show the lines for grandparental & avuncular relationships?
+#'   Can sometimes make the plot overly crowded.
 #'
-#' @seealso \code{\link{MakeAgePrior}}
+#' @details When called with an output list from \code{MakeAgePrior}, the raw
+#'   distributions are shown too in a separate panel, in addition to the the
+#'   scaled, flattened & smoothened distributions used for pedigree
+#'   reconstruction.
+#'
+#' @seealso \code{\link{MakeAgePrior}}, \code{\link{SummarySeq}}
 #'
 #' @importFrom graphics par plot lines points abline legend
 #'
 #' @export
 
-PlotAgePrior <- function(AP = NULL,
-                         APlist = NULL)
+PlotAgePrior <- function(AP = NULL, GPlines = TRUE)
 {
 
+  APlist <- NULL
 	if (is.list(AP)) {
-		APlist <- AP
-		AP <- NULL
+	  if ("PA.R" %in% names(AP)) {
+		  APlist <- AP
+		  AP <- NULL
+	  } else if ("AgePriors" %in% names(AP)) {
+	    AP <- AP$AgePriors
+	  } else {
+	    stop("AP is not an agepriors matrix")
+	  }
+	} else if (!is.matrix(AP)) {
+	  stop("AP is not an agepriors matrix")
+	} else if (ncol(AP)!=9) {
+	  stop("AP should have 9 columns and as many rows as there are ageclasses")
 	}
+
 	if (!is.null(APlist)) {
 		op <- par(mfcol=c(2,1), mai=c(.8, .9, .5, .2))
 		LR.RU.A <- APlist[["LR.RU.A"]]
@@ -481,11 +500,10 @@ PlotAgePrior <- function(AP = NULL,
 	MinP <- 0.001
 	RR <- c("M", "P", "FS", "MS", "PS")  # relatedness categories considered
   RP <- c("MGM", "PGF", "MGF", "UA")
-	RRP <- c(RR, RP)
 
 	COL.R <- c(M="red", P="blue", FS="mediumpurple", MS="lightpink2", PS="skyblue",
                MGM="seagreen2" , PGF="seagreen4" , MGF="seagreen3" , UA="peru")
-	jit <- stats::setNames(c(seq(-.07,.07, length.out=5), rep(0,4)), RRP)
+	jit <- stats::setNames(seq(-.07,.07, length.out=5), RR)
 
 	xmax <- ifelse(!is.null(APlist), MaxT, max(which(rowSums(LR.RU.A)>0)))
 
@@ -499,8 +517,10 @@ PlotAgePrior <- function(AP = NULL,
 			lines(0:MaxT+jit[r], PA.R[, r], col=COL.R[r], lwd=2)
 			points(0:MaxT+jit[r], PA.R[, r], col=COL.R[r], pch=20, cex=.9)
 		}
-		for (r in RRP) {
-			lines(0:MaxT, PA.R[,r], col=COL.R[r], lwd=1)
+		if (GPlines) {
+  		for (r in RP) {
+  			lines(0:MaxT, PA.R[,r], col=COL.R[r], lwd=1)
+  		}
 		}
 	}
 
@@ -511,13 +531,28 @@ PlotAgePrior <- function(AP = NULL,
 	legend("top", "*: if TRUE", bty="n")
 	abline(v=seq(0,MaxT,10), h=10^(-4:0), col="grey", lty=3, xpd=FALSE)
 	abline(h=1, col="grey", lwd=2, xpd=FALSE)
-	for (r in RRP) {
-		lines(0:MaxT+jit[r], LR.RU.A[, r], col=COL.R[r], lwd=ifelse(r %in% RR,2,1), lty=1)
-		if (r %in% RR) points(0:MaxT+jit[r], LR.RU.A[, r], col=COL.R[r], pch=20, cex=.9)
+	for (r in RR) {
+		lines(0:MaxT+jit[r], LR.RU.A[, r], col=COL.R[r], lwd=2, lty=1)
+		points(0:MaxT+jit[r], LR.RU.A[, r], col=COL.R[r], pch=20, cex=.9)
 	}
-	legend("topright", c(RRP, "U"), title="Relationship", cex=0.8,
-				 col=c(COL.R, "grey"), lwd=c(rep(2,5),rep(1,4),2),
-				 inset=.02, bg=0, ncol=2)
+	if (GPlines) {
+		for (r in RP) {
+		  lines(0:MaxT+jit[r], LR.RU.A[, r], col=COL.R[r], lwd=1, lty=1)
+		}
+	}
+
+	if (GPlines) {
+	  LBLS <- c(RR,RP, "U")
+	  col.leg <- c(COL.R, "grey")
+	  lwd.leg <- c(rep(2,5),rep(1,4),2)
+	} else {
+	  LBLS <- c(RR, "U")
+	  col.leg <- c(COL.R[RR], "grey")
+	  lwd.leg <- 2
+	}
+
+	legend("topright", LBLS, title="Relationship", cex=0.8,
+				 col=col.leg, lwd=lwd.leg, inset=.02, bg=0, ncol=2)
 
 	if (!is.null(APlist))   par(op)
 }

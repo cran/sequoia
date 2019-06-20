@@ -10,4 +10,5 @@ assignment, sibship clustering and beyond",
         pages="1009-1024",
          year = 2017,
          note = note,
+				 doi = "10.1111/1755-0998.12665",
          url = "https://CRAN.R-project.org/package=sequoia")

@@ -527,14 +527,12 @@ MkGenoErrors <- function(SGeno,
 #' @keywords internal
 
 DoErrors <- function(SGeno, RealToObs) {
-#  dyn.load("E:/Sequoia/Rversion/backup copy/SimGenoErrors.dll")
    TMP <- .Fortran("mkerrors",
                    nInd = as.integer(nrow(SGeno)),
                    nSnp = as.integer(ncol(SGeno)),
                    GenoFR = as.integer(SGeno),
                    EProb = as.double(RealToObs))
    return( matrix(TMP$GenoFR, nrow(SGeno), ncol(SGeno)) )
-#   dyn.unload("E:/Sequoia/Rversion/backup copy/SimGenoErrors.dll")
 }
 
 

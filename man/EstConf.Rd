@@ -35,15 +35,20 @@ list-within-a-list). Set to NULL to use all default values.}
 TRUE merely runs SimGeno and sequoia quietly.}
 }
 \value{
-A 2x2 matrix for parentage assignment, or a 2x7x2 array for full
-  pedigree reconstruction, with for dams and sires and per category (see
-  \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
-  Mismatch + P2only).
+When \code{return.PC = FALSE}, a 2x2 matrix for parentage assignment, or a
+  2x7x2 array for full pedigree reconstruction, with for dams and sires and
+  per category (see \code{\link{PedCompare}}) the average and minimum number
+  of Match/(Match + Mismatch + P2only).
 
-When return.PC is TRUE, a list is returned with two arrays: ConfProb contains
-the average confidence probability across simulations, and SimCounts all
-counts of matches, mismatches, Pedigree1-only and pedigree2- only per
-simulation.
+  When \code{return.PC} is TRUE, a list is returned with:
+  \item{ConfProb}{Average confidence probability across simulations, as
+    returned when \code{return.PC = FALSE}.}
+  \item{SimCounts}{All counts of matches, mismatches, Pedigree1-only and
+    pedigree2-only, per simulation.}
+  \item{RunParams}{Current call to EstConf, as well as the default
+    parameter values for \code{EstConf, SimGeno}, and \code{sequoia}.}
+  \item{RunTime}{\code{sequoia} runtime per simulation in seconds, as
+    measured by \code{\link{system.time}()['elapsed']}.}
 }
 \description{
 Estimate the assignment error rate by repeatedly simulating data

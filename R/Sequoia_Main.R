@@ -24,7 +24,8 @@
 #'  \item{Sex: }{1 = females, 2 = males, other = unkown, except 4 =
 #'    hermaphrodite,}
 #' \item{BirthYear: }{(birth or hatching year) Integer, negative numbers are
-#' interpreted as missing values.}} If the species has multiple generations per
+#'    interpreted as missing values.}}
+#' If the species has multiple generations per
 #' year, use an integer coding such that the candidate parents' `Birth year' is
 #' at least one smaller than their putative offspring's. Column names are
 #' ignored, so ensure column order is ID - sex - birth year.

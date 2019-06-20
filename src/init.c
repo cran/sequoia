@@ -35,7 +35,7 @@ static R_NativePrimitiveArgType ambigType[] = {
   INTSXP,  // 6 BYRF
   REALSXP, // 7 APRF
   INTSXP,  // 8 parentsRF
-	INTSXP,  // 9 Nd
+//	INTSXP,  // 9 Nd      
   INTSXP,  // 10 DumParRF
 	INTSXP,  // 11 nAmb
   INTSXP,  // 12 AmbigID
@@ -56,26 +56,24 @@ static R_NativePrimitiveArgType eType[] = {
 };
 
 extern void F77_NAME(makeped)(int *Ng, int *SpecsInt, float *SpecsDbl,
-  int *GenoFR, int *SexRF, int *BYRF, int *APRF, int *parentsRF, 
+  int *GenoFR, int *SexRF, int *BYRF, float *APRF, int *parentsRF, 
 	float *LrRF, int *OhRF, int *Nd, int *DumParRF, float *DumLrRF, 
 	int *DumBYRF, float *TotLL,
 	int *nDupGenos, int *DupGenosFR, int *nMisMFR, float *DupGenoLR);  
 
 extern void F77_NAME(findambig)(int *Ng, int *SpecsInt, float *SpecsDbl,
-  int *GenoFR, int *SexRF, int *BYRF, int *APRF, int *parentsRF, 
-	int *Nd, int *DumParRF,
-	int *nAmb, int *AmbigID, int *AmbigRel, float *AmbigLR, int *AmbigOH,
-	int *nTrio, int *trioID, float *trioLR, int *trioOH);
+  int *GenoFR, int *SexRF, int *BYRF, float *APRF, int *parentsRF, 
+  int *DumParRF, int *nAmb, int *AmbigID, int *AmbigRel, float *AmbigLR, 
+	int *AmbigOH, int *nTrio, int *trioID, float *trioLR, int *trioOH);
 
 extern void F77_NAME(deallocall)();
 
 extern void F77_NAME(mkerrors)(int *Nind, int *nSnp, int *GenoFR,
 	float *EProbFR);
 
-	
 static const R_FortranMethodDef FortranEntries[] = {
 	{"makeped", (DL_FUNC) &F77_NAME(makeped), 19, psType},
-  {"findambig", (DL_FUNC) &F77_NAME(findambig), 19, ambigType},
+  {"findambig", (DL_FUNC) &F77_NAME(findambig), 18, ambigType},
   {"deallocall", (DL_FUNC) &F77_NAME(deallocall), 0},
 	{"mkerrors", (DL_FUNC) &F77_NAME(mkerrors), 4, eType},
   {NULL, NULL, 0, NULL}

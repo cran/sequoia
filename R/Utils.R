@@ -232,3 +232,19 @@ CountAgeDif <- function(BY, BYrange = range(BY)) {
 
 #===============================
 
+ChkOwnAnc <- function(Ped) {
+  Ped <- as.matrix(Ped)
+  for (i in 1:nrow(Ped)) {
+    focal <- Ped[i, 1]
+    Par <- unlist(unique(na.exclude(Ped[i, 2:3])))
+    for (g in 1:100) {   # assuming Ped < 100 generations
+      if (length(Par) == 0)  break
+#      cat(g, Par, "\n")
+      if (focal %in% Par) {
+        stop("Own Ancestor! ", g, " ", focal, " ", Par)
+      }
+      Par <- unlist(unique(na.exclude(c(Ped[Ped[,1] %in% Par, 2:3]))))  # next generation
+    }
+  }
+  cat("ped OK", "\n")
+}

@@ -29,15 +29,20 @@
 #' @param quiet suppress messages. `very' also suppresses simulation counter,
 #'   TRUE merely runs SimGeno and sequoia quietly.
 #'
-#' @return A 2x2 matrix for parentage assignment, or a 2x7x2 array for full
-#'   pedigree reconstruction, with for dams and sires and per category (see
-#'   \code{\link{PedCompare}}) the average and minimum number of Match/(Match +
-#'   Mismatch + P2only).
+#' @return When \code{return.PC = FALSE}, a 2x2 matrix for parentage assignment, or a
+#'   2x7x2 array for full pedigree reconstruction, with for dams and sires and
+#'   per category (see \code{\link{PedCompare}}) the average and minimum number
+#'   of Match/(Match + Mismatch + P2only).
 #'
-#' When return.PC is TRUE, a list is returned with two arrays: ConfProb contains
-#' the average confidence probability across simulations, and SimCounts all
-#' counts of matches, mismatches, Pedigree1-only and pedigree2- only per
-#' simulation.
+#'   When \code{return.PC} is TRUE, a list is returned with:
+#'   \item{ConfProb}{Average confidence probability across simulations, as
+#'     returned when \code{return.PC = FALSE}.}
+#'   \item{SimCounts}{All counts of matches, mismatches, Pedigree1-only and
+#'     pedigree2-only, per simulation.}
+#'   \item{RunParams}{Current call to EstConf, as well as the default
+#'     parameter values for \code{EstConf, SimGeno}, and \code{sequoia}.}
+#'   \item{RunTime}{\code{sequoia} runtime per simulation in seconds, as
+#'     measured by \code{\link{system.time}()['elapsed']}.}
 #'
 #' @seealso \code{\link{SimGeno}, \link{sequoia}, \link{PedCompare}}
 #'
@@ -123,15 +128,16 @@ EstConf <- function(Ped = NULL,
                     ifelse(quiet == "very", TRUE, FALSE))
 
   #~~~~~~~~~~~
+  RunTime <- rep(NA, nSim)
   for (i in 1:nSim) {
     if (quiet != "very")  cat("\n i=", i, "\t", format(Sys.time(), "%H:%M:%S"), "\t\t")
 
     GM <- do.call(SimGeno, c(list(Ped=Ped), args.sim))
 
-    Seq.i <- do.call(sequoia, c(list(GenoM = GM,
+    RunTime[i] <- system.time(Seq.i <- do.call(sequoia, c(list(GenoM = GM,
                                      LifeHistData = LifeHistData,
                                      quiet = seq.quiet),
-                                     args.seq) )
+                                     args.seq) ))["elapsed"]
 
 
     if (ParSib=="par") {
@@ -166,8 +172,15 @@ EstConf <- function(Ped = NULL,
     ntot <- sum(PC[,"TT","Total",s])
   }
   ECP <- round(ECP, nchar(ntot))
+
+  RunParams <- list(SimGeno_default = formals(SimGeno),
+                    sequoia_default = formals(sequoia),
+                    EstConf_default = formals(EstConf),
+                    EstConf_specified = match.call())
+
   if (return.PC) {
-    list(SimCounts = PC, ConfProb = ECP)
+    list(SimCounts = PC, ConfProb = ECP,
+         RunParams = RunParams, RunTime = RunTime)
   } else {
     ECP
   }

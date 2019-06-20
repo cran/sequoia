@@ -159,13 +159,12 @@ integer, intent(INOUT) :: parentsRF(2*Ng), OhRF(3*Ng), &
   Nd(2), DumParRF(2*Ng), DumBYRF(3*Ng), &
   nDupGenos, DupGenosFR(2*Ng), nMisMFR(Ng)
 double precision, intent(INOUT) :: LrRF(3*Ng), DumLrRF(3*Ng), TotLL(42), DupGenoLR(Ng)
-integer :: ParSib, MaxSibIter, i, j,k,l, maybe, topX, x, &
-  CalcLLR, UseAge, nAmbMax
+integer :: ParSib, MaxSibIter, i, CalcLLR, UseAge, nAmbMax
 integer, allocatable, dimension(:,:,:) :: DumBYmm
 
 
 call Initiate(Ng, SpecsInt, SpecsDbl, GenoFR, SexRF,  BYRF, APRF, &  ! IN
-  parentsRF, Nd, DumParRF, &   ! IN
+  parentsRF, DumParRF, &   ! IN
   ParSib, MaxSibIter, CalcLLR, UseAge, nAmbMax)  ! OUT
 
  !=========================
@@ -239,7 +238,7 @@ end subroutine makeped
 ! ####################################################################
 
 subroutine Initiate(Ng, SpecsInt, SpecsDbl, GenoFR, SexRF,  BYRF, APRF, &
-  parentsRF, Nd, DumParRF, &
+  parentsRF, DumParRF, &
   ParSib, MaxSibIter, CalcLLR, UseAge, nAmbMax)
 use Global
 implicit none
@@ -247,10 +246,13 @@ implicit none
 integer, intent(IN) :: Ng, SpecsInt(12)
 double precision, intent(IN) :: SpecsDbl(3), APRF(9*SpecsInt(6))
 integer, intent(IN) :: GenoFR(Ng*SpecsInt(3)), SexRF(Ng), BYRF(Ng), &
-  parentsRF(2*Ng), Nd(2), DumParRF(2*Ng)
+  parentsRF(2*Ng), DumParRF(2*Ng)
 integer, intent(OUT) :: ParSib, MaxSibIter, CalcLLR, UseAge, nAmbMax
 integer :: i, j, k, l, ParTmp(2), x, s
 
+! open(unit=101, file="log.txt", status="unknown", access="append")
+! write(101, '("Welcome to Initiate")') 
+! close(101)
 
 ! set global parameters & return values
 nInd = Ng
@@ -353,14 +355,13 @@ do i=1,nInd
     endif
   enddo
 enddo
-
-!nC = Nd
+ 
 ! reverse  AtoVi(GpID, 2,nInd/2, nC, DumParRF)
 do k=1,2
   do s=1, nC(k)
     do i=1,2
       x = (k-1)*2*nInd/2 + (i-1)*nC(1) + s
-      GpID(j, s, k) = DumParRF(x)
+      GpID(i, s, k) = DumParRF(x)
     enddo
   enddo
 enddo
@@ -466,7 +467,7 @@ enddo
 ! ####################################################################
 
 subroutine findambig(Ng, SpecsInt, SpecsDbl, GenoFR, &
-    SexRF, BYRF, APRF, parentsRF, Nd, DumParRF, &
+    SexRF, BYRF, APRF, parentsRF, DumParRF, &
     nAmb, AmbigID, AmbigRel, AmbigLR, AmbigOH, &
     ntrio, trioIDs, trioLR, trioOH)
 use Global
@@ -475,20 +476,16 @@ implicit none
 integer, intent(IN) :: Ng, SpecsInt(12)
 double precision, intent(IN) :: SpecsDbl(3), APRF(9*SpecsInt(6))
 integer, intent(IN) :: SexRF(Ng), BYRF(Ng), GenoFR(Ng*SpecsInt(3))
-integer, intent(INOUT) :: parentsRF(2*Ng), Nd(2), DumParRF(2*Ng), &
+integer, intent(INOUT) :: parentsRF(2*Ng), DumParRF(2*Ng), &
   nAmb, AmbigID(2*SpecsInt(11)), AmbigRel(2*SpecsInt(11)), &
   AmbigOH(SpecsInt(11)), ntrio, trioIDs(3*Ng), trioOH(3*Ng)
 double precision, intent(INOUT) :: AmbigLR(2*SpecsInt(11)), trioLR(3*Ng) 
 integer :: ParSib, MaxSibIter, CalcLLR, UseAge, nAmbMax, &
-  i, j, k, x, topX, Anc(2,mxA), ADX, maybe, OH, Lboth
+  i, j, k, x, topX, Anc(2,mxA), ADX, maybe, Lboth
 double precision :: LL(7), LLtmp(7,3), dLL(2), LRR(3), LLX(7)
 
-!open(unit=101, file="log.txt", status="unknown")
-!write(101, '("Welcome to FindAmbig")') 
-!close(101)
-
 call Initiate(Ng, SpecsInt, SpecsDbl, GenoFR, SexRF,  BYRF, APRF, &  ! IN
-  parentsRF, Nd, DumParRF, &   ! IN
+  parentsRF, DumParRF, &   ! IN
   ParSib, MaxSibIter, CalcLLR, UseAge, nAmbMax)  ! OUT
 
 nAmb = 0
@@ -526,12 +523,13 @@ if (ParSib == 1) then
 endif
 
 do i=1,nInd-1
+  if (nAmb==nAmbMax)  exit   
   if (Error/=0) return
   if (MODULO(i,500)==0)   call rchkusr()
   if (quiet<1 .and. nInd>1500) then 
     if (MODULO(i,500)==0) call intpr (" ", 1, i, 1)
-  endif
-  do j=i+1,nInd
+  endif 
+  do j=i+1,nInd    
     Lboth = COUNT(Genos(:,i)/=-9 .and. Genos(:,j)/=-9)    
     if (Lboth < nSnp/2.0)   cycle   ! >1/2th of markers missing
     if (ANY(Parent(i,:)==j) .or. ANY(Parent(j,:)==i)) cycle  ! PO
@@ -637,11 +635,10 @@ do i=1,nInd-1
       endif
       exit
     endif
-  enddo
-  if (nAmb==nAmbMax)  exit                                                                    
+  enddo                                                             
 enddo
 
-if (nAmb>1) then  
+if (nAmb>1) then   
   if (COUNT(AmbigRel((nAmbMax+1) : (2*nAmbMax)) == 1) > 1) then
     if(quiet<1) then
       call intpr("Checking for Parent-Parent-Offspring trios ... ",-1, 0, 0)
@@ -664,7 +661,7 @@ implicit none
  character(len=*), intent(IN) :: message
 ! Error = 1
  call DeAllocAll
- call rexit("  ERROR! ***"//message//"*** Results are not reliable!")
+ call rexit("  ERROR! ***"//message//"***")
 
 end subroutine Erstop
 
@@ -1145,7 +1142,7 @@ if (Error/=0) return
       if (ANY(AncJ == i)) cycle
       if (AgeDiff(i,j) == 999D0) then
         skip = .FALSE.
-        if (BY(i)/=-999 .and. BY(j)==-999) then
+        if (BY(i)>=0 .and. BY(j)<0) then
           do k=1,2
             do u=2, mxA
               if (AncJ(k,u)>0) then
@@ -1155,7 +1152,7 @@ if (Error/=0) return
           enddo
         endif
         if (skip) cycle
-        if (BY(i)==-999 .and. BY(j)/=-999 .and. Sex(i)/=3) then
+        if (BY(i)<0 .and. BY(j)>=0 .and. Sex(i)/=3) then
           if (ANY(Parent(:, Sex(i))==i)) then
             call GetOff(i,sex(i),.FALSE., nof, offspr, sxOff)
             if (ANY(AgeDiff(offspr(1:nof), j) <= 0))  cycle
@@ -1178,9 +1175,9 @@ if (Error/=0) return
                 
   if (ALL(nCP == 1) .and. ALL(CandPar(1,:) == curPar))  cycle                                                                                                                                    
   if (ALL(nCP>0)) then   ! test combo's
-    if (ALL(CandPar >= 0) .and. BY(i)/=-999 .and. &
-      ALL(BY(CandPar(1:nCP(1), 1))/=-999) .and. &
-      ALL(BY(CandPar(1:nCP(2), 2))/=-999) .and. &
+    if (ALL(CandPar >= 0) .and. BY(i)>=0 .and. &
+      ALL(BY(CandPar(1:nCP(1), 1))>=0) .and. &
+      ALL(BY(CandPar(1:nCP(2), 2))>=0) .and. &
       ALL(Sex(CandPar(1:nCP(1), 1))==1) .and. &
       ALL(Sex(CandPar(1:nCP(2), 2))==2)) then
       LLX = -999
@@ -6834,7 +6831,7 @@ double precision :: LLg(7), LLtmp(2), ALR(7), LLx(6), LLz(2,2), LRHS, &
   LLM(5), LLMo(5), LLHA(3), dLH(nS(SB,kB)), ALRx(6), LLC, ALRtmp, &
   dx(maxSibSize), LLHHA(2), LLP
 integer :: i, j, x, Par(2), AncA(2,mxA), AncB(2,mxA), ix, tmpGP
-logical :: ShareOpp, ShareSib, con
+logical :: ShareOpp, ShareSib
 
 LL = 999D0
 LLg = 999D0
@@ -7464,7 +7461,7 @@ use Global
 implicit none
 
 integer, intent(IN) :: A, SB, k
-integer :: i, n, j
+integer :: i, n
 
 if (nS(SB,k) +1 >= maxSibSize) then
   call Erstop("reached MaxSibshipSize, please increase") 
@@ -8705,7 +8702,7 @@ if (LL/=999) return
  call GetAncest(-SB, k, AncB)
 if (ANY(AncB == A)) then  ! A>0
   LL = 777
-else if (BY(A)/=-999) then
+else if (BY(A)>=0) then
   do x=3, mxA
     do m=1,2
       if (AncB(m, x) > 0) then
@@ -10753,7 +10750,7 @@ else if (A/=0) then
   OffHasBY = .FALSE.
   do m=1,2
     if (Parent(A,m) > 0) then  
-      if (BY(Parent(A,m)) > 0)   ParHasBY = .TRUE.
+      if (BY(Parent(A,m)) >= 0)   ParHasBY = .TRUE.
     else if (Parent(A,m) < 0 .and. DumRel) then
       ParHasBY = .TRUE.
     endif
@@ -10762,7 +10759,7 @@ else if (A/=0) then
   if (noff>0) then
     do i=1, nOff
       if (Offspr(i)>0) then
-        if (BY(Offspr(i)) >0) then
+        if (BY(Offspr(i)) >=0) then
           OffHasBY = .TRUE.
           exit
         endif
@@ -11969,26 +11966,25 @@ integer :: i,j,k,l
 ! allele frequencies
 allocate(AF(nSNP))
 do l=1,nSnp
-	if (ANY(Genos(l,:)/=-9)) then
-		AF(l)=float(SUM(Genos(l,:)-1, MASK=Genos(l,:)/=-9))/& !(2*nInd)
-			(COUNT(Genos(l,:)/=-9)*2)
-	else
-		AF(l) = 1
-	endif
+  if (ANY(Genos(l,:)/=-9)) then
+    AF(l)=float(SUM(Genos(l,:)-1, MASK=Genos(l,:)/=-9))/(COUNT(Genos(l,:)/=-9)*2)
+  else
+    AF(l) = 1
+  endif
 enddo
 
 !=================
 BY1 = 1
 if (ANY(BY >= 0)) then
   BY1 = MINVAL(BY, MASK=BY>=0)
-  WHERE (BY /= -999) BY = BY - BY1 +1
+  WHERE (BY >=0) BY = BY - BY1 +1    ! BY becomes strictly positive
 endif
 
 allocate(AgeDiff(nInd,nInd))
 AgeDiff=999
 do i=1, nInd
   do j=1, nInd
-    if (BY(i)/=-999 .and. BY(j)/=-999) then
+    if (BY(i)>=0 .and. BY(j)>=0) then
       AgeDiff(i,j) = BY(i) - BY(j)   ! if >0, then j older than i
     endif   
   enddo

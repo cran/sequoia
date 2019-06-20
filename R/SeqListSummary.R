@@ -64,8 +64,6 @@ SummarySeq <- function(SeqList = NULL,
 
   # check input
   names(PedIN)[1:3] <- c("id", "dam", "sire")
-  for (i in 4:6) PedIN[which(PedIN[,i]==999), i] <- NA
-  for (i in 7:9) PedIN[which(PedIN[,i]==-9), i] <- NA
   Ped <- AddParPed(PedIN, ZeroToNA=TRUE)
   Ped$Sex <- ifelse(Ped$id %in% Ped$dam, 1,
                 ifelse(Ped$id %in% Ped$sire, 2, 3))
@@ -129,6 +127,7 @@ SummarySeq <- function(SeqList = NULL,
   if (Plot) {
     plot.seq(SummaryOUT, Ped)
     if (!is.null(SeqList)) {
+      inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
       op <- par(mfcol=c(1,1), mai=c(.9,.9,.4,.2))
       PlotAgePrior(SeqList$AgePriors)   # doesn't change par
       par(op)
@@ -213,12 +212,11 @@ plot.seq <- function(SeqSum, Ped)
   }
 
 
-  promptSavePlot()
-
   #~~~~~~~~~~~~~~~~~
   # dummy individuals
   ParCount.D <- SeqSum$ParentCount["D",1:2,,]
   if (sum(ParCount.D)>0) {
+    inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
     bp <- barplot(t(rbind(ParCount.D["Female",,],
                           ParCount.D["Male",,])[4:1,]), horiz=TRUE, las=1, space=c(.2,.2,1,.2),
                   main="No. parents assigned to \ndummy individuals",
@@ -232,11 +230,12 @@ plot.seq <- function(SeqSum, Ped)
             col=col.damsire[,2], add=TRUE, axes=F,
             names.arg=rep("",2))
     bpM <- matrix(rev(bp),2,2)
+    maxN <- max(apply(ParCount.D, 1:2, sum))
     for (s in 1:2) {
       for (p in 1:2) {
         for (x in 1:4) {
           if (ParCount.D[s,p, x]>0) {
-            rot <- ifelse(ParCount.D[s,p, x]/sum(ParCount.D[s,p, ]) < 0.1, TRUE, FALSE)
+            rot <- ifelse(ParCount.D[s,p, x]/maxN < 0.1, TRUE, FALSE)
             xx <- ifelse(x==1, ParCount.D[s,p, x]/2,
                          ParCount.D[s,p, x]/2 + sum(ParCount.D[s,p, 1:(x-1)]))
             text(xx, bpM[p,s], colnames(ParCount.G)[x], col=ifelse(x==1, 0, 1),
@@ -245,28 +244,31 @@ plot.seq <- function(SeqSum, Ped)
         }
       }
     }
-    promptSavePlot()
   }
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # hist sibship sizes
+  inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
   np <- par(mai=c(.85, .8,1,.2), mfrow=c(1,2))
   for (p in 1:2) {
     barplot(t(SeqSum$SibSize[[p]]), col=col.damsire[,p], las=1, space=0,
           xlab="Sibship size", ylab="Count", main=paste0(c("M","P")[p], "aternal sibships"))
   }
 
-  promptSavePlot()
-
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # LLR
   LLRc <- c("LLRdam", "LLRsire", "LLRpair")
-  Mainz.LLR <- c("LLR dam / not dam", "LLR sire / not sire", "LLR parent pair",
-             "Offspring - dam\nopposing homozygotes", "Offspring - sire\nopposing homozygotes ",
-             "Offspring - dam - sire\nMendelian errors")
-  brks.LLR <- pretty(x=unlist(Ped[, LLRc]), n=50)
 
   if (any(LLRc %in% names(Ped))) {
+    inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
+    Mainz.LLR <- c("LLR dam / not dam", "LLR sire / not sire", "LLR parent pair",
+             "Offspring - dam\nopposing homozygotes", "Offspring - sire\nopposing homozygotes ",
+             "Offspring - dam - sire\nMendelian errors")
+    for (i in 1:3) {
+      Ped[which(Ped[,LLRc[i]]==999), LLRc[i]] <- NA
+    }
+    brks.LLR <- pretty(x=unlist(Ped[, LLRc]), n=50)
+
     if (any(!is.na(unlist(Ped[,LLRc])))) {
       np <- par(mfrow=c(1,3), mai=c(.8,.4,.4,.1))
       for (i in 1:3) {
@@ -275,17 +277,20 @@ plot.seq <- function(SeqSum, Ped)
         hist(Ped[,LLRc[i]], breaks=brks.LLR, col="grey",
              main=Mainz.LLR[i], xlab="Log10 likelihood ratio", ylab="")
       }
-      promptSavePlot()
     }
   }
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # OH
   OHc <- c("OHdam", "OHsire", "MEpair")
-  Mainz.OH <- c("Offspring - dam\nopposing homozygotes", "Offspring - sire\nopposing homozygotes ",
-             "Offspring - dam - sire\nMendelian errors")
-
   if (any(OHc %in% names(Ped))) {
+    inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
+    Mainz.OH <- c("Offspring - dam\nopposing homozygotes", "Offspring - sire\nopposing homozygotes ",
+             "Offspring - dam - sire\nMendelian errors")
+    for (i in 1:3) {
+      Ped[which(Ped[,OHc[i]]==-9), OHc[i]] <- NA
+    }
+
     np <- par(mfrow=c(1,3), mai=c(.8,.4,.4,.1))
     for (i in 1:3) {
       if (!OHc[i] %in% names(Ped))  next
@@ -293,32 +298,10 @@ plot.seq <- function(SeqSum, Ped)
       hist(Ped[,OHc[i]], breaks=c(0:(max(Ped[, OHc[i]],na.rm=TRUE)+2))-.5, col="grey",
            main=Mainz.OH[i], xlab="Count", ylab="")
     }
-    promptSavePlot()
   }
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
   par(op)
 }
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-promptSavePlot <- function() {
-  inp <- readline(prompt = "Press <s> to save current plot or press <Enter> to continue...")
-  if (inp == "s") {
-    s <- readline(prompt = "Enter path (including file name but not extension) to which to save image: ")
-    grDevices::savePlot(paste(s, ".jpeg", sep = ""), type = "jpeg")
-    readline(prompt = "File saved.  Press <Enter> to continue...")
-  }
-}
-
-
-
-
-
-
-
-
-
 
 

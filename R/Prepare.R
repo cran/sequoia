@@ -130,6 +130,7 @@ CheckLH <- function(LifeHistData) {
   LifeHistData <- LifeHistData[!is.na(LifeHistData$ID), ]
   for (x in c("Sex", "BY")) LifeHistData[, x] <- as.integer(LifeHistData[, x])
   LifeHistData$BY[is.na(LifeHistData$BY)] <- -999
+  LifeHistData$BY[LifeHistData$BY < 0] <- -999
   LifeHistData$Sex[is.na(LifeHistData$Sex)] <- 3
   LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
 
