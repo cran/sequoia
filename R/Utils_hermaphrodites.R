@@ -1,10 +1,10 @@
 herm_clone_LH <- function(LH, herm.suf=c("f", "m")) {
   hermLH.1 <- LH[which(LH$Sex==4), ]
   hermLH.1$ID <- paste(hermLH.1$ID, herm.suf[1], sep="_")
-  hermLH.1$Sex = 1
+  hermLH.1$Sex <- 1
   hermLH.2 <- LH[which(LH$Sex==4), ]
   hermLH.2$ID <- paste(hermLH.2$ID, herm.suf[2], sep="_")
-  hermLH.2$Sex = 2
+  hermLH.2$Sex <- 2
   unique(rbind(LH, hermLH.1, hermLH.2))
 }
 
@@ -25,7 +25,7 @@ herm_clone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
 
 #=============================================================
 herm_clone_Ped <- function(Ped, LH, herm.suf=c("f", "m")) {
-  Ped <- AddParPed(Ped)
+  Ped <- PedPolish(Ped)
   hermID <- as.character(LH$ID[which(LH$Sex==4 & LH$ID %in% Ped$id)])
   these <- which(Ped$id %in% hermID)
   if (length(these)>0) {
@@ -86,7 +86,7 @@ herm_unclone_Geno <- function(Geno, LH, herm.suf=c("f", "m")) {
 }
 
 #=============================================================
-herm_unclone_MaybeRel <- function(MR, Ped, LH, herm.suf=c("f", "m")) {
+herm_unclone_MaybeRel <- function(MR, Ped=NULL, LH, herm.suf=c("f", "m")) {
   hermID <- as.character(LH$ID[which(LH$Sex==4)])
   H1 <- substr(MR$ID1, nchar(MR$ID1)-1, nchar(MR$ID1)) %in% paste0("_", herm.suf) &
                            chop(MR$ID1, herm.suf[MR$Sex1]) %in% hermID
@@ -96,11 +96,13 @@ herm_unclone_MaybeRel <- function(MR, Ped, LH, herm.suf=c("f", "m")) {
   MR$ID2 <- ifelse(H2, chop(MR$ID2, suf=herm.suf[MR$Sex2]), MR$ID2)
   MR$Sex1[H1] <- 4
   MR$Sex2[H2] <- 4
-  tmp <- merge(MR, Ped[, 1:3], by.x="ID1", by.y="id")
-  if(any(tmp$ID2==tmp$dam | tmp$ID2==tmp$sire, na.rm=TRUE)) {
-    MR <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MR)])
-  } else {
-    MR <- tmp[, names(MR)]
+  if (!is.null(Ped)) {
+    tmp <- merge(MR, Ped[, 1:3], by.x="ID1", by.y="id")
+    if(any(tmp$ID2==tmp$dam | tmp$ID2==tmp$sire, na.rm=TRUE)) {
+      MR <- with(tmp, tmp[-which(ID2==dam | ID2==sire), names(MR)])
+    } else {
+      MR <- tmp[, names(MR)]
+    }
   }
   MR <- unique(MR[MR$ID1 != MR$ID2, ])
   MR

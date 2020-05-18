@@ -4,25 +4,31 @@
 \alias{PlotAgePrior}
 \title{Plot age priors}
 \usage{
-PlotAgePrior(AP = NULL, GPlines = TRUE)
+PlotAgePrior(AP = NULL, legend = TRUE)
 }
 \arguments{
-\item{AP}{matrix with age priors of dimension nAgeclasses rows by 9 columns,
-OR a list returned by \code{\link{MakeAgePrior}} when called with
-Return='all', OR a list returned by \code{\link{sequoia}} containing an
-element 'AgePriors'.}
+\item{AP}{matrix with age priors (P(A|R)/P(A)) with age differences in rows
+and relationships in columns; by default M: maternal parent (mother), P: paternal
+parent (father), FS: full siblings, MS: maternal siblings (full + half),
+PS: paternal siblings.}
 
-\item{GPlines}{show the lines for grandparental & avuncular relationships?
-Can sometimes make the plot overly crowded.}
+\item{legend}{if TRUE, a new plotting window is started and
+\code{\link{layout}} is used to plot a legend next to the main plot. Set to
+FALSE if you want to add it as panel to an existing plot (e.g. with
+par(mfcol=c(2,2))).}
+}
+\value{
+a heatmap
 }
 \description{
-visualise the age-difference based prior probability ratios
+visualise the age-difference based prior probability ratios as a
+  heatmap
 }
-\details{
-When called with an output list from \code{MakeAgePrior}, the raw
-  distributions are shown too in a separate panel, in addition to the the
-  scaled, flattened & smoothened distributions used for pedigree
-  reconstruction.
+\examples{
+\dontrun{
+PlotAgePrior(SeqOUT$AgePriors)
+}
+
 }
 \seealso{
 \code{\link{MakeAgePrior}}, \code{\link{SummarySeq}}

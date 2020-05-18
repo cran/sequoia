@@ -4,29 +4,37 @@
 \alias{SnpStats}
 \title{SNP summary statistics}
 \usage{
-SnpStats(GenoM, Ped = NULL, Plot = TRUE)
+SnpStats(GenoM, Pedigree = NULL, ErrFlavour = "version2.0", Plot = TRUE)
 }
 \arguments{
 \item{GenoM}{Genotype matrix, in sequoia's format: 1 column per SNP, 1 row
 per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
 IDs.}
 
-\item{Ped}{a dataframe with 3 columns: ID - parent1 - parent2. Additional
-columns and non-genotyped individuals are ignored. Only used to estimate
-the error rate.}
+\item{Pedigree}{a dataframe with 3 columns: ID - parent1 - parent2.
+Additional columns and non-genotyped individuals are ignored. Used to
+estimate the error rate.}
+
+\item{ErrFlavour}{function that takes the genotyping error rate \code{Err} as
+input, and returns a 3x3 matrix of observed (columns) conditional on actual
+(rows) genotypes, or choose from inbuilt ones as used in sequoia
+'version2.0', 'version1.3', or 'version1.1'. See \code{\link{ErrToM}}.}
 
 \item{Plot}{show histograms of the results?}
 }
 \value{
 a matrix with a number of rows equal to the number of SNPs
- (=number of columns of GenoM) and 2 or 3 columns:
+ (=number of columns of GenoM), and when no Pedigree is provided 2 columns:
 \item{AF}{Allele frequency of the 'second allele' (the one for which the
   homozygote is coded 2)}
 \item{Mis}{Proportion of missing calls}
-\item{ER}{(only when Ped provided) number of Mendelian errors in parent-
- offspring pairs (i.e. the number of opposing homozygotes, 'OHdam' &
-  'OHsire' in pedigree) and parent-parent-offspring trios ('MEpairs' in
-  pedigree).}
+When a Pedigree is provided, there are 7 additional columns:
+\item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
+  genotyped for the SNP}
+\item{OHdam, OHsire}{Count of number of opposing homozygous cases}
+\item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
+\item{Err.hat}{Error rate, as estimated from the joined offspring-parent
+  (-parent) genotypes and the presumed error structure (\code{ErrFlavour})}
 }
 \description{
 Estimate allele frequency (AF), missingness and Mendelian
@@ -34,22 +42,31 @@ errors per SNP.
 }
 \details{
 Calculation of these summary statistics can be done in PLINK, and
-SNPs with low minor allele freuqency or high missigness should be filtered
-out using PLINK prior to pedigree reconstruction. This function is merely
-provided as an aid to inspect the relationship between AF, missingness
-and error to find a suitable combination of thresholds to use.
-
-The error count includes both the number of parent-offspring pairs that are
-opposing homozygotes (parent is AA and offspring is aa), as Mendelian errors
-in parent-parent-offspring trios (e.g. parents AA and aa, but offspring not
-Aa).
-
-The underlying genotyping error can not be easily estimated from the number
-of Mendelian errors, as many errors may go undetected and a single error in
- a prolific individual can result in a high number of Mendelian errors.
- Moreover, a high error rate may interfere with pedigree reconstruction, and
- succesful assignment will be biased towards parents with lower error count.
+  SNPs with low minor allele frequency or high missingness should be filtered
+  out prior to pedigree reconstruction. This function is provided as an aid
+  to inspect the relationship between AF, missingness and genotyping error to
+  find a suitable combination of SNP filtering thresholds to use.
 }
+\section{Estimated genotyping error}{
+
+The error rate is estimated from the number of opposing homozygous cases (OH,
+parent is AA and offspring is aa) Mendelian errors (ME, e.g. parents AA and
+aa, but offspring not Aa) in parent-parent-offspring trios, and OH cases for
+offspring with a single genotyped parent.
+
+The estimated error rates will not be as accurate as from duplicate samples,
+since a single error in an individual with many offspring will be counted
+many times, while errors in individuals without parents or offspring will not
+be counted at all. Moreover, a high error rate may interfere with pedigree
+reconstruction, and succesful assignment will be biased towards parents with
+lower error count. Nonetheless, it will provide a ballpark estimate for the
+average error rate, which will be useful for subsequent (rerun of) pedigree
+reconstruction.
+}
+
 \seealso{
-\code{\link{GenoConvert}}
+\code{\link{GenoConvert}} to convert from various data formats;
+  \code{\link{CheckGeno}} to check the data is in valid format for sequoia
+  and exclude monomorphic SNPs etc., \code{\link{CalcOHLLR}} to calculate OH
+  & ME per individual
 }

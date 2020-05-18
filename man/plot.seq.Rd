@@ -4,14 +4,17 @@
 \alias{plot.seq}
 \title{Plot summary overview of sequoia output}
 \usage{
-\method{plot}{seq}(SeqSum, Ped)
+\method{plot}{seq}(SeqSum, Pedigree, Panels = "all")
 }
 \arguments{
 \item{SeqSum}{list output from \code{\link{SummarySeq}}}
 
-\item{Ped}{Pedigree with at least id, dam and sire in columns 1-3,
+\item{Pedigree}{dataframe with at least id, dam and sire in columns 1-3,
 respectively. If columns with parental LLRs and/or Mendelian errors are
 present, these will be plotted as well.}
+
+\item{Panels}{character vector with panel(s) to plot. Choose from 'all',
+'G.parents', 'D.parents', 'sibships', 'LLR', 'OH'.}
 }
 \description{
 visualise the numbers of assigned parents, sibship sizes, and parental LLRs

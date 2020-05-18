@@ -47,7 +47,8 @@
 #'   be used. This is column 1 for InFormat 'raw' and 'seq', but those are by
 #'   default not used.
 #' @param FIDsep string used to paste FID and IID together into a composite-ID
-#'   (value passed to \code{paste}'s \code{collapse}).
+#'   (value passed to \code{paste}'s \code{collapse}). This joining can be
+#'    reversed using \code{\link{PedStripFID}}.
 #' @param dropcol  columns to exclude from the output data, on top of IDcol and
 #'   FIDcol (which become rownames). When NA, defaults to columns 3-6 for
 #'   InFormat 'raw' and 'seq'. Can also be used to drop some SNPs, see example
@@ -59,7 +60,7 @@
 #'   inside R. When converting to 0/1/2 format, 2 is the homozygote for the
 #'   minor allele, and 0 the homozygote for the major allele.
 #'
-#' @section Error messages: An occassional error when reading in a file with
+#' @section Error messages: An occasional error when reading in a file with
 #'   GenoConvert is that 'rows have unequal length'. GenoConvert makes use of
 #'   \code{\link{readLines}} and \code{\link{strsplit}}, which is much faster
 #'   than \code{\link{read.table}} for large datafiles, but also more sensitive
@@ -70,8 +71,7 @@
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @seealso \code{\link{SnpStats}, \link{LHConvert}, and \link{PedStripFID}} to
-#'   reverse joining FID and IID
+#' @seealso \code{\link{CheckGeno}, \link{SnpStats}, \link{LHConvert}}
 #'
 #' @examples
 #' \dontrun{
@@ -190,13 +190,13 @@ GenoConvert <- function(InFile = NULL,
     rm(InData)
 
   } else if (!is.null(InFile)) {
-    GenoTmp <- readLines(InFile)
+    GenoTmp <- readLines(InFile, warn=FALSE)
     if (header)  GenoTmp <- GenoTmp[-1]
 
-    TmpL <- strsplit(GenoTmp[-1], split = sep[1])
+    TmpL <- strsplit(GenoTmp, split = sep[1])
     if (length(TmpL[[1]])==1) {
       for (s in sep[-1]) {
-        TmpL <- strsplit(GenoTmp[-1], split = s)
+        TmpL <- strsplit(GenoTmp, split = s)
         if (length(TmpL[[1]]) > 1) break
       }
     }
@@ -210,6 +210,8 @@ GenoConvert <- function(InFile = NULL,
     GenoTmp <- plyr::ldply(TmpL)
     rm(TmpL)
   }
+  if (nrow(GenoTmp)<2)  stop("Genotype matrix must have at least 2 individuals")
+  if (ncol(GenoTmp)<2)  stop("Genotype matrix must have at least 2 SNPs")
 
   #~~~~~~~~~
 
@@ -377,34 +379,34 @@ LHConvert <- function(PlinkFile = NULL, UseFID = FALSE,
                              rep("NULL", ncol-6))), quiet=TRUE)
 
   LH <- data.frame(id = TMP[[2]],
-                    Sex = TMP[[5]],
-                    BY = TMP[[6]],
-                    stringsAsFactors=FALSE)
+                   Sex = TMP[[5]],
+                   BirthYear = TMP[[6]],
+                   stringsAsFactors=FALSE)
   if (SwapSex) {
     LH$Sex <- ifelse(LH$Sex==1, 2,
-                   ifelse(LH$Sex==2, 1,
-                        NA))
+                     ifelse(LH$Sex==2, 1,
+                            NA))
   }
 
   if (UseFID) {
     IDX <- data.frame(id.old = TMP[[2]],
-                        id.new = paste(TMP[[1]], TMP[[2]], sep=FIDsep),
-                        stringsAsFactors=FALSE)
+                      id.new = paste(TMP[[1]], TMP[[2]], sep=FIDsep),
+                      stringsAsFactors=FALSE)
     LH <- merge(LH, IDX, by.x="id", by.y="id.old", all.x=TRUE)
     LH$id <- ifelse(!is.na(LH$id.new), LH$id.new, LH$id)
-    LH <- LH[, c("id", "Sex", "BY")]
+    LH <- LH[, c("id", "Sex", "BirthYear")]
   }
 
   if (!is.null(LHIN)) {
-    names(LHIN) <- c("id", "Sex", "BY")
+    names(LHIN) <- c("id", "Sex", "BirthYear")
     LH$Sex[!LH$Sex %in% c(1,2)] <- NA
     LHIN$Sex[!LHIN$Sex %in% c(1,2)] <- NA
-    LH$BY[LH$BY < 0] <- NA
-    LHIN$BY[LHIN$BY < 0] <- NA
+    LH$BirthYear[LH$BirthYear < 0] <- NA
+    LHIN$BirthYear[LHIN$BirthYear < 0] <- NA
 
     chk <- merge(LH, LHIN, by="id")
     n.sexmismatch <- sum(chk$Sex.x != chk$Sex.y, na.rm=T)
-    n.BYmismatch <- sum(chk$BY.x != chk$BY.y, na.rm=T)
+    n.BYmismatch <- sum(chk$BirthYear.x != chk$BirthYear.y, na.rm=T)
     if (n.sexmismatch > 0 & n.sexmismatch <= 10) {
       these <- with(chk, id[which(!is.na(Sex.x) & !is.na(Sex.y) & Sex.x!=Sex.y)])
       warning(paste("There are", n.sexmismatch, "sex mismatches: ",
@@ -413,7 +415,7 @@ LHConvert <- function(PlinkFile = NULL, UseFID = FALSE,
       warning(paste("There are", n.sexmismatch, "sex mismatches"))
     }
     if (n.BYmismatch > 0 & n.BYmismatch <= 10) {
-      these <- with(chk, id[which(!is.na(BY.x) & !is.na(BY.y) & BY.x!=BY.y)])
+      these <- with(chk, id[which(!is.na(BirthYear.x) & !is.na(BirthYear.y) & BirthYear.x!=BirthYear.y)])
       warning(paste("There are", n.BYmismatch, "birth year mismatches: ",
                     paste(these, collapse=", ")))
     } else if (n.BYmismatch>10) {

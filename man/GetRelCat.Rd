@@ -4,16 +4,19 @@
 \alias{GetRelCat}
 \title{Pairwise relationship}
 \usage{
-GetRelCat(x, Ped, GenBack = 2)
+GetRelCat(x, Pedigree, GenBack = 2, patmat = TRUE)
 }
 \arguments{
-\item{x}{The focal individual, either its rownumber in the pedigreee or ID.}
+\item{x}{The focal individual, either its rownumber in the pedigree or ID.}
 
-\item{Ped}{dataframe with pedigree; columns id - dam - sire.}
+\item{Pedigree}{dataframe columns id - dam - sire.}
 
 \item{GenBack}{Number of generations back to consider; 1 returns
 parent-offspring and sibling relationships, 2 also returns grandparental,
 avuncular and first cousins.}
+
+\item{patmat}{logical, distinguish between paternal versus maternal relative
+pairs?}
 }
 \value{
 A named vector of length equal to the number of rows in Ped, with for
@@ -42,16 +45,53 @@ A named vector of length equal to the number of rows in Ped, with for
 Determine the relationship between individual X and all other
   individuals in the pedigree, going up to 1 or 2 generations back.
 }
-\details{
-if
-}
 \examples{
-\dontrun{
+data(Ped_griffin)
+# find all relatives of a specific individual
+Rel42 <- GetRelCat("i042_2003_F", Ped_griffin)
+Rel42[Rel42 != "U"]
+
 # make NxN matrix with relationship categories:
-RCM <- sapply(1:nrow(Ped), GetRelCat, Ped)
-# table is considerably faster on a factor than a character vector:
-table(factor(RCM, levels=c("M","P","FS","MHS","PHS","MGM")))
+Ped_griffin_sub <- Ped_griffin[Ped_griffin$birthyear<2003,]  # quicker
+RCM <- sapply(seq_along(Ped_griffin_sub$id), GetRelCat, Ped_griffin_sub)
+table(RCM)
+#   M  MHS    O    P    S    U
+#  10    6   16    6   40 1522
 # note that sibling & cousin pairs are counted twice!
+# Parent-offspring pairs are counted directionally:
+# once as offspring (O), once as mother (M) or father (P)
+
+# for large pedigrees, table(factor()) is much faster:
+table(factor(RCM, levels=c("M","P","FS","MHS","PHS","U")))
+
+# list the maternal half-siblings:
+these <- which(RCM=="MHS", arr.ind=TRUE)
+data.frame(id1 = Ped_griffin_sub$id[these[,1]],
+           id2 = Ped_griffin_sub$id[these[,2]])
+
+
+# Get Colony-style lists of full sibs & half sibs dyads:
+\dontrun{
+RCM <- sapply(seq_along(MyPedigree$id), GetRelCat, Pedigree = MyPedigree,
+              GenBack = 1, patmat = FALSE)
+# rownumbers of pairs of FS & HS
+FullSibDyads <- which(RCM == "FS", arr.ind=TRUE)
+HalfSibDyads <- which(RCM == "HS", arr.ind=TRUE)
+
+# each pair is listed 2x - fix:
+FullSibDyads <- FullSibDyads[FullSibDyads[,1] < FullSibDyads[,2], ]
+HalfSibDyads <- HalfSibDyads[HalfSibDyads[,1] < HalfSibDyads[,2], ]
+
+# translate rownumbers into IDs
+MyPedigree$id <- as.character(MyPedigree$id)
+FullSibDyads <- cbind(MyPedigree$id[FullSibDyads[,1]],
+                      MyPedigree$id[FullSibDyads[,2]])
+HalfSibDyads <- cbind(MyPedigree$id[HalfSibDyads[,1]],
+                      MyPedigree$id[HalfSibDyads[,2]])
 }
 
+}
+\seealso{
+\code{\link{ComparePairs}} to compare pairwise relationships
+  between 2 pedigrees.
 }

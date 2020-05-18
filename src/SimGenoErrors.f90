@@ -1,12 +1,12 @@
 ! Array storage in Fortran is column-major:
 ! the first index varies fastest
 
-subroutine mkerrors(Nind, nSnp, GenoFR, EProbFR)
+subroutine mkerrors(nind, nsnp, genofr, eprobfr)
 implicit none
 
-integer, intent(IN) :: nInd, nSnp
-double precision, intent(IN) :: EProbFR(nSnp*3*3)
-integer, intent(INOUT) :: GenoFR(nInd*nSnp)
+integer, intent(IN) :: nind, nsnp
+integer, intent(INOUT) :: genofr(nind*nsnp)
+double precision, intent(IN) :: eprobfr(nsnp*3*3)
 integer :: Genos(nSnp, nInd), l, i, x, j, h
 double precision :: EProb(3,3,nSnp), p(3), r(nSnp, nInd)
 

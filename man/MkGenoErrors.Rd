@@ -4,10 +4,15 @@
 \alias{MkGenoErrors}
 \title{Simulate genotyping errors}
 \usage{
-MkGenoErrors(SGeno, CallRate = 0.99, SnpError = 5e-04,
-  ErrorFM = function(E) {     matrix(c(1 - E - (E/2)^2, E, (E/2)^2, E/2,
-  1 - E, E/2, (E/2)^2, E, 1 - E - (E/2)^2), 3, 3, byrow = TRUE) },
-  Error.shape = 0.5, CallRate.shape = 1)
+MkGenoErrors(
+  SGeno,
+  CallRate = 0.99,
+  SnpError = 5e-04,
+  ErrorFM = function(E) {     matrix(c(1 - E - (E/2)^2, E, (E/2)^2, E/2, 1 - E, E/2,
+    (E/2)^2, E, 1 - E - (E/2)^2), 3, 3, byrow = TRUE) },
+  Error.shape = 0.5,
+  CallRate.shape = 1
+)
 }
 \arguments{
 \item{SGeno}{Matrix with genotype data in Sequoia's format: 1 row per

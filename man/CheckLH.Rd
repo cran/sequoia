@@ -7,10 +7,12 @@
 CheckLH(LifeHistData)
 }
 \arguments{
-\item{LifeHistData}{the dataframe with ID - Sex - Birth year}
+\item{LifeHistData}{the dataframe with ID - Sex - Birth year, and
+optionally BY.min - BY.max}
 }
 \value{
-a dataframe with corrected formatting of LifeHistData, if required
+a dataframe with LifeHistData formatted for use by the Fortran
+   part of the program
 }
 \description{
 Check that the provided LifeHistData is in the correct format

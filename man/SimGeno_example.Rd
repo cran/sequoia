@@ -4,8 +4,11 @@
 \name{SimGeno_example}
 \alias{SimGeno_example}
 \title{Example genotype file}
-\format{A data frame with 214 rows and 201 columns: id, followed by 1 column
-per SNP coded as 0/1/2 or -9 for missing values.}
+\format{
+A genotype matrix with 214 rows (ids) and 200 columns (SNPs). Each
+  SNP is coded as 0/1/2 copies of the reference allele, with -9 for missing
+  values. Ids are stored as rownames.
+}
 \usage{
 data(SimGeno_example)
 }

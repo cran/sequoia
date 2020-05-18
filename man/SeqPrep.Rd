@@ -4,20 +4,31 @@
 \alias{SeqPrep}
 \title{preparations}
 \usage{
-SeqPrep(GenoM = NULL, LifeHistData = NULL, nAgeClasses = 1,
-  MaxSibIter = 5, Err = 1e-04, MaxMismatch = 3, Tfilter = -2,
-  Tassign = 0.5, MaxSibshipSize = 100, DummyPrefix = c("F", "M"),
-  Complexity = "full", UseAge = "yes", FindMaybeRel = TRUE,
-  CalcLLR = TRUE)
+SeqPrep(
+  GenoM = NULL,
+  LifeHistData = NULL,
+  nAgeClasses = 1,
+  MaxSibIter = 5,
+  Err = 1e-04,
+  MaxMismatchV = NULL,
+  Tfilter = -2,
+  Tassign = 0.5,
+  MaxSibshipSize = 100,
+  DummyPrefix = c("F", "M"),
+  Complexity = "full",
+  UseAge = "yes",
+  FindMaybeRel = TRUE,
+  CalcLLR = TRUE
+)
 }
 \arguments{
 \item{GenoM}{matrix with genotype data, size nInd x nSnp}
 
 \item{LifeHistData}{Dataframe with 3 columns:
-\itemize{
-\item{ID: }{max. 30 characters long,}
-\item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
-\item{Birth Year: }{(or hatching year) Zero and negative numbers are
+\describe{
+\item{ID}{max. 30 characters long,}
+\item{Sex}{1 = females, 2 = males, other numbers = unknown,}
+\item{Birth Year}{(or hatching year) Zero and negative numbers are
   interpreted as missing values.}}}
 
 \item{nAgeClasses}{Number of age classes (= no. rows in AgePriors)}
@@ -27,8 +38,9 @@ SeqPrep(GenoM = NULL, LifeHistData = NULL, nAgeClasses = 1,
 
 \item{Err}{Estimated genotyping error rate.}
 
-\item{MaxMismatch}{Maximum number of loci at which candidate parent and
-offspring are allowed to be opposite homozygotes, or be excluded.}
+\item{MaxMismatchV}{Maximum number of loci at which (1) a duplicate sample
+mismatches; (2) candidate parent and offspring are allowed to be opposite
+homozygotes; (3) parent-parent-offspring trios can have Mendelian errors.}
 
 \item{Tfilter}{Threshold log-likelihood ratio between a proposed relationship
 versus unrelated, to select candidate relatives. Typically a negative

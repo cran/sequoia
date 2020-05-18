@@ -4,14 +4,18 @@
 \alias{EstConf}
 \title{Estimate confidence probability}
 \usage{
-EstConf(Ped = NULL, LifeHistData = NULL, args.sim = list(nSnp = 400,
-  SnpError = 0.001, ParMis = c(0.4, 0.4)), args.seq = list(MaxSibIter =
-  10, Err = 1e-04, Tassign = 0.5), nSim = 10, return.PC = FALSE,
-  quiet = TRUE)
+EstConf(
+  Pedigree = NULL,
+  LifeHistData = NULL,
+  args.sim = list(nSnp = 400, SnpError = 0.001, ParMis = c(0.4, 0.4)),
+  args.seq = list(MaxSibIter = 10, Err = 0.001, Tassign = 0.5),
+  nSim = 10,
+  quiet = TRUE
+)
 }
 \arguments{
-\item{Ped}{Reference pedigree from which to simulate, dataframe with columns
-id-dam-sire. Additional columns are ignored}
+\item{Pedigree}{Reference pedigree from which to simulate, dataframe with
+columns id-dam-sire. Additional columns are ignored}
 
 \item{LifeHistData}{Dataframe with id, sex (1=female, 2=male, 3=unknown), and
 birth year.}
@@ -29,70 +33,118 @@ list-within-a-list). Set to NULL to use all default values.}
 
 \item{nSim}{number of rounds of simulations to perform.}
 
-\item{return.PC}{return all \code{\link{PedCompare}} \code{Counts}?}
-
 \item{quiet}{suppress messages. `very' also suppresses simulation counter,
-TRUE merely runs SimGeno and sequoia quietly.}
+TRUE just runs SimGeno and sequoia quietly.}
 }
 \value{
-When \code{return.PC = FALSE}, a 2x2 matrix for parentage assignment, or a
-  2x7x2 array for full pedigree reconstruction, with for dams and sires and
-  per category (see \code{\link{PedCompare}}) the average and minimum number
-  of Match/(Match + Mismatch + P2only).
+a list, with the main results in dataframe \code{ConfProb} and array
+  \code{PedErrors}. \code{ConfProb} has 7 columns:
+\item{id.cat, dam.cat, sire.cat}{Category of the focal individual, dam, and
+sire, in the pedigree inferred based on the simulated data. Coded as
+G=genotyped, D=dummy, X=none}
+\item{dam.conf}{Probability that the dam is correct, given the categories of
+the assigned dam and sire (ignoring whether or not the sire is correct).
+Rounded to \code{nchar(N)} significant digits}
+\item{sire.conf}{as dam.conf, for the sire}
+\item{pair.conf}{Probability that both dam and sire are correct, given their
+categories}
+\item{N}{Number of individuals per category-combination, across all
+\code{nSim} simulations}
 
-  When \code{return.PC} is TRUE, a list is returned with:
-  \item{ConfProb}{Average confidence probability across simulations, as
-    returned when \code{return.PC = FALSE}.}
-  \item{SimCounts}{All counts of matches, mismatches, Pedigree1-only and
-    pedigree2-only, per simulation.}
-  \item{RunParams}{Current call to EstConf, as well as the default
-    parameter values for \code{EstConf, SimGeno}, and \code{sequoia}.}
+array \code{PedErrors} has three dimensions:
+\item{class}{\itemize{
+  \item FalseNeg(atives): could have been assigned but was not
+(individual + parent both genotyped or dummyfiable; P1only in
+\code{PedCompare}).
+  \item FalsePos(itives): no parent in reference pedigree, but
+one was assigned based on the simulated data (P2only)
+  \item Mismatch: different parents between the pedigrees}}
+\item{cat}{Category of individual + parent, as a two-letter code where the first letter
+indicates the focal individual and the second the parent; G=Genotyped, D=Dummy, T=Total}
+\item{parent}{dam or sire}
+
+The other list elements are:
+  \item{Pedigree.reference}{the pedigree from which data was simulated}
+  \item{Pedigree.inferred}{a list with for each iteration the inferred
+    pedigree based on the simulated data}
+  \item{SimSNPd}{a list with for each iteration the IDs of the individuals
+    simulated to have been genotyped}
+  \item{RunParams}{a list with the current call to EstConf, as well as the
+  default parameter values for \code{EstConf, SimGeno}, and \code{sequoia}.}
   \item{RunTime}{\code{sequoia} runtime per simulation in seconds, as
     measured by \code{\link{system.time}()['elapsed']}.}
 }
 \description{
-Estimate the assignment error rate by repeatedly simulating data
-  from a reference pedigree using \code{\link{SimGeno}}, reconstruction a
-  pedigree from this using \code{\link{sequoia}}, and counting the number of
-  mismatches using \code{\link{PedCompare}}.
+Estimate confidence and assignment error rate by repeatedly
+  simulating genotype data from a reference pedigree using
+  \code{\link{SimGeno}}, reconstruction a pedigree from this using
+  \code{\link{sequoia}}, and counting the number of mismatches using
+  \code{\link{PedCompare}}.
 }
 \details{
 The confidence probability is taken as the number of correct
-  (matching) assignments, divided by all assignments made. A confidence of
-  '1' should be interpreted as '> 1 - 1/(sum(!is.na(Ped$dam)) * nSim)'
+  (matching) assignments, divided by all assignments made in the
+  \emph{observed} (inferred-from-simulated) pedigree. In contrast, the false
+  negative & false positive assignment rates are proportions of the number of
+  parents in the \emph{true} (reference) pedigree. Each rate is calculated
+  separatedly for dams & sires, and separately for each category
+  (\strong{G}enotyped/\strong{D}ummy(fiable)/\strong{X} (none)) of
+  individual, parent and co-parent.
+
+ This function does not know which individuals in \code{Pedigree} are
+ genotyped, so the confidence probabilities need to be added to the Pedigree
+ by the user as shown in the example at the bottom.
+
+ A confidence of `1' assignments on simulated data were correct for that
+ category-combination. It should be interpreted as (and perhaps modified to)
+ \eqn{> 1 - 1/N}, where sample size \code{N} is given in the last column of
+ the \code{ConfProb} and \code{PedErrors} dataframes in the output. The same
+ applies for a false negative/positive rate of `0'.
 }
+\section{Assumptions}{
+ Because the actual true pedigree is (typically)
+  unknown, the provided reference pedigree is used as a stand-in and assumed
+  to be the true pedigree, with unrelated founders. It is also assumed that
+  the probability to be genotyped is equal for all parents; in each
+  iteration, a new random set of parents (proportion set by \code{ParMis}) is
+  mimicked to be non-genotyped. In addition, SNPs are assumed to segregate
+  independently.
+}
+
 \examples{
 \dontrun{
-data(SimGeno_example, LH_HSg5, package="sequoia")
+data(Ped_HSg5, LH_HSg5, package="sequoia")
 
-conf.A <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
+## Example A: parentage assignment only
+conf.A <- EstConf(Pedigree = Ped_HSg5, LifeHistData = LH_HSg5,
    args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
-   args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5),
-   nSim = 3, return.PC = TRUE)
+   args.seq = list(MaxSibIter = 0, Err=1e-3, Tassign=0.5),
+   nSim = 2)
 
-# effect of tweaking AgePriors
-# (only some effect due to low no. SNPs & high error rate,
-#  effect of increasing no. SNPs is much larger)
-AP <- MakeAgePrior(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
-                   Flatten = FALSE, Smooth = FALSE)
-conf.B <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
-   args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
-   args.seq = list(MaxSibIter = 0, Err=1e-4, Tassign=0.5,
-                   SeqList = list(AgePriors = AP)),
-   nSim = 3, return.PC = TRUE)
+# parent-pair confidence, per category:
+conf.A$ConfProb
 
-# with sibship clustering
-conf.C <- EstConf(Ped = Ped_HSg5, LifeHistData = LH_HSg5,
-   args.sim = list(nSnp = 200, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
-   args.seq = list(MaxSibIter = 10, Err=1e-4, Tassign=0.5),
-   nSim = 3, return.PC = TRUE)
-conf.C$ConfProb[,"GG",]  # Genotyped individuals, Genotyped parent
-conf.C$ConfProb[,"GD",]  # Genotyped individuals, Dummy parent
-AR <- apply(conf.C$SimCounts, 1, function(M) M["TT","Match", ]/M["TT","Total", ])
-ER <- apply(conf.C$SimCounts, 1,
-       function(M) (M["TT","Mismatch", ] + M["TT","P2only", ])/M["TT","Total", ])
-apply(ER, 1, mean)  # separate error rate dams & sires
-mean(ER)            # overall error rate
+# calculate (correct) assignment rates (ignores co-parent)
+1 - apply(conf.A$PedErrors, c(1,3), sum, na.rm=TRUE)
+
+## Example B: with sibship clustering, based on sequoia inferred pedigree
+RealGenotypes <- SimGeno(Ped = Ped_HSg5, nSnp = 100,
+                         ParMis=c(0.19,0.53), SnpError = 6e-3)
+SeqOUT <- sequoia(GenoM = RealGenotypes,
+                  LifeHistData = LH_HSg5,
+                  Err=5e-3, MaxSibIter=10)
+
+conf.B <- EstConf(Pedigree = SeqOUT$Pedigree,
+              LifeHistData = LH_HSg5,
+               args.sim = list(nSnp = 100, SnpError = 5e-3,
+                               ParMis=c(0.2, 0.5)),
+              args.seq = list(Err=5e-3, MaxSibIter = 10),
+              nSim = 3)
+Ped.withConf <- getAssignCat(Pedigree = SeqOUT$Pedigree,
+                             Genotyped = rownames(RealGenotypes))
+Ped.withConf <- merge(Ped.withConf, conf.B$ConfProb, all.x=TRUE)
+Ped.withConf <- Ped.withConf[, c("id","dam","sire", "dam.conf", "sire.conf",
+                                 "id.cat", "dam.cat", "sire.cat")]
 }
 
 }

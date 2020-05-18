@@ -4,59 +4,80 @@
 #' errors per SNP.
 #'
 #' @details Calculation of these summary statistics can be done in PLINK, and
-#' SNPs with low minor allele freuqency or high missigness should be filtered
-#' out using PLINK prior to pedigree reconstruction. This function is merely
-#' provided as an aid to inspect the relationship between AF, missingness
-#' and error to find a suitable combination of thresholds to use.
+#'   SNPs with low minor allele frequency or high missingness should be filtered
+#'   out prior to pedigree reconstruction. This function is provided as an aid
+#'   to inspect the relationship between AF, missingness and genotyping error to
+#'   find a suitable combination of SNP filtering thresholds to use.
 #'
-#' The error count includes both the number of parent-offspring pairs that are
-#' opposing homozygotes (parent is AA and offspring is aa), as Mendelian errors
-#' in parent-parent-offspring trios (e.g. parents AA and aa, but offspring not
-#' Aa).
+#' @section Estimated genotyping error:
+#' The error rate is estimated from the number of opposing homozygous cases (OH,
+#' parent is AA and offspring is aa) Mendelian errors (ME, e.g. parents AA and
+#' aa, but offspring not Aa) in parent-parent-offspring trios, and OH cases for
+#' offspring with a single genotyped parent.
 #'
-#' The underlying genotyping error can not be easily estimated from the number
-#' of Mendelian errors, as many errors may go undetected and a single error in
-#'  a prolific individual can result in a high number of Mendelian errors.
-#'  Moreover, a high error rate may interfere with pedigree reconstruction, and
-#'  succesful assignment will be biased towards parents with lower error count.
+#' The estimated error rates will not be as accurate as from duplicate samples,
+#' since a single error in an individual with many offspring will be counted
+#' many times, while errors in individuals without parents or offspring will not
+#' be counted at all. Moreover, a high error rate may interfere with pedigree
+#' reconstruction, and succesful assignment will be biased towards parents with
+#' lower error count. Nonetheless, it will provide a ballpark estimate for the
+#' average error rate, which will be useful for subsequent (rerun of) pedigree
+#' reconstruction.
 #'
 #' @param GenoM  Genotype matrix, in sequoia's format: 1 column per SNP, 1 row
-#' per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
-#' IDs.
-#' @param Ped  a dataframe with 3 columns: ID - parent1 - parent2. Additional
-#'  columns and non-genotyped individuals are ignored. Only used to estimate
-#'  the error rate.
+#'   per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
+#'   IDs.
+#' @param Pedigree  a dataframe with 3 columns: ID - parent1 - parent2.
+#'   Additional columns and non-genotyped individuals are ignored. Used to
+#'   estimate the error rate.
+#' @param ErrFlavour function that takes the genotyping error rate \code{Err} as
+#'   input, and returns a 3x3 matrix of observed (columns) conditional on actual
+#'   (rows) genotypes, or choose from inbuilt ones as used in sequoia
+#'   'version2.0', 'version1.3', or 'version1.1'. See \code{\link{ErrToM}}.
 #' @param Plot  show histograms of the results?
 #'
 #' @return a matrix with a number of rows equal to the number of SNPs
-#'  (=number of columns of GenoM) and 2 or 3 columns:
+#'  (=number of columns of GenoM), and when no Pedigree is provided 2 columns:
 #' \item{AF}{Allele frequency of the 'second allele' (the one for which the
 #'   homozygote is coded 2)}
 #' \item{Mis}{Proportion of missing calls}
-#' \item{ER}{(only when Ped provided) number of Mendelian errors in parent-
-#'  offspring pairs (i.e. the number of opposing homozygotes, 'OHdam' &
-#'   'OHsire' in pedigree) and parent-parent-offspring trios ('MEpairs' in
-#'   pedigree).}
+#' When a Pedigree is provided, there are 7 additional columns:
+#' \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
+#'   genotyped for the SNP}
+#' \item{OHdam, OHsire}{Count of number of opposing homozygous cases}
+#' \item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
+#' \item{Err.hat}{Error rate, as estimated from the joined offspring-parent
+#'   (-parent) genotypes and the presumed error structure (\code{ErrFlavour})}
 #'
-#' @seealso  \code{\link{GenoConvert}}
+#' @seealso  \code{\link{GenoConvert}} to convert from various data formats;
+#'   \code{\link{CheckGeno}} to check the data is in valid format for sequoia
+#'   and exclude monomorphic SNPs etc., \code{\link{CalcOHLLR}} to calculate OH
+#'   & ME per individual
+#'
+#' @importFrom graphics plot points legend
 #'
 #' @export
 
 SnpStats <- function(GenoM,
-                     Ped = NULL,
+                     Pedigree = NULL,
+                     ErrFlavour = "version2.0",
                      Plot = TRUE)
 {
   Mis <- apply(GenoM, 2, function(x) sum(x==-9))/nrow(GenoM)
   AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
 
-  if (!is.null(Ped)) {
-    Par <- Ped[,1:3]
+  if (is.logical(Pedigree)) {
+    Plot <- Pedigree
+    Pedigree <- NULL
+  }
+  if (!is.null(Pedigree)) {
+    Par <- Pedigree[,1:3]
     for (i in 1:3) {
       Par[,i] <- as.character(Par[,i])
       Par[!Par[,i] %in% rownames(GenoM), i] <- NA
     }
     Par <- Par[!is.na(Par[,1]), ]
-    ER <- OHP(GenoM, Par)
+    ER <- EstErr(GenoM, Par, ErrFlavour)
     OUT <- cbind(AF, Mis, ER)
 
   } else {
@@ -64,41 +85,79 @@ SnpStats <- function(GenoM,
   }
 
   if (Plot) {
-    if (is.null(Ped)) {
-      op <- par(mfrow=c(1,3), mai=c(.8,.8,.5,.1))
+    oldpar <- par(no.readonly = TRUE)
+    if (is.null(Pedigree)) {
+      par(mfrow=c(1,3), mai=c(.9,.8,.2,.1))
     } else {
-      op <- par(mfrow=c(2,2), mai=c(.8,.8,.5,.1))
+      par(mfrow=c(2,3), mai=c(.9,.8,.2,.1))
     }
-    hist(OUT[,"AF"], breaks=ncol(GenoM)/5, col="grey", main="Frequency '1' allele",
-         xlab="", cex.main=1.2)
-    hist(OUT[,"Mis"], breaks=ncol(GenoM)/5, col="grey", main="Missingness",
-         xlab="", cex.main=1.2)
+    hist(OUT[,"AF"], breaks=ncol(GenoM)/5, col="grey", main="",
+         xlab="Frequency '1' allele", cex.lab=1.3, ylab="")
+    hist(OUT[,"Mis"], breaks=ncol(GenoM)/5, col="grey", main="",
+         xlab="Missingness", cex.lab=1.3, ylab="")
     MAF <- ifelse(OUT[,"AF"] <= 0.5, OUT[,"AF"], 1-OUT[,"AF"])
-    if (!is.null(Ped)) {
-      hist(OUT[,"ER"], breaks=c(0:(max(OUT[,"ER"])+2))-.5, col="grey", main="Mendelian Errors",
-         xlab="", cex.main=1.2)
+    if (!is.null(Pedigree)) {
+      hist(OUT[,"Err.hat"], breaks=ncol(GenoM)/5, col="grey",
+           main="", xlab="Error rate", cex.lab=1.3, ylab="")
     }
-    plot(MAF, OUT[,"Mis"], pch=16, cex=1.2, xlim=c(0,0.5), xlab="Minor Allele Frequency",
-         ylab="Missingness", cex.lab=1.3)
-    if (!is.null(Ped)) {
-      if (any(OUT[,"ER"] > 0)) {
-        q95 <- OUT[,"ER"] > stats::quantile(OUT[,"ER"], prob=0.95)
-        points(MAF[q95], OUT[q95, "Mis"], pch=16, col="red")
-        legend("topleft", "5% highest ER", pch=16, col="red", inset=.01)
-      }
+    plot(MAF, OUT[,"Mis"], pch=16, cex=1.2, xlim=c(0,0.5),
+         xlab="Minor Allele Frequency", ylab="Missingness", cex.lab=1.3)
+    if (!is.null(Pedigree)) {
+      q95.e <- OUT[,"Err.hat"] > stats::quantile(OUT[,"Err.hat"], prob=0.95)
+      points(MAF[q95.e], OUT[q95.e, "Mis"], pch=16, col="red")
+      legend("topleft", "5% highest error", pch=16, col="red", inset=.01)
+
+      plot(MAF, OUT[,"Err.hat"], pch=16, cex=1.2, xlim=c(0,0.5),
+         xlab="Minor Allele Frequency", ylab="Error rate", cex.lab=1.3)
+      q95.m <- OUT[,"Mis"] > stats::quantile(OUT[,"Mis"], prob=0.95)
+      points(MAF[q95.m], OUT[q95.m, "Err.hat"], pch=16, col="red")
+      legend("topleft", "5% highest missingness", pch=16, col="red", inset=.01)
+
+      plot(OUT[,"Mis"], OUT[,"Err.hat"], pch=16, cex=1.2,
+         xlab="Missingness", ylab="Error rate", cex.lab=1.3)
+      q95.maf <- MAF < stats::quantile(MAF, prob=0.05)
+      points(OUT[q95.maf,"Mis"], OUT[q95.maf,"Err.hat"], pch=16, col="grey")
+      legend("topright", "5% lowest MAF", pch=16, col="grey", inset=.01)
     }
-    par(op)
+    par(oldpar)  # restore old par settings
   }
 
-  rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT), width=ifelse(nrow(OUT)<1000, 3, 4), flag="0"))
-  return( OUT )
+  rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT),
+                                         width=ifelse(nrow(OUT)<1000, 3, 4),
+                                         flag="0"))
+  invisible( OUT )
 }
 
 
-#===========
 
-OHP <- function(GenoM, Par) {
-  GenoMx <- GenoM
+#==============================================================================
+#' @title Estimate genotyping error rate
+#'
+#' @description Estimate genotyping error rate from Mendelian errors per SNP.
+#'
+#' @param GenoM  Genotype matrix, in sequoia's format: 1 column per SNP, 1 row
+#'   per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
+#'   IDs.
+#' @param Par  Pedigree, only genotyped parents are used.
+#' @param ErrFlavour function that takes the genotyping error rate \code{Err} as
+#'   input, and returns a 3x3 matrix of observed (columns) conditional on actual
+#'   (rows) genotypes, or choose from inbuilt ones as used in sequoia
+#'   'version2.0', 'version1.3', or 'version1.1'. See \code{\link{ErrToM}}.
+#'
+#' @return a dataframe with columns:
+#' \item{Err.hat}{Error rate, as estimated from the joined offspring-parent
+#'   (-parent) genotypes and the presumed error structure (\code{ErrFlavour})}
+#' \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
+#'   genotyped for the SNP}
+#' \item{OHdam, OHsire}{Count of number of opposing homozygous cases}
+#' \item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
+#'
+#' @seealso \code{\link{SnpStats}}
+#'
+#' @keywords internal
+
+EstErr <- function(GenoM, Par, ErrFlavour = "version2.0") {
+	GenoMx <- GenoM
   GenoMx[GenoMx==-9] <- 3
   GenoMx <- rbind(GenoMx, "NA" = 3)
   GenoMx <- GenoMx +1
@@ -108,18 +167,120 @@ OHP <- function(GenoM, Par) {
   Par$RowS <- with(Par, sapply(sire, function(x, y) ifelse(is.na(x), nrow(GenoMx),
                                             which(y == x)), y = rownames(GenoMx)))
 
-  # mendelian errors
+	Obs.OO.all <- array(dim=c(nrow(Par), 3, ncol(GenoMx)))  # 4 = NA
+  for (i in 1:nrow(Par)) {
+    Obs.OO.all[i,,] <- rbind(GenoMx[Par$RowI[i], ],
+                             GenoMx[Par$RowD[i], ],
+                             GenoMx[Par$RowS[i], ])
+  }
+  OO.trio <- plyr::aaply(Obs.OO.all, 3, function(M) table(factor(M[,1], levels=1:4),
+                                                    factor(M[,2], levels=1:4),
+                                                    factor(M[,3], levels=1:4)))
+
+	AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
+
+	ErrF <- ErrToM(flavour = ErrFlavour, Return = "function")
+
+	E.hat <- numeric(ncol(GenoM))  # based on trio where possible
+	for (l in 1:ncol(GenoM)) {
+		E.hat[l] <- stats::optimise(CalcChi2, interval=c(0,1), q=AF[l],
+		                     A.obs=OO.trio[l,,,], ErrF=ErrF)$minimum
+	}
+
+	# mendelian errors
   MER <- array(0, dim=c(4,4,4))  # offspr - mother - father
   MER[1:3,,1] <- matrix(c(0,1,2, 0,0,1, 1,0,1, 0,0,1), 3,4)  # 0/1/2/NA
   MER[1:3,,2] <- matrix(c(0,0,1, 0,0,0, 1,0,0, 0,0,0), 3,4)
   MER[1:3,,3] <- matrix(c(1,0,1, 1,0,0, 2,1,0, 1,0,0), 3,4)
   MER[1:3,,4] <- matrix(c(0,0,1, 0,0,0, 1,0,0, 0,0,0), 3,4)
 
-  ERcount <- matrix(0, nrow(Par), ncol(GenoMx))
-  for (i in 1:nrow(Par)) {
-    ERcount[i, ] <- MER[cbind(GenoMx[Par$RowI[i], ],
-                          GenoMx[Par$RowD[i], ],
-                          GenoMx[Par$RowS[i], ])]
+  tmpdam <- apply(OO.trio, c(1,2,3), sum)  # sum over sire genotypes
+  tmpsire <- apply(OO.trio, c(1,2,4), sum)
+  Counts <- cbind(n.dam = apply(tmpdam, 1, function(M) sum(M[1:3, 1:3])),
+                  OHdam = apply(tmpdam, 1, function(M) M[1,3] + M[3,1]),
+                  n.sire = apply(tmpsire, 1, function(M) sum(M[1:3, 1:3])),
+                  OHsire = apply(tmpsire, 1, function(M) M[1,3] + M[3,1]),
+                  n.pair = apply(OO.trio, 1, function(A) sum(A[1:3, 1:3, 1:3])),
+                  MEpair = sapply(1:ncol(GenoM), function(l) sum(MER * OO.trio[l,,,])))
+
+	return( data.frame(Err.hat = E.hat, Counts) )
+}
+
+
+
+#==============================================================================
+#' @title Perform chi-square test on observed vs expected genotypes
+#'
+#' @description For one SNP and all offspring-parent-parent trios or single
+#'   parent-offspring pairs, calculate the expected genotype frequencies given
+#'   the allele frequency, genotyping error rate, and error flavour, and perform
+#'   a chi-square test.
+#'
+#' @param E  presumed genotyping error rate
+#' @param q  allele frequency
+#' @param A.obs  array of dim 4x4x4 with counts of joined
+#'   offspring-parent-parent at the SNPs
+#' @param ErrF  ErrFlavour; function that takes the genotyping error rate
+#'   \code{Err} as input, and returns a 3x3 matrix of observed (columns)
+#'   conditional on actual (rows) genotypes, or choose from inbuilt ones as used
+#'   in sequoia 'version2.0', 'version1.3', or 'version1.1'. See
+#'   \code{\link{ErrToM}}.
+#'
+#' @return the chisquare value of the test
+#'
+#' @seealso \code{\link{EstErr}, \link{SnpStats}}
+#'
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' E.hat <- numeric(ncol(GenoM))  # based on trio where possible
+#' for (l in 1:ncol(GenoM)) {
+#' 		E.hat[l] <- stats::optimise(CalcChi2, interval=c(0,1), q=AF[l],
+#' 		                     A.obs=OO.trio[l,,,], ErrF=ErrF)$minimum
+#' } }
+
+CalcChi2 <- function(E, q, A.obs, ErrF) {
+  A.obs[4,,] <- NA   # id not SNPd: no information
+  A.obs[,4,4] <- NA  # neither parent SNPd: no information
+  mis <- c(dam = sum(A.obs[,4,], na.rm=T),
+           sire = sum(A.obs[,,4], na.rm=T)) / sum(A.obs, na.rm=T)
+
+  # TODO?: calc q from M.obs & adjust iteratively for E
+  AHWE <- c((1-q)^2, 2*q*(1-q), q^2)
+
+  # offspring - parent pair
+  AKAP <- matrix(c(1-q, (1-q)/2, 0,
+                       q,   1/2,     1-q,
+                       0,   q/2,     q), nrow=3, byrow=TRUE)
+  P.AA <- sweep(AKAP, 2, AHWE, "*")  # joined prob actual genotypes
+
+  ErrM <- ErrF(E)
+  P.OO <- t(ErrM) %*% P.AA %*% ErrM     # joined prob obs genotypes
+
+  # offspring - dam - sire trio
+  AKA2P <- array(dim=c(3,3,3))  # offspr - mother - father
+  AKA2P[1,,] <- matrix(c(1,.5,0, .5,.25, 0,  0, 0,0), nrow=3)
+  AKA2P[2,,] <- matrix(c(0,.5,1, .5, .5,.5,  1,.5,0), nrow=3)
+  AKA2P[3,,] <- matrix(c(0, 0,0,  0,.25,.5,  0,.5,1), nrow=3)
+
+  P.AAA <- sweep( sweep(AKA2P, 2, AHWE, "*"), 3, AHWE, "*")
+  P.OOA <- array(dim=c(3,3,3))
+  for (i in 1:3) {
+    P.OOA[,,i] <- t(ErrM) %*% P.AAA[,,i]  %*% ErrM
   }
-  apply(ERcount, 2, sum, na.rm=T)
+
+  P.OOO <- array(NA, dim=c(4,4,4))
+  for (j in 1:3) {
+    P.OOO[1:3,j,1:3] <- P.OOA[,j,] %*% ErrM
+  }
+  P.OOO <- P.OOO * (1 - mis["dam"]) * (1 - mis["sire"])
+  P.OOO[1:3, 4, 1:3] <- mis["dam"] * P.OO
+  P.OOO[1:3, 1:3, 4] <- mis["sire"] * P.OO
+  P.OOO <- P.OOO / sum(P.OOO, na.rm=T)  # rounding errors
+
+  A.exp <- P.OOO * sum(A.obs, na.rm=T)
+
+  Chi2 <- sum((A.obs - A.exp)^2 / A.exp, na.rm=TRUE)
+  return( Chi2 )
 }

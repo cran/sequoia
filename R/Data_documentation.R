@@ -1,6 +1,7 @@
 #' @title Example pedigree
 #'
-#' @description This is Pedigree II in the paper.
+#' @description This is Pedigree II in the paper, with discrete generations and
+#'   considerable inbreeding
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
@@ -54,8 +55,9 @@ NULL
 #' @keywords datasets sequoia
 #' @name SimGeno_example
 #' @usage data(SimGeno_example)
-#' @format A data frame with 214 rows and 201 columns: id, followed by 1 column
-#' per SNP coded as 0/1/2 or -9 for missing values.
+#' @format A genotype matrix with 214 rows (ids) and 200 columns (SNPs). Each
+#'   SNP is coded as 0/1/2 copies of the reference allele, with -9 for missing
+#'   values. Ids are stored as rownames.
 NULL
 
 
@@ -80,4 +82,52 @@ NULL
 #'   \item{d4}{mother genotype}
 #'   \item{d5}{father genotype}
 #' }
+NULL
+
+
+#' @title Example pedigree: griffins
+#'
+#' @description Example Pedigree used in the ageprior vignette, with overlapping
+#'   generations.
+#'
+#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
+#'
+#' @seealso \code{\link{SeqOUT_griffin}} for a sequoia run on simulated genotype
+#'   data based on this pedigree; \code{\link{Ped_HSg5}} for another pedigree,
+#'   \code{\link{sequoia}}
+#'
+#' @docType data
+#' @keywords datasets sequoia
+#' @name Ped_griffin
+#' @usage data(Ped_griffin)
+#' @format A data frame with 200 rows and 4 variables (id, dam, sire, birthyear)
+NULL
+
+
+#' @title Example sequoia output (griffins)
+#'
+#' @description Example output of a sequoia run including sibship clustering,
+#' based on the griffin pedigree.
+#'
+#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
+#'
+#' @seealso \code{\link{Ped_griffin}, \link{sequoia}}
+#'
+#' @docType data
+#' @keywords datasets sequoia
+#' @name SeqOUT_griffin
+#' @usage data(SeqOUT_griffin)
+#' @format a list, see \code{\link{sequoia}}
+#'
+#' @examples
+#' \dontrun{
+#' GenoS <- SimGeno(Ped.griffin, nSnp=400, ParMis=0.4)
+#' griffin.sex <- sapply(Ped.griffin$ID,
+#'                     function(x) substr(x, start=nchar(x), stop=nchar(x)))
+#' LH_griffin <- data.frame(ID = Ped_griffin$ID,
+#'                          Sex = ifelse(griffin.sex=="F", 1, 2),
+#'                          BirthYear = Ped_griffin$BY)
+#' SeqOUT_griffin <- sequoia(GenoS, LH_griffin,
+#'                   MaxSibIter = 10,
+#'                   args.AP = list(Smooth = FALSE)) }
 NULL

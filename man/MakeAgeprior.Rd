@@ -4,52 +4,78 @@
 \alias{MakeAgePrior}
 \title{Age priors}
 \usage{
-MakeAgePrior(Ped = NULL, LifeHistData = NULL, MaxAgeParent = NULL,
-  Flatten = TRUE, lambdaNW = -log(0.5)/100, Smooth = TRUE,
-  Plot = TRUE, Return = "LR", quiet = FALSE)
+MakeAgePrior(
+  Pedigree = NULL,
+  LifeHistData = NULL,
+  MaxAgeParent = NULL,
+  Discrete = NULL,
+  Flatten = NULL,
+  lambdaNW = -log(0.5)/100,
+  Smooth = TRUE,
+  Plot = TRUE,
+  Return = "LR",
+  quiet = FALSE
+)
 }
 \arguments{
-\item{Ped}{dataframe with pedigree, with id - dam - sire in columns 1-3, and
-optional column with birth years. Other columns are ignored.}
+\item{Pedigree}{dataframe with id - dam - sire in columns 1-3, and optional
+column with birth years. Other columns are ignored.}
 
-\item{LifeHistData}{dataframe with columns id - sex (not used) - birth year
-(unknown: negative number or NA). Column names are ignored, so the column
-order is important. "Birth year" may be in any arbitrary discrete time unit
-relevant to the species (day, month, decade), as long as parents are never
-born in the same time unit as their offspring.}
+\item{LifeHistData}{dataframe with 3 or 5 columns: id - sex (not used) -
+birth year (- BY.min - BY.max), with unknown birth years coded as negative
+numbers or NA. Column names are ignored, so the column order is important.
+"Birth year" may be in any arbitrary discrete time unit relevant to the
+species (day, month, decade), as long as parents are never born in the same
+time unit as their offspring. It may include individuals not in the
+pedigree, and not all individuals in the pedigree need to be in
+LifeHistData.}
 
-\item{MaxAgeParent}{maximum age of a parent (max across dams and sires). If
-NULL, will be estimated from the data. If there are fewer than 100 parents
-of either sex assigned, \code{MaxAgeParent} is set to the maximum age
-difference in the birth year column of \code{Ped} or \code{LifeHistData}.}
+\item{MaxAgeParent}{maximum age of a parent, a single number (max across
+dams and sires) or a vector of length two (dams, sires). If NULL, it will
+be estimated from the data. If there are fewer than 20 parents of either
+sex assigned, \code{MaxAgeParent} is set to the maximum age difference in
+the birth year column of \code{Pedigree} or \code{LifeHistData}.}
 
-\item{Flatten}{Calculate weighed average between the observed age difference
-distribution among the relative pairs with known age difference and a
-completely flat distribution. The weights are a function of the number of
-pairs and \code{lambdaNW}, see \code{Details}. Advisable if the relative
-pairs with known age difference non-typical of the pedigree as a whole or
-when their number is limited, and therefore automatically set to TRUE when
-there are fewer than 20 parents of either sex assigned. Not advisable when
-generations do not overlap.}
+\item{Discrete}{Discrete generations? By default (NULL), discrete
+generations are assumed if all parent-offspring pairs have an age
+difference of 1, and all siblings an age difference of 0, and there are at
+least 20 pairs of each category (mother, father, maternal sibling, paternal
+sibling). Otherwise, overlapping generations are presumed. When
+\code{Discrete=TRUE} (explicitly or deduced), \code{Smooth} and
+\code{Flatten} are always automatically set to \code{FALSE}. Use
+\code{Discrete=FALSE} to enforce (potential for) overlapping generations.}
 
-\item{lambdaNW}{When \code{Flatten=TRUE}, weighing factors of the
-data-estimated age-difference distribution versus a flat distribution are
-calculated as \eqn{W(R) = 1 - exp(-lambdaNW * N(R))}, where \eqn{N(R)} is
-the number of pairs with relationship R for which the age difference is
-known. See Details below.}
+\item{Flatten}{To deal with small sample sizes for some or all relationships,
+calculate weighed average between the observed age difference distribution
+among relatives and a flat (0/1) distribution. When \code{Flatten=NULL}
+(the default) automatically set to TRUE when there are fewer than 20
+parents with known age of either sex assigned, or fewer than 20 maternal or
+paternal siblings with known age difference. Also advisable if the sampled
+relative pairs with known age difference are non-typical of the pedigree as
+a whole.}
+
+\item{lambdaNW}{Control weighing factors when \code{Flatten=TRUE}. Weights
+are calculated as \eqn{W(R) = 1 - exp(-lambdaNW * N(R))}, where \eqn{N(R)}
+is the number of pairs with relationship R for which the age difference is
+known. Large values (>0.2) put strong emphasis on the pedigree, small
+values (<0.0001) cause the pedigree to be ignored. Default results in
+\eqn{W=0.5} for \eqn{N=100}.}
 
 \item{Smooth}{Smooth the tails of and any dips in the distribution? Sets dips
-(<10\% of average of neighbouring ages) to the average of the neigbouring
+(<10\% of average of neighbouring ages) to the average of the neighbouring
 ages, sets the age after the end (oldest observed age) to LR(end)/2, and
 assigns a small value (0.001) to the ages before the front (youngest
-observed age) and after the new end. Set to FALSE when generations do not
-overlap.}
+observed age) and after the new end. Peaks are not smoothed out, as these
+are less likely to cause problems than dips, and are more likely to be
+genuine characteristics of the species. Is set to \code{FALSE} when
+generations do not overlap (\code{Discrete=TRUE}).}
 
-\item{Plot}{plot a 2-panel overview of the results?}
+\item{Plot}{plot a heatmap of the results? Only when \code{Pedigree} is
+provided}
 
 \item{Return}{return only a matrix with the likelihood-ratio \eqn{P(A|R) /
-P(A)} ("LR") or a list including also various intermediate statistics
-("all") ?}
+P(A)} (\code{"LR"}) or a list including also various intermediate statistics
+(\code{"all"}) ?}
 
 \item{quiet}{suppress messages}
 }
@@ -59,102 +85,116 @@ A matrix with the probability ratio of the age difference between two
   (\eqn{P(A|R)}) versus being a random draw from the sample (\eqn{P(A)}). For
   siblings and avuncular pairs, this is the absolute age difference.
 
-  The matrix has one row per age difference (0 - nAgeClasses) and nine
+  The matrix has one row per age difference (0 - nAgeClasses) and five
   columns, one for each relationship type, with abbreviations:
-  \item{M}{Mothers} \item{P}{Fathers} \item{FS}{Full siblings}
-  \item{MS}{Maternal half-siblings} \item{PS}{Paternal half-siblings}
-  \item{MGM}{Maternal grandmother} \item{PGF}{Paternal grandfather}
-  \item{MGF}{Maternal grandfathers and paternal grandmothers}
-  \item{UA}{Avuncular (aunt/uncle - niece/nephew)}
+  \item{M}{Mothers}
+  \item{P}{Fathers}
+  \item{FS}{Full siblings}
+  \item{MS}{Maternal half-siblings}
+  \item{PS}{Paternal half-siblings}
 
   When \code{Return}='all', a list is returned with in addition to this
   matrix ('LR.RU.A') the following elements:
-  \item{BirthYearRange}{vector length 2}
-  \item{MaxAgeParent}{single number, as estimated from the data or provided}
-  \item{tblA.R}{matrix with the counts per age difference (0 - nAgeClasses)
-  and the five relationship types as for 'LR.RU.A', plus a column 'X' with
-  age differences across all pairs of individuals, including those in
-  LifeHistData but not in Ped.}
-  \item{Weights}{vector length 4, the weights
-    used to flatten the distributions}
-  \item{LR.RU.A.unweighed}{matrix with
-    nAgeClasses+1 rows and 9 columns; LR.RU.A prior to flattening and
-    smoothing}
+   \item{BirthYearRange}{vector length 2}
+   \item{MaxAgeParent}{single number, estimated from the data or provided}
+   \item{tblA.R}{matrix with the counts per age difference (0 -
+  nAgeClasses) and the five relationship types as for 'LR.RU.A', plus a
+  column 'X' with age differences across all pairs of individuals, including
+  those in LifeHistData but not in Pedigree.}
+   \item{Weights}{vector length 4, the weights used to flatten the
+    distributions}
+   \item{LR.RU.A.unweighed}{matrix with nAgeClasses+1 rows and 5 columns;
+    LR.RU.A prior to flattening and smoothing}
+   \item{Specs.AP}{the names of the input Pedigree and LifeHistData (or
+   NULL), the 'effective' settings of Discrete, Smooth, and Flatten, and the
+   value of lambdaNW}
 }
 \description{
-Calculate age-difference based prior probability ratios
-  \eqn{P(A|R) / P(A)} for various categories of pairwise relatives.
+For various categories of pairwise relatives (R), calculate
+  age-difference (A) based probability ratios \eqn{P(A|R) / P(A)} .
 }
 \details{
-Using Bayes' theorem, \deqn{P(Relationship | Age difference) =
-  P(Age difference | Relationship) / P(Age difference) * P(Relationship)} or
-  for short \eqn{P(R|A) =P(A|R) / P(A) * P(R)}. During pedigree
-  reconstruction, the ratios \eqn{P(A|R) / P(A)} calculated here are
-  multiplied by the age-independent genetic-only \eqn{P(Relationship)} to
-  obtain a probability that the pair are relatives of type R conditional on
-  both their age difference and their genotypes. This age-difference prior is
-  used not only for pairs of genotyped individuals, but also between
-  genotyped and dummy individuals and between pairs of dummy individuals.
-  Therefore, \eqn{P(Age difference)} is taken in the broadest sense possible
-  and calculated across all pairs of individuals in Ped and LifeHistData.
-  When P(A) is 0 but The resulting distribution is by default flattened and
-  smoothed to account for finite sample size.
+The ratio \eqn{P(A|R) / P(A)} is the ratio between the observed
+  counts of pairs with age difference A and relationship R (\eqn{N_{A,R}}),
+  and the expected counts if age and relationship were independent
+  (\eqn{N_{.,.}*p_A*p_R}).
 
-Sometimes no age information is available for one or more relative
-categories, for example when all candidate fathers are unsampled and/or of
-unknown age. To account for the amount of information available, if
-Flatten=TRUE a weighed average of \eqn{P(A|R)/P(A)} as estimated from the
-data and a completely flat distribution is returned. The weighing factor
-\eqn{W(R)} for each relationship is a function of the number of relative
-pairs with a known age difference \eqn{N(R)}, following the sigmoid curve
-\eqn{W(R) = 1 - exp(-lambdaNW * N(R))}. By default,
-\eqn{lambdaNW=-log(0.5)/100}, corresponding to a weight of <50\% if there are
-<100 pairs, and >50\% if there are >100 pairs. See example below for a plot
-of this curve.
+  During pedigree reconstruction, the ratios \eqn{P(A|R) / P(A)} calculated
+  here are multiplied by the age-independent genetic-only \eqn{P(R|G)} to
+  obtain a probability that the pair are relatives of type R conditional on
+  both their age difference and their genotypes (i.e. using Bayes' theorem,
+  \eqn{P(R|A, G) =P(A|R) / P(A) * P(R|G)}).
+
+  The age-difference prior is used for pairs of genotyped individuals, as
+  well as for dummy individuals. This assumes that the propensity for a pair
+  with a given age difference to both be sampled does not depend on their
+  relationship, so that the ratio \eqn{P(A|R) / P(A)} does not differ between
+  sampled and unsampled pairs.
 }
-\section{Discrete generations}{
- When generations do not overlap, Flatten and
-  Smooth should both be set to FALSE. This is done automatically when it is
-  detected that all parents are 1 year older than their offspring, and
-  siblings are always born in the same year.
+\section{CAUTION}{
+ The small sample correction with \code{Smooth} and/or
+  \code{Flatten} prevents errors in one dataset, but may introduce errors in
+  another; a single solution that fits to the wide variety of life histories
+  and datasets is impossible. Please do inspect the matrix, e.g. with
+  \code{PlotAgePrior}.
 }
 
 \section{Single cohort}{
  When no birth year information is given, or all
-  individuals have the same birthyear, it is assumed that a single cohort has
-  been analysed and a simple 2 by 9 matrix with 0's and 1's is returned. Note
-  that by default it is assumed that no avuncular pairs exist within this
-  single cohort; if they may exist, change LR.RU.A["0","UA"] from 0 to 1.
+  individuals have the same birth year, it is assumed that a single cohort has
+  been analysed and a matrix with 0's and 1's is returned. When
+  \code{Discrete=FALSE}, avuncular pairs are assumed potentially present,
+  while when \code{Discrete=TRUE} avuncular is not considered as a
+  relationship possibility.
 }
 
 \section{Other time units}{
  "Birth year" may be in any arbitrary time unit
   relevant to the species (day, month, decade), as long as parents are never
-  born in the same time unit as their offspring. Time of
-  birth/hatching/germination must be expressed as whole, positive numbers.
+  born in the same time unit as their offspring, but always before their
+  putative offspring (e.g. parent's BirthYear= 1 (or 2001) and offspring
+  BirthYear=5 (or 2005)). Negative numbers and NA's are interpreted as unknown,
+  and fractional numbers are not allowed.
+}
+
+\section{Maximum parental age}{
+ The number of rows in the output ageprior
+  matrix equals the maximum parental age +1 (the first row is for age
+  difference 0). The maximum parental age equals:
+ \itemize{
+ \item{}{the maximum age of parents if a pedigree is provided, or}
+ \item{}{the (largest) value of \code{MaxAgeParent}, or}
+ \item{}{1, if generations are discrete, or}
+ \item{}{the maximum range of birth years in LifeHistData (including BY.min
+ and BY.max, when provided)}}
+ Exception is when \code{MaxAgeParent} is larger than the maximum age of
+ parents in the provided skeleton pedigree, then \code{MaxAgeParent} is used.
+ Thus, \code{MaxAgeParent} can be used when the birth year range in
+ LifeHistData and/or the age distribution of assigned parents does not
+ capture the absolutely maximum age of parents. Not adjusting this may hinder
+ subsequent assignment of both dummy parents and grandparents.
 }
 
 \examples{
 data(LH_HSg5, Ped_HSg5, package="sequoia")
+
+# no pedigree available:
+MakeAgePrior(LifeHistData = LH_HSg5)
+MakeAgePrior(LifeHistData = LH_HSg5, Discrete=TRUE)
+MakeAgePrior(LifeHistData = LH_HSg5, MaxAgeParent = c(2,3))
 \dontrun{
-MakeAgePrior(Ped_HSg5, LH_HSg5, Flatten=FALSE, Smooth=FALSE)
-APlist <- MakeAgePrior(Ped_HSg5, LH_HSg5, Flatten=FALSE, Smooth=TRUE,
-  Return="all") }
-
-# effect of lambdaNW on weights when Flatten=TRUE:
-lambda1 <- -log(0.5)/100
-lambda2 <- -log(1-.9)/100
-curve(1-exp(-lambda1*x), lty=2, lwd=2, from=1, to=1000, log="x",
-      xlab="N known age difference", ylab="W", las=1)
-curve(1-exp(-lambda2*x), lty=2, lwd=2, col="blue", add=TRUE)
-abline(h=c(0,.1,.25,.5,.75,.9,1), col="grey", lty=3)
-
-N = c(1,10,42,100,200, 432, 1e3, 1e4)
-data.frame(N = N,
-           W1 = round(1-exp(-lambda1*N), 3),
-           W2 = round(1-exp(-lambda2*N), 3))
+# with pedigree:
+MakeAgePrior(Pedigree=Ped_HSg5[1:100,], LifeHistData = LH_HSg5)
+MakeAgePrior(Ped_HSg5[1:100,], LH_HSg5, Discrete=FALSE)
+# With 'Flatten', the value depens on the no. pairs per relationship:
+MakeAgePrior(Ped_HSg5[1:100,], LH_HSg5, Flatten=TRUE)
+AP.all <- MakeAgePrior(Ped_HSg5[1:200,], LH_HSg5, Flatten=TRUE)
+AP.all$tblA.R
+}
 
 }
 \seealso{
-\code{\link{sequoia}, \link{PlotAgePrior}}
+\code{\link{sequoia}} (and its argument \code{args.AP}),
+  \code{\link{PlotAgePrior}} for visualisation. The age vignette gives
+  further details, mathematical justification, and some examples.
 }

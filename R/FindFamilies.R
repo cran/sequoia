@@ -35,6 +35,10 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
     } else {
       stop("please provide either Ped or SeqList with element 'PedigreePar' or 'Pedigree'")
     }
+  } else {
+    if (!(is.data.frame(Ped) | is.matrix(Ped)) || nrow(Ped)<2 || ncol(Ped)<3) {
+      stop("'Ped' must be a dataframe with at least columns id - dam - sire")
+    }
   }
   Ped <- Ped[, 1:3]
 
@@ -50,7 +54,7 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
 
       if (length(AL[[x]]) > 0) {
         DXL <- list()
-        for (a in 1:length(AL[[x]])) {
+        for (a in seq_along(AL[[x]])) {
           DXL[[a]] <- unique(unlist(GetDesc(which(Ped[,1] == AL[[x]][a]), Ped)))
         }
         DL[[x+1]] <- unique(unlist(DXL))
@@ -61,7 +65,7 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
 
       if (length(DL[[x]]) > 0) {
         AXL <- list()
-        for (d in 1:length(DL[[x]])) {
+        for (d in seq_along(DL[[x]])) {
           AXL[[d]] <- unique(unlist(GetAncest(which(Ped[,1] == DL[[x]][d]), Ped)))
         }
         AL[[x+1]] <- unique(unlist(AXL))
@@ -88,15 +92,17 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
     MR <- merge(MR, stats::setNames(PedX, c("ID2", "FID2")), all.x=TRUE)
 
     NewLinks <- with(MR, MR[which(FID1 != FID2), ])
-    for (i in 1:nrow(NewLinks)) {
-      if (NewLinks$FID1[i]==0 & NewLinks$FID2[i]!=0) {
-        Ped$FID[Ped$id == NewLinks$ID1[i]] <- NewLinks$FID2[i]
-      } else if (NewLinks$FID1[i]!=0 & NewLinks$FID2[i]==0) {
-        Ped$FID[Ped$id == NewLinks$ID2[i]] <- NewLinks$FID1[i]
-      } else {
-        newFID <- min(NewLinks[i, c("FID1", "FID2")])
-        oldFID <- max(NewLinks[i, c("FID1", "FID2")])
-        Ped$FID[which(Ped$FID == oldFID)] <- newFID
+    if (nrow(NewLinks)>0) {
+      for (i in 1:nrow(NewLinks)) {
+        if (NewLinks$FID1[i]==0 & NewLinks$FID2[i]!=0) {
+          Ped$FID[Ped$id == NewLinks$ID1[i]] <- NewLinks$FID2[i]
+        } else if (NewLinks$FID1[i]!=0 & NewLinks$FID2[i]==0) {
+          Ped$FID[Ped$id == NewLinks$ID2[i]] <- NewLinks$FID1[i]
+        } else {
+          newFID <- min(NewLinks[i, c("FID1", "FID2")])
+          oldFID <- max(NewLinks[i, c("FID1", "FID2")])
+          Ped$FID[which(Ped$FID == oldFID)] <- newFID
+        }
       }
     }
   }

@@ -1,0 +1,116 @@
+#' @title Maximum number of mismatches
+#'
+#' @description Calculate the maximum expected number of mismatches for
+#'   duplicate samples, parent-offspring pairs, and parent-parent-offspring
+#'   trios.
+#'
+#' @details The thresholds for maximum number of mismatches calculated here aim
+#'   to minimise false negatives, i.e. to minimise the chance that any true
+#'   duplicates or true parent-offspring pairs are already excluded during the
+#'   filtering steps where these \code{MaxMismatch} values are used.
+#'   Consequently, there is a high probability of false positives, i.e. it is
+#'   likely that some sample pairs with fewer mismatches than the
+#'   \code{MaxMismatch} threshold, are in fact not duplicate samples or
+#'   parent-offspring pairs. Use of these \code{MaxMismatch} thresholds is
+#'   therefore only the first step of pedigree reconstruction by
+#'   \code{\link{sequoia}}.
+#'
+#' @param Err estimated genotyping error rate, as a single number or 3x3 matrix.
+#'   If a matrix, this should be the probability of observed genotype (columns)
+#'   conditional on actual genotype (rows). Each row must therefore sum to 1.
+#' @param MAF vector with minor allele frequency at each SNP.
+#' @param ErrFlavour function that takes \code{Err} as input, and returns a 3x3
+#'   matrix of observed (columns) conditional on actual (rows) genotypes, or
+#'   choose from inbuilt ones as used in sequoia 'version2.0', 'version1.3', or
+#'   'version1.1'. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.
+#' @param qntl quantile of binomial distribution to be used as the maximum, of
+#'   individual-level probability. For a desired dataset-level probability
+#'   quantile \eqn{Q}, use \eqn{qntl = Q^(1/N)}, where \eqn{N} is the number of
+#'   individuals.
+#'
+#' @return a vector with three integers:
+#'  \item{DUP}{Maximum number of differences between 2 samples from the
+#'   same individual}
+#'  \item{OH}{Maximum number of Opposing Homozygous SNPs between a true
+#'    parent-offspring pair}
+#'  \item{ME}{Maximum number of Mendelian Errors among a true parent-parent-
+#'   offspring trio}
+#'
+#' @seealso  \code{\link{SnpStats}}
+#'
+#' @export
+
+CalcMaxMismatch <- function(Err, MAF, ErrFlavour = "version2.0", qntl=1-1e-5) {
+
+	# TODO: Err a vector with same length as MAF (ErrToM Return='function')
+
+  # ErrM: observed (columns) conditional on actual (rows)
+  ErrM <- ErrToM(Err, flavour = ErrFlavour, Return = "matrix")  # performs checks if Err is already matrix
+
+  if (!is.double(MAF) || any(MAF < 0 | MAF > 1)) {
+    stop("Allele frequency vector 'MAF' must be between 0 and 1")
+  }
+  if (!is.double(qntl) || qntl < 0 | qntl > 1) {
+    stop("'qntl' must be a number between 0 and 1")
+  }
+
+
+  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  # arrays to calculate offspring-dam-sire mendelian error probability
+  AKA2P <- array(dim=c(3,3,3))  # offspr - mother - father
+  AKA2P[1,,] <- matrix(c(1,.5,0, .5,.25, 0,  0, 0,0), nrow=3)
+  AKA2P[2,,] <- matrix(c(0,.5,1, .5, .5,.5,  1,.5,0), nrow=3)
+  AKA2P[3,,] <- matrix(c(0, 0,0,  0,.25,.5,  0,.5,1), nrow=3)
+
+  I.ME <- array(0, dim=c(3,3,3))
+  I.ME[1,3, ] <- 1
+  I.ME[3,1, ] <- 1
+  I.ME[1, ,3] <- 1
+  I.ME[3, ,1] <- 1
+  I.ME[2,1,1] <- 1
+  I.ME[2,3,3] <- 1
+  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+  # per-SNP probability of mismatch
+  P.Mismatch <- matrix(NA, 3, length(MAF),
+                       dimnames = list(c("DUP", "OH", "ME"), seq_along(MAF)))
+  # probably possible to do it slightly faster w/o for loop, but not easily.
+  for (x in seq_along(MAF)) {
+    q <- MAF[x]
+    AHWE <- c((1-q)^2, 2*q*(1-q), q^2)
+
+    # duplicate mismatch
+    P.Mismatch["DUP", x] <- 1 - sum(ErrM^2 %*% AHWE)
+
+    # parent-offspring opposite homozygosite
+    AKAP <- matrix(c(1-q, (1-q)/2, 0,
+                     q,   1/2,     1-q,
+                     0,   q/2,     q), nrow=3, byrow=TRUE)
+    P.AA <- sweep(AKAP, 2, AHWE, "*")   # joined prob actual genotypes
+    P.OO <- t(ErrM) %*% P.AA %*% ErrM     # joined prob obs genotypes
+    P.Mismatch["OH", x] <- P.OO[1,3] + P.OO[3,1]
+
+    # offspring-dam-sire mendelian error
+    P.AAA <- sweep( sweep(AKA2P, 2, AHWE, "*"), 3, AHWE, "*")
+    P.OOA <- array(dim=c(3,3,3))
+    for (i in 1:3) {
+      P.OOA[,,i] <- t(ErrM) %*% P.AAA[,,i]  %*% ErrM
+    }
+    P.OOO <- array(dim=c(3,3,3))  # 3x obs
+    for (j in 1:3) {
+      P.OOO[,j,] <- P.OOA[,j,] %*% ErrM
+    }
+    P.Mismatch["ME", x] <- sum(P.OOO * I.ME)
+  }
+
+  MaxMismatch <- setNames(numeric(3), c("DUP", "OH", "ME"))
+  for (x in 1:3) {
+    MaxMismatch[x] <- stats::qbinom(qntl, size = length(MAF), prob = mean(P.Mismatch[x, ]))
+  }
+
+  return( MaxMismatch )
+}
+
+#===============================================================================
+#===============================================================================

@@ -4,8 +4,13 @@
 \alias{LHConvert}
 \title{Extract sex and birthyear from PLINK file}
 \usage{
-LHConvert(PlinkFile = NULL, UseFID = FALSE, SwapSex = TRUE,
-  FIDsep = "__", LifeHistData = NULL)
+LHConvert(
+  PlinkFile = NULL,
+  UseFID = FALSE,
+  SwapSex = TRUE,
+  FIDsep = "__",
+  LifeHistData = NULL
+)
 }
 \arguments{
 \item{PlinkFile}{character string with name of genotype file to be converted}

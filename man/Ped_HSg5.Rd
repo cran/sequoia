@@ -4,12 +4,15 @@
 \name{Ped_HSg5}
 \alias{Ped_HSg5}
 \title{Example pedigree}
-\format{A data frame with 1000 rows and 3 variables (id, dam, sire)}
+\format{
+A data frame with 1000 rows and 3 variables (id, dam, sire)
+}
 \usage{
 data(Ped_HSg5)
 }
 \description{
-This is Pedigree II in the paper.
+This is Pedigree II in the paper, with discrete generations and
+  considerable inbreeding
 }
 \references{
 Huisman, J. (2017) Pedigree reconstruction from SNP data:

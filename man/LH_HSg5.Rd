@@ -4,8 +4,10 @@
 \name{LH_HSg5}
 \alias{LH_HSg5}
 \title{Example life history file}
-\format{A data frame with 1000 rows and 3 variables: ID, Sex (1=female,
-2=male), and BirthYear}
+\format{
+A data frame with 1000 rows and 3 variables: ID, Sex (1=female,
+2=male), and BirthYear
+}
 \usage{
 data(LH_HSg5)
 }

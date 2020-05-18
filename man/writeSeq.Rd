@@ -4,14 +4,25 @@
 \alias{writeSeq}
 \title{write sequoia output to excel or text files}
 \usage{
-writeSeq(SeqList, GenoM = NULL, PedComp = NULL, OutFormat = "txt",
-  folder = "Sequoia-OUT", file = "Sequoia-OUT.xlsx", quiet = FALSE)
+writeSeq(
+  SeqList,
+  GenoM = NULL,
+  MaybeRel = NULL,
+  PedComp = NULL,
+  OutFormat = "txt",
+  folder = "Sequoia-OUT",
+  file = "Sequoia-OUT.xlsx",
+  ForVersion = 2,
+  quiet = FALSE
+)
 }
 \arguments{
 \item{SeqList}{the list returned by \code{\link{sequoia}}, to be written out.}
 
 \item{GenoM}{the matrix with genetic data (optional). Ignored if
 OutFormat='xls', as the resulting file could become too large for excel.}
+
+\item{MaybeRel}{a list with results from \code{\link{GetMaybeRel}} (optional).}
 
 \item{PedComp}{a list with results from \code{\link{PedCompare}} (optional).
 \code{SeqList$DummyIDs} is combined with \code{PedComp$DummyMatch} if both
@@ -26,6 +37,9 @@ OutFormat='xls'.}
 
 \item{file}{the name of the excel file to write to, ignored if
 OutFormat='txt'.}
+
+\item{ForVersion}{choose '1' for back-compatibility with stand-alone sequoia
+versions 1.x}
 
 \item{quiet}{suppress messages.}
 }
@@ -49,4 +63,8 @@ write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
       col.names=TRUE, row.names=FALSE, append=TRUE, showNA=FALSE)
 }
 
+}
+\seealso{
+\code{\link{writeColumns}} to write to a text file, using white
+  space padding to keep columns aligned
 }

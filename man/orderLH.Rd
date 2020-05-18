@@ -8,17 +8,21 @@ orderLH(LH = NULL, gID = NULL)
 }
 \arguments{
 \item{LH}{dataframe with lifehistory information:
-\itemize{
- \item{ID: }{max. 30 characters long,}
- \item{Sex: }{1 = females, 2 = males, other numbers = unkown,}
- \item{Birth Year: }{(or hatching year) Use negative numbers to denote
- missing values.}}}
+\describe{
+ \item{ID}{max. 30 characters long,}
+ \item{Sex}{1 = females, 2 = males, other numbers = unknown,}
+ \item{Birth Year}{(or hatching year) Use negative numbers to denote
+ missing values.}
+ \item{BY.min}{minimum birth year (optional)}
+ \item{BY.max}{maximum birth year (optional)}}}
 
-\item{gID}{character vector with IDs in genotype data, in order of occurence}
+\item{gID}{character vector with IDs in genotype data, in order of occurrence}
 }
 \value{
-\item{BY}{Numeric vector with birth years, of same length as gID}
-\item{Sex}{Numeric vector with genders, of same length as gID}
+a dataframe with the same 5 columns, but with individuals in exactly
+  the same order as gID, including padding with 'empty' rows if an individual
+  in gID was not in the input-LH. Missing values are recoded to 3 for the
+  'Sex' column, and -999 for the birth year columns.
 }
 \description{
 Order lifehistory data to match order of IDs in genotype data,

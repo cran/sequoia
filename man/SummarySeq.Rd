@@ -4,14 +4,20 @@
 \alias{SummarySeq}
 \title{Summarise sequoia output or pedigree}
 \usage{
-SummarySeq(SeqList = NULL, Ped = NULL, DumPrefix = c("F0", "M0"),
-  SNPd = NULL, Plot = TRUE)
+SummarySeq(
+  SeqList = NULL,
+  Pedigree = NULL,
+  DumPrefix = c("F0", "M0"),
+  SNPd = NULL,
+  Plot = TRUE,
+  Panels = "all"
+)
 }
 \arguments{
 \item{SeqList}{the list returned by \code{\link{sequoia}}. Only elements
 'Pedigree' or 'PedigreePar' and 'AgePriors' are used.}
 
-\item{Ped}{Dataframe, pedigree with the first three columns being id - dam -
+\item{Pedigree}{Dataframe, pedigree with the first three columns being id - dam -
 sire. Column names are ignored, as are additional columns.}
 
 \item{DumPrefix}{character vector of length 2 with prefixes for dummy dams
@@ -19,16 +25,25 @@ sire. Column names are ignored, as are additional columns.}
 if provided. Used to distinguish between dummies and non-dummies.}
 
 \item{SNPd}{character vector with ids of SNP genotyped individuals. Only when
-\code{Ped} is provided instead of \code{SeqList}, then used to distinguish
+\code{Pedigree} is provided instead of \code{SeqList}, then used to distinguish
 between genetically assigned parents and 'observed' parents (e.g. observed
 in the field, or assigned previously using microsatellites). Will be read
 from \code{SeqList}'s 'PedigreePar' if provided.}
 
 \item{Plot}{Show barplots and histograms of the results, as well as of the
 parental LLRs, Mendelian errors, and agepriors, if present.}
+
+\item{Panels}{character vector with panel(s) to plot. Choose from 'all',
+'G.parents' (parents of genotyped individuals), 'D.parents' (parents of
+dummy individuals), 'sibships' (distribution of sibship sizes), 'LLR'
+(log10-likelihood ratio parent/otherwise related), 'OH' (count of opposite
+homozygote SNPs).}
 }
 \value{
 A list with the following elements:
+  \item{PedSummary}{a 1-column dataframe with basic summary statistics, as
+  used to be returned by \code{Pedantics}' \code{pedStatSummary} (now
+  archived on CRAN)}
   \item{ParentCount}{a 2x3x2x4 array with the number of assigned parents,
   split by D1: genotyped vs dummy individuals; D2: female, male and
   unknown-sex individuals; D3: dams vs sires; D4: genotyped, dummy, observed
@@ -53,10 +68,12 @@ SeqOUT <- sequoia(GenoM = SimGeno_example,
                    LifeHistData = LH_HSg5, MaxSibIter = 10)
 Ped_example <- SeqOUT$Pedigree
 Ped_example$dam[1:20] <- paste0("Mum", 1:20)  # some field mums
-SummarySeq(SeqOUT, Ped=Ped_example)
+SummarySeq(SeqOUT, Pedigree=Ped_example)
 }
 
 }
 \seealso{
-\code{\link{sequoia}}
+\code{\link{sequoia}} for pedigree reconstruction;
+  \code{\link{CalcOHLLR}} to (re-)calculate opposite homozygosity & parental
+  LLR; \code{\link{PlotAgePrior}} to visualise just the ageprior.
 }

@@ -4,18 +4,70 @@
 \alias{CheckGeno}
 \title{check GenoM}
 \usage{
-CheckGeno(GenoM, quiet = FALSE)
+CheckGeno(GenoM, quiet = FALSE, Plot = FALSE)
 }
 \arguments{
 \item{GenoM}{the genotype matrix}
 
 \item{quiet}{suppress messages}
+
+\item{Plot}{display the plots of \code{\link{SnpStats}}}
 }
 \value{
-a list with low call rate individuals (<0.5, 'ExcludedInd') and low
-  call rate SNPs (<0.1, 'ExcludedSnps'), if any, which will be excluded from
-  pedigree reconstruction.
+a list with, if any are found:
+ \item{ExcludedSNPs}{SNPs scored for <10% of individuals; automatically
+   excluded when running \code{\link{sequoia}}}
+ \item{ExcludedSnps-mono}{monomorphic (fixed) SNPs; automatically excluded
+   when running \code{\link{sequoia}}. Column numbers are *after* removal of
+    \code{ExcludedSNPs}, if any.}
+ \item{ExcludedIndiv}{Individuals scored for <5% of SNPs; these cannot be
+   reliably included during pedigree reconstruction. Individual call rate is
+   calculated after removal of 'Excluded SNPs'}
+ \item{Snps-LowCallRate}{SNPs scored for 10% -- 50% of individuals; strongly
+   recommended to be filtered out}
+ \item{Indiv-LowCallRate}{individuals scored for <50% of SNPs; strongly
+   recommended to be filtered out}
 }
 \description{
-Check that the provided genotype matrix is in the correct format
+Check that the provided genotype matrix is in the correct
+  format, and check for low call rate samples and SNPs
+}
+\section{Thresholds}{
+ Appropriate call rate thresholds for SNPs and
+  individuals depend on the total number of SNPs, distribution of call rates,
+  genotyping errors, and the proportion of candidate parents that are SNPd
+  (sibship clustering is more prone to false positives). Note that filtering
+  first on SNP call rate tends to keep more individuals in.
+}
+
+\examples{
+\dontrun{
+GenoM <- SimGeno(Ped_HSg5, nSnp=400, CallRate = runif(400, 0.2, 0.8))
+Excl <- CheckGeno(GenoM)
+GenoM.orig <- GenoM   # make a 'backup' copy
+if ("ExcludedSnps" \%in\% names(Excl))
+  GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
+if ("ExcludedInd" \%in\% names(Excl))
+  GenoM <- GenoM[!rownames(GenoM) \%in\% Excl[["ExcludedInd"]], ]
+if ("ExcludedIndiv" \%in\% names(Excl))
+  GenoM <- GenoM[!rownames(GenoM) \%in\% Excl[["ExcludedIndiv"]], ]
+
+# warning about  SNPs scored for <50\% of individuals ?
+SnpCallRate <- apply(GenoM, MARGIN=2,
+                     FUN = function(x) sum(x!=-9)) / nrow(GenoM)
+hist(SnpCallRate, breaks=50, col="grey")
+GenoM <- GenoM[, SnpCallRate > 0.6]
+
+# to be on the safe side, filter out low call rate individuals
+IndivCallRate <- apply(GenoM, MARGIN=1,
+                       FUN = function(x) sum(x!=-9)) / ncol(GenoM)
+hist(IndivCallRate, breaks=50, col="grey")
+GoodSamples <- rownames(GenoM)[ IndivCallRate > 0.8]
+}
+
+}
+\seealso{
+\code{\link{SnpStats}} to calculate SNP call rates;
+  \code{\link{CalcOHLLR}} to count the number of SNPs scored in both focal
+  individual and parent
 }

@@ -4,11 +4,21 @@
 \alias{GenoConvert}
 \title{Convert genotype data}
 \usage{
-GenoConvert(InFile = NULL, InFormat = "raw", OutFile = NA,
-  OutFormat = "seq", InData = NULL, Missing = c("-9", "??", "?",
-  "NA", "NULL", c("0")[InFormat \%in\% c("col", "ped")]), sep = c(" ",
-  "\\t", ",", ";"), header = NA, IDcol = NA, FIDcol = NA,
-  FIDsep = "__", dropcol = NA, quiet = FALSE)
+GenoConvert(
+  InFile = NULL,
+  InFormat = "raw",
+  OutFile = NA,
+  OutFormat = "seq",
+  InData = NULL,
+  Missing = c("-9", "??", "?", "NA", "NULL", c("0")[InFormat \%in\% c("col", "ped")]),
+  sep = c(" ", "\\t", ",", ";"),
+  header = NA,
+  IDcol = NA,
+  FIDcol = NA,
+  FIDsep = "__",
+  dropcol = NA,
+  quiet = FALSE
+)
 }
 \arguments{
 \item{InFile}{character string with name of genotype file to be converted}
@@ -44,7 +54,8 @@ be used. This is column 1 for InFormat 'raw' and 'seq', but those are by
 default not used.}
 
 \item{FIDsep}{string used to paste FID and IID together into a composite-ID
-(value passed to \code{paste}'s \code{collapse}).}
+(value passed to \code{paste}'s \code{collapse}). This joining can be
+ reversed using \code{\link{PedStripFID}}.}
 
 \item{dropcol}{columns to exclude from the output data, on top of IDcol and
 FIDcol (which become rownames). When NA, defaults to columns 3-6 for
@@ -87,7 +98,7 @@ The following formats can be specified by \code{InFormat}:
 }
 
 \section{Error messages}{
- An occassional error when reading in a file with
+ An occasional error when reading in a file with
   GenoConvert is that 'rows have unequal length'. GenoConvert makes use of
   \code{\link{readLines}} and \code{\link{strsplit}}, which is much faster
   than \code{\link{read.table}} for large datafiles, but also more sensitive
@@ -126,8 +137,7 @@ GenoM <- GenoConvert(InData=GenoTmp, InFormat="single", IDcol=0)
 
 }
 \seealso{
-\code{\link{SnpStats}, \link{LHConvert}, and \link{PedStripFID}} to
-  reverse joining FID and IID
+\code{\link{CheckGeno}, \link{SnpStats}, \link{LHConvert}}
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

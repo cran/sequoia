@@ -4,14 +4,16 @@
 \name{Inherit}
 \alias{Inherit}
 \title{Inheritance patterns}
-\format{An array with the following dimensions:
+\format{
+An array with the following dimensions:
 \describe{
   \item{d1}{type: autosomal, x-chromosome, y-chromosome, or mtDNA}
   \item{d2}{offspring sex: female, male, or unknown}
   \item{d3}{offspring genotype: aa (0), aA (1), Aa (1), or AA (2)}
   \item{d4}{mother genotype}
   \item{d5}{father genotype}
-}}
+}
+}
 \usage{
 data(Inherit)
 }

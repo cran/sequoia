@@ -4,14 +4,29 @@
 \alias{SimGeno}
 \title{Simulated genotypes}
 \usage{
-SimGeno(Ped, nSnp = 400, ParMis = 0.4, MAF = 0.3, CallRate = 0.99,
-  SnpError = 5e-04, ErrorFM = "SNPchip", ReturnStats = FALSE,
-  OutFile = NA, Inherit = "autosomal", InheritFile = NA,
-  quiet = FALSE, PropLQ, MisHQ, MisLQ, ErHQ, ErLQ)
+SimGeno(
+  Pedigree,
+  nSnp = 400,
+  ParMis = 0.4,
+  MAF = 0.3,
+  CallRate = 0.99,
+  SnpError = 5e-04,
+  ErrorFM = "version2.0",
+  ReturnStats = FALSE,
+  OutFile = NA,
+  Inherit = "autosomal",
+  InheritFile = NA,
+  quiet = FALSE,
+  PropLQ,
+  MisHQ,
+  MisLQ,
+  ErHQ,
+  ErLQ
+)
 }
 \arguments{
-\item{Ped}{Dataframe, pedigree with the first three columns being id - dam -
-sire. Column names are ignored, as are additional columns, with the
+\item{Pedigree}{Dataframe, pedigree with the first three columns being id -
+dam - sire. Column names are ignored, as are additional columns, with the
 exception of a 'Sex' column when Inherit is not 'autosomal'.}
 
 \item{nSnp}{number of SNPs to simulate.}
@@ -19,7 +34,7 @@ exception of a 'Sex' column when Inherit is not 'autosomal'.}
 \item{ParMis}{Single number or vector length two with proportion of parents
 with fully missing genotype. Ignored if CallRate is a named vector.}
 
-\item{MAF}{minimum minor allele frequency, and allele frequencyes will be
+\item{MAF}{minimum minor allele frequency, and allele frequencies will be
 sampled uniformly between this minimum and 0.5, OR a vector with minor
 allele frequency at each locus. In both cases, this is the MAF among
 pedigree founders, the MAF in the sample will deviate due to drift.}
@@ -36,12 +51,13 @@ SNP, OR a vector with the genotyping error for each SNP.}
 
 \item{ErrorFM}{function taking the error rate (scalar) as argument and
 returning a 3x3 matrix with probabilities that actual genotype i (rows) is
-observed as genotype j (columns). See details.}
+observed as genotype j (columns). Inbuilt ones are as used in sequoia
+'version2.0', 'version1.3', or 'version1.1'. See details.}
 
 \item{ReturnStats}{in addition to the genotype matrix, return the input
 parameters and mean & quantiles of MAF, error rate and call rates.}
 
-\item{OutFile}{filename for simulated genotypes. If NA (default), return
+\item{OutFile}{file name for simulated genotypes. If NA (default), return
 results within R.}
 
 \item{Inherit}{inheritance pattern, scalar or vector of length nSnp,
@@ -50,7 +66,7 @@ inheritance patterns for the X and Y chromosome and mtDNA, and allows
 custom inheritance patterns. Note that these are NOT currently supported by
 the pedigree reconstruction with \code{\link{sequoia}} !}
 
-\item{InheritFile}{filename for excel file with inheritance patterns,
+\item{InheritFile}{file name for excel file with inheritance patterns,
 requires library xlsx.}
 
 \item{quiet}{suppress messages.}
@@ -58,7 +74,7 @@ requires library xlsx.}
 \item{PropLQ}{[deprecated] proportion of low-quality samples.}
 
 \item{MisHQ}{[deprecated] average missingness for high-quality samples,
-assuming a beta-disstribution with alpha = 1.}
+assuming a beta-distribution with alpha = 1.}
 
 \item{MisLQ}{[deprecated] average missingness in low-quality samples.}
 
@@ -68,9 +84,19 @@ assuming a beta-disstribution with alpha = 1.}
 \item{ErLQ}{[deprecated] error rate in low quality samples.}
 }
 \value{
-if ReturnStats=FALSE (the default), a matrix with genotype data in
-  sequoia's input format, encoded as 0/1/2/-9. if ReturnStats=TRUE, a named
-  list with list 'ParamsIN', list 'StatsOUT', and matrix 'SGeno'.
+if \code{ReturnStats=FALSE} (the default), a matrix with genotype data in
+  sequoia's input format, encoded as 0/1/2/-9.
+
+  If \code{ReturnStats=TRUE}, a named list with three elements: list
+  'ParamsIN', matrix 'SGeno', and list 'StatsOUT':
+  \item{AF}{Frequency in 'observed' genotypes of '1' allele}
+  \item{AF.act}{Allele frequency in 'actual' (without genotyping errors &
+    missingness)}
+  \item{SnpError}{Error rate per SNP (actual /= observed AND observed /=
+    missing)}
+  \item{SnpCallRate}{Non-missing per SNP}
+  \item{IndivError}{Error rate per individual}
+  \item{IndivCallRate}{Non-missing per individual}
 }
 \description{
 Simulate SNP genotype data from a pedigree, with optional
@@ -78,16 +104,18 @@ Simulate SNP genotype data from a pedigree, with optional
 }
 \details{
 Please ensure the pedigree is a valid pedigree, for example by first
-  running fixPedigree() from library Pedantics. Genotypes are drawn assuming
-  Hardy-Weinberg equilibrium and the provided MAF among founders, i.e.
-  individuals with no known parents, including parents who do not also occur
-  in the ID column. Offspring genotypes are generated following Mendelian
-  inheritance, assuming all loci are completely independent.
+  running \code{\link{PedPolish}}. For founders, i.e. individuals with no
+  known parents, genotypes are drawn according to the provided MAF and
+  assuming Hardy-Weinberg equilibrium. Offspring genotypes are generated
+  following Mendelian inheritance, assuming all loci are completely
+  independent. Individuals with one known parent are allowed: at each locus,
+  one allele is inherited from the known parent, and the other drawn from the
+  genepool according to the provided MAF.
 
   Genotyping errors are generated following a user-definable 3x3 matrix with
   probabilities that actual genotype i (rows) is observed as genotype j
   (columns). This is specified as \code{ErrorFM}, which is a function of
-  \code{SnpError}. By default (\code{ErrorFM} = "SNPchip"), \code{SnpError}
+  \code{SnpError}. By default (\code{ErrorFM} = "version2.0"), \code{SnpError}
   is interpreted as a locus-level error rate (rather than allele-level), and
   equals the probability that a homozygote is observed as heterozygote, and
   the probability that a heterozygote is observed as either homozygote (i.e.,
@@ -122,16 +150,18 @@ Please ensure the pedigree is a valid pedigree, for example by first
 }
 \section{Disclaimer}{
  This simulation is highly simplistic and assumes that
-  all SNPs segregate completely independently, and that the SNPs are in
-  Hardy-Weinberg equilibrium in the pedigree founders. Results based on this
-  simulated data will provide an minimum estimate of the number of SNPs
-  required, and an optimistic estimate of pedigree reconstruction
-  performance.
+  all SNPs segregate completely independently, that the SNPs are in
+  Hardy-Weinberg equilibrium in the pedigree founders. It assumes that
+  genotyping errors are not due to heritable mutations of the SNPs, and that
+  missingness is random and not e.g. due to heritable mutations of SNP
+  flanking regions. Results based on this simulated data will provide an
+  minimum estimate of the number of SNPs required, and an optimistic estimate
+  of pedigree reconstruction performance.
 }
 
 \examples{
 data(Ped_HSg5)
-GenoM <- SimGeno(Ped = Ped_HSg5, nSnp = 100, ParMis = c(0.2, 0.7))
+GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = c(0.2, 0.7))
 
 \dontrun{
 # Alternative genotyping error model
@@ -141,13 +171,15 @@ EFM <- function(E) {   # Whalen, Gorjanc & Hickey 2018
           E/4, E/4, 1-E*3/4),
           3,3, byrow=TRUE)  }
 EFM(0.01)
-GenoM <- SimGeno(Ped = Ped_HSg5, nSnp = 100, ParMis = 0.2,
+GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = 0.2,
  SnpError = 5e-3, ErrorFM = EFM)
 }
 
 }
 \seealso{
-\code{\link{EstConf}}, \code{\link{MkGenoErrors}}
+the wrapper \code{\link{EstConf}} for repeated simulation and
+  pedigree reconstruction; \code{\link{MkGenoErrors}} for fine control over
+  the distribution of genotyping errors in simulated data.
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

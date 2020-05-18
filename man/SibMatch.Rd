@@ -7,9 +7,9 @@
 SibMatch(SimX, Infrd, SNPd)
 }
 \arguments{
-\item{SimX}{a vector with the IDs in the true sibship}
+\item{SimX}{a vector with the IDs in the true (Ped1) sibship}
 
-\item{Infrd}{a list of vectors with the IDs in the inferred sibships}
+\item{Infrd}{a list of vectors with the IDs in the inferred (Ped2) sibships}
 
 \item{SNPd}{character vector with IDs of genotyped individuals}
 }
