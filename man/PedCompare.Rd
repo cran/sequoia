@@ -2,33 +2,50 @@
 % Please edit documentation in R/ComparePeds.R
 \name{PedCompare}
 \alias{PedCompare}
-\title{Compare two Pedigrees}
+\title{Compare Two Pedigrees}
 \usage{
 PedCompare(
   Ped1 = NULL,
   Ped2 = NULL,
   DumPrefix = c("F0", "M0"),
   SNPd = NULL,
-  Symmetrical = TRUE
+  Symmetrical = TRUE,
+  minSibSize = "2sib",
+  Plot = TRUE
 )
 }
 \arguments{
-\item{Ped1}{original pedigree, dataframe with columns id-dam-sire; only the
-first 3 columns will be used.}
+\item{Ped1}{first (e.g. original) pedigree, dataframe with columns
+id-dam-sire; only the first 3 columns will be used.}
 
-\item{Ped2}{inferred pedigree, e.g. \code{SeqOUT$Pedigree} or
+\item{Ped2}{second pedigree, e.g. newly inferred \code{SeqOUT$Pedigree} or
 \code{SeqOUT$PedigreePar}, with columns id-dam-sire.}
 
-\item{DumPrefix}{character vector of length 2 with the dummy prefixes in
-Pedigree 2; all IDs not starting with the Dummy prefix are taken as
-genotyped if \code{SNPd=NULL}.}
+\item{DumPrefix}{character vector with the prefixes identifying dummy
+individuals in \code{Ped2}. Use 'F0' ('M0') to avoid matching to regular
+individuals with IDs starting with 'F' ('M'), provided \code{Ped2} has
+fewer than 999 dummy females (males).}
 
-\item{SNPd}{character vector with IDs of genotyped individuals.}
+\item{SNPd}{character vector with IDs of genotyped individuals. If
+\code{NULL}, defaults to the IDs occurring in both \code{Ped1} and
+\code{Ped2} and not starting with any of the prefixes in \code{DumPrefix}.}
 
-\item{Symmetrical}{When determining the category of individuals
+\item{Symmetrical}{when determining the category of individuals
 (Genotyped/Dummy/X), use the 'highest' category across the two pedigrees
 (\code{TRUE}, default) or only consider \code{Ped1} (\code{Symmetrical =
 FALSE}).}
+
+\item{minSibSize}{minimum requirements to be considered 'dummifiable',
+ passed to \code{\link{getAssignCat}}:
+ \itemize{
+    \item '1sib' : sibship of size 1, with or without grandparents. The
+    latter aren't really a sibship, but can be useful in some situations.
+    \item '1sib1GP': sibship of size 1 with at least 1 grandparent
+    \item '2sib': at least 2 siblings, with or without grandparents
+      (default)
+}}
+
+\item{Plot}{show square Venn diagrams of counts?}
 }
 \value{
 A list with
@@ -41,7 +58,9 @@ A list with
 \item{ConsensusPed}{A consensus pedigree, with Pedigree 2 taking priority
   over Pedigree 1}
 \item{DummyMatch}{Dataframe with all dummy IDs in Pedigree 2 (id.2), and the
- best-matching individual in Pedigree 1 (id.1)}
+best-matching individual in Pedigree 1 (id.1). Also includes the class of the
+dam & sire, as well as counts of offspring per outcome class (off.Match,
+off.Mismatch, etc.)}
 \item{Mismatch}{A subset of MergedPed with mismatches between Ped1 and Ped2,
  as defined below}
 \item{Ped1only}{as Mismatches, with parents in Ped1 that were not assigned
@@ -140,9 +159,19 @@ The comparison is divided into different classes of `assignable'
 
 \section{Dummifiable}{
 
-Considered as potential dummy individuals are all non-genotyped individuals in
-Pedigree 1 who have, according to either pedigree, at least 2 genotyped
-offspring, or at least one genotyped offspring and a genotyped parent.
+  Considered as potential dummy individuals are all non-genotyped individuals
+  in Pedigree 1 who have, according to either pedigree, at least 2 genotyped
+  offspring, or at least one genotyped offspring and a genotyped parent.
+}
+
+\section{Mismatches}{
+
+  Perhaps unexpectedly, cases where all siblings are correct but a dummy
+  parent rather than the genotyped Ped1-parent are assigned, are classified
+  as a mismatch (for each of the siblings). These are typically due to a too
+  low assumed genotyping error rate, a wrong parental birth year, or some
+  other issue that requires user inspection. To identify these cases,
+  \code{\link{ComparePairs}} may be of help.
 }
 
 \section{Genotyped 'mystery samples'}{
@@ -160,23 +189,25 @@ offspring, or at least one genotyped offspring and a genotyped parent.
 }
 
 \examples{
-\dontrun{
+\donttest{
 data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5, Err=0.001)
+SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
+  Err=0.0001, quiet=TRUE, Plot=FALSE)
+# (Performance is better when using Err=0.001, but this makes for a more
+# interesting example)
+
 compare <- PedCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
-compare$Counts   # 2 non-assigned, due to simulated genotyping errors
 compare$Counts["TT",,]  # totals only
 compare$Counts[,,"dam"]  # dams only
+# 2 mismatch & 3+1 non-assigned, due to simulated genotyping errors
 
-# inspect 'assignable but non-assigned in Ped2'
-compare$P1only[compare$P1only$Cat=="GG", ]
+# inspect 'assignable but non-assigned in Ped2', id + dam both genotyped:
+compare$P1only[compare$P1only$id.dam.cat=="GG", ]
 # further inspection:
-head(compare$MergedPed)
-compare$MergedPed[which(compare$MergedPed$dam.1=="a00001"), ]
+compare$MergedPed[which(compare$MergedPed$dam.1=="a00013"), ]
 
-# get an overview of all non-genotyped -- dummy matches
-BestMatch <- compare$MergedPed[!is.na(compare$MergedPed$id.r),
-                               c("id", "id.r")]
+# overview of all non-genotyped -- dummy matches
+head(compare$DummyMatch)
 
 # success of paternity assignment, if genotyped mother correctly assigned
 dimnames(compare$Counts.detail)

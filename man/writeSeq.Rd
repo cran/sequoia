@@ -2,7 +2,7 @@
 % Please edit documentation in R/WriteToFiles.R
 \name{writeSeq}
 \alias{writeSeq}
-\title{write sequoia output to excel or text files}
+\title{Write Sequoia Output to File}
 \usage{
 writeSeq(
   SeqList,
@@ -17,14 +17,14 @@ writeSeq(
 )
 }
 \arguments{
-\item{SeqList}{the list returned by \code{\link{sequoia}}, to be written out.}
+\item{SeqList}{list returned by \code{\link{sequoia}}, to be written out.}
 
-\item{GenoM}{the matrix with genetic data (optional). Ignored if
+\item{GenoM}{matrix with genetic data (optional). Ignored if
 OutFormat='xls', as the resulting file could become too large for excel.}
 
-\item{MaybeRel}{a list with results from \code{\link{GetMaybeRel}} (optional).}
+\item{MaybeRel}{list with results from \code{\link{GetMaybeRel}} (optional).}
 
-\item{PedComp}{a list with results from \code{\link{PedCompare}} (optional).
+\item{PedComp}{list with results from \code{\link{PedCompare}} (optional).
 \code{SeqList$DummyIDs} is combined with \code{PedComp$DummyMatch} if both
 are provided.}
 
@@ -33,10 +33,10 @@ are provided.}
 \item{folder}{the directory where the text files will be written; will be
 created if it does not already exists. Relative to the current working
 directory, or NULL for current working directory. Ignored if
-OutFormat='xls'.}
+\code{OutFormat='xls'}.}
 
 \item{file}{the name of the excel file to write to, ignored if
-OutFormat='txt'.}
+\code{OutFormat='txt'}.}
 
 \item{ForVersion}{choose '1' for back-compatibility with stand-alone sequoia
 versions 1.x}
@@ -50,8 +50,8 @@ The various list elements returned by \code{sequoia} are each
 }
 \details{
 The text files can be used as input for the stand-alone Fortran
-  version of #'   sequoia, e.g. when the genotype data is too large for R.
-  See \code{vignette('sequoia')} for further details.
+  version of sequoia, e.g. when the genotype data is too large for R. See
+  \code{vignette('sequoia')} for further details.
 }
 \examples{
 \dontrun{
@@ -66,5 +66,5 @@ write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
 }
 \seealso{
 \code{\link{writeColumns}} to write to a text file, using white
-  space padding to keep columns aligned
+  space padding to keep columns aligned.
 }

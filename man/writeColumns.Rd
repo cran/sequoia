@@ -2,7 +2,7 @@
 % Please edit documentation in R/WriteToFiles.R
 \name{writeColumns}
 \alias{writeColumns}
-\title{write data to a file column-wise}
+\title{Write Data to a File Column-wise}
 \usage{
 writeColumns(x, file = "", row.names = TRUE, col.names = TRUE)
 }
@@ -16,9 +16,9 @@ If not, it is attempted to coerce x to a matrix.}
 to be written along with x.}
 
 \item{col.names}{a logical value indicating whether the column names of x
-are to be written along with x}
+are to be written along with x.}
 }
 \description{
-write data.frame or matrix to a text file, using white
-space padding to keep columns aligned as in \code{print}
+Write data.frame or matrix to a text file, using white
+space padding to keep columns aligned as in \code{print}.
 }

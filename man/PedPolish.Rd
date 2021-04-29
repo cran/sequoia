@@ -2,47 +2,74 @@
 % Please edit documentation in R/PedPolish.R
 \name{PedPolish}
 \alias{PedPolish}
-\title{Pedigree fix}
+\title{Fix Pedigree}
 \usage{
 PedPolish(
-  Ped,
-  GenoNames = NULL,
+  Pedigree,
+  gID = NULL,
   ZeroToNA = TRUE,
   NAToZero = FALSE,
   DropNonSNPd = TRUE,
-  FillParents = FALSE
+  FillParents = FALSE,
+  NullOK = FALSE,
+  LoopCheck = TRUE,
+  StopIfInvalid = TRUE
 )
 }
 \arguments{
-\item{Ped}{dataframe where the first 3 columns are id, dam, sire}
+\item{Pedigree}{dataframe where the first 3 columns are id, dam, sire.}
 
-\item{GenoNames}{character vector with ids of genotyped individuals
-(rownames of genotype matrix)}
+\item{gID}{character vector with ids of genotyped individuals
+(rownames of genotype matrix).}
 
 \item{ZeroToNA}{logical, replace 0's for missing values by NA's (defaults to
-\code{TRUE})}
+\code{TRUE}).}
 
 \item{NAToZero}{logical, replace NA's for missing values by 0's. If
-\code{TRUE}, ZeroToNA is automatically set to \code{FALSE}}
+\code{TRUE}, ZeroToNA is automatically set to \code{FALSE}.}
 
 \item{DropNonSNPd}{logical, remove any non-genotyped individuals (but keep
-non-genotyped parents), & sort pedigree in order of \code{GenoNames}}
+non-genotyped parents), & sort pedigree in order of \code{gID}.}
 
 \item{FillParents}{logical, for individuals with only 1 parent assigned, set
 the other parent to a dummy (without assigning siblings or grandparents).
 Makes the pedigree compatible with R packages and software that requires
 individuals to have either 2 or 0 parents, such as
 \code{\link[kinship2]{kinship}}.}
+
+\item{NullOK}{logical, is it OK for Ped to be NULL? Then NULL will be
+returned.}
+
+\item{LoopCheck}{logical, check for invalid pedigree loops by calling
+\code{\link{getGenerations}}.}
+
+\item{StopIfInvalid}{if a pedigree loop is detected, stop with an error
+(TRUE, default).}
 }
 \description{
 Ensure all parents & all genotyped individuals are included,
-  remove duplicates, rename columns, and replace 0 by NA or v.v.
+  remove duplicates, rename columns, and replace 0 by NA or v.v..
 }
 \details{
-recognized column names are any that contain:
+Recognized column names are any that contain:
  \describe{
   \item{dam}{"dam", "mother", "mot", "mom", "mum", "mat"}
   \item{sire}{"sire", "father", "fat", "dad", "pat"}}
 \code{sequoia} requires the column order id - dam - sire; columns 2 and 3 are
 swapped if necessary.
+}
+\examples{
+\dontrun{
+# To get the output pedigree into kinship2 compatible format:
+PedP <- sequoia::PedPolish(SeqOUT$Pedigree, DropNonSNPd=FALSE,
+                           FillParents = TRUE)
+PedP$Sex <- with(PedP, ifelse(id \%in\% dam, "female",  "male"))
+# default to 'male' to avoid warning: "More than 25\% of the gender values are
+#  'unknown'"
+
+Ped.fix <- with(PedP, kinship2::fixParents(id=id, dadid=sire, momid=dam,
+                                           sex=Sex))
+Ped.k <- with(Ped.fix, kinship2::pedigree(id, dadid, momid, sex, missid=0))
+}
+
 }

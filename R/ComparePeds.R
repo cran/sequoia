@@ -1,6 +1,6 @@
 #============================================================================
 #============================================================================
-#' @title Compare two Pedigrees
+#' @title Compare Two Pedigrees
 #'
 #' @description Compare an inferred pedigree (Ped2) to a previous or simulated
 #'   pedigree (Ped1), including comparison of sibship clusters and sibship
@@ -16,18 +16,31 @@
 #'   intersect between the IDs in Pedigrees 1 and 2 is taken as the vector of
 #'   genotyped individuals.
 #'
-#' @param  Ped1 original pedigree, dataframe with columns id-dam-sire; only the
-#'   first 3 columns will be used.
-#' @param  Ped2 inferred pedigree, e.g. \code{SeqOUT$Pedigree} or
+#' @param  Ped1 first (e.g. original) pedigree, dataframe with columns
+#'   id-dam-sire; only the first 3 columns will be used.
+#' @param  Ped2 second pedigree, e.g. newly inferred \code{SeqOUT$Pedigree} or
 #'   \code{SeqOUT$PedigreePar}, with columns id-dam-sire.
-#' @param  DumPrefix  character vector of length 2 with the dummy prefixes in
-#'   Pedigree 2; all IDs not starting with the Dummy prefix are taken as
-#'   genotyped if \code{SNPd=NULL}.
-#' @param SNPd character vector with IDs of genotyped individuals.
-#' @param Symmetrical  When determining the category of individuals
+#' @param  DumPrefix  character vector with the prefixes identifying dummy
+#'   individuals in \code{Ped2}. Use 'F0' ('M0') to avoid matching to regular
+#'   individuals with IDs starting with 'F' ('M'), provided \code{Ped2} has
+#'   fewer than 999 dummy females (males).
+#' @param SNPd character vector with IDs of genotyped individuals. If
+#'   \code{NULL}, defaults to the IDs occurring in both \code{Ped1} and
+#'   \code{Ped2} and not starting with any of the prefixes in \code{DumPrefix}.
+#' @param Symmetrical  when determining the category of individuals
 #'   (Genotyped/Dummy/X), use the 'highest' category across the two pedigrees
 #'   (\code{TRUE}, default) or only consider \code{Ped1} (\code{Symmetrical =
 #'   FALSE}).
+#' @param minSibSize  minimum requirements to be considered 'dummifiable',
+#'   passed to \code{\link{getAssignCat}}:
+#'   \itemize{
+#'      \item '1sib' : sibship of size 1, with or without grandparents. The
+#'      latter aren't really a sibship, but can be useful in some situations.
+#'      \item '1sib1GP': sibship of size 1 with at least 1 grandparent
+#'      \item '2sib': at least 2 siblings, with or without grandparents
+#'        (default)
+#'  }
+#' @param Plot show square Venn diagrams of counts?
 #'
 #' @return A list with
 #' \item{Counts}{A 7 x 5 x 2 named numeric array with the
@@ -39,7 +52,9 @@
 #' \item{ConsensusPed}{A consensus pedigree, with Pedigree 2 taking priority
 #'   over Pedigree 1}
 #' \item{DummyMatch}{Dataframe with all dummy IDs in Pedigree 2 (id.2), and the
-#'  best-matching individual in Pedigree 1 (id.1)}
+#' best-matching individual in Pedigree 1 (id.1). Also includes the class of the
+#' dam & sire, as well as counts of offspring per outcome class (off.Match,
+#' off.Mismatch, etc.)}
 #' \item{Mismatch}{A subset of MergedPed with mismatches between Ped1 and Ped2,
 #'  as defined below}
 #' \item{Ped1only}{as Mismatches, with parents in Ped1 that were not assigned
@@ -119,9 +134,17 @@
 #'   assigned, and ageprior inconclusive).
 #'
 #' @section Dummifiable:
-#' Considered as potential dummy individuals are all non-genotyped individuals in
-#' Pedigree 1 who have, according to either pedigree, at least 2 genotyped
-#' offspring, or at least one genotyped offspring and a genotyped parent.
+#'   Considered as potential dummy individuals are all non-genotyped individuals
+#'   in Pedigree 1 who have, according to either pedigree, at least 2 genotyped
+#'   offspring, or at least one genotyped offspring and a genotyped parent.
+#'
+#' @section Mismatches:
+#'   Perhaps unexpectedly, cases where all siblings are correct but a dummy
+#'   parent rather than the genotyped Ped1-parent are assigned, are classified
+#'   as a mismatch (for each of the siblings). These are typically due to a too
+#'   low assumed genotyping error rate, a wrong parental birth year, or some
+#'   other issue that requires user inspection. To identify these cases,
+#'   \code{\link{ComparePairs}} may be of help.
 #'
 #' @section Genotyped 'mystery samples':
 #'  If Pedigree 2 includes samples for which the ID is unknown, the behaviour of
@@ -145,23 +168,25 @@
 #'   reference pedigree that could have been assigned.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-#' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5, Err=0.001)
+#' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
+#'   Err=0.0001, quiet=TRUE, Plot=FALSE)
+#' # (Performance is better when using Err=0.001, but this makes for a more
+#' # interesting example)
+#'
 #' compare <- PedCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
-#' compare$Counts   # 2 non-assigned, due to simulated genotyping errors
 #' compare$Counts["TT",,]  # totals only
 #' compare$Counts[,,"dam"]  # dams only
+#' # 2 mismatch & 3+1 non-assigned, due to simulated genotyping errors
 #'
-#' # inspect 'assignable but non-assigned in Ped2'
-#' compare$P1only[compare$P1only$Cat=="GG", ]
+#' # inspect 'assignable but non-assigned in Ped2', id + dam both genotyped:
+#' compare$P1only[compare$P1only$id.dam.cat=="GG", ]
 #' # further inspection:
-#' head(compare$MergedPed)
-#' compare$MergedPed[which(compare$MergedPed$dam.1=="a00001"), ]
+#' compare$MergedPed[which(compare$MergedPed$dam.1=="a00013"), ]
 #'
-#' # get an overview of all non-genotyped -- dummy matches
-#' BestMatch <- compare$MergedPed[!is.na(compare$MergedPed$id.r),
-#'                                c("id", "id.r")]
+#' # overview of all non-genotyped -- dummy matches
+#' head(compare$DummyMatch)
 #'
 #' # success of paternity assignment, if genotyped mother correctly assigned
 #' dimnames(compare$Counts.detail)
@@ -173,20 +198,20 @@ PedCompare <- function(Ped1 = NULL,
                        Ped2 = NULL,
                        DumPrefix = c("F0", "M0"),
                        SNPd = NULL,
-                       Symmetrical = TRUE)
+                       Symmetrical = TRUE,
+                       minSibSize = "2sib",
+                       Plot = TRUE)
 {
-  if(is.null(Ped1)) stop("Must provide 'Ped1'")
-  if(is.null(Ped2)) stop("Must provide 'Ped2'")
-  Ped1 <- PedPolish(Ped1[, 1:3], ZeroToNA=TRUE)
-  Ped2 <- PedPolish(Ped2[, 1:3], ZeroToNA=TRUE)
+  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)[, 1:3]
+  Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)[, 1:3]
   if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
 
   if (is.null(SNPd)) {
     SNPd <- intersect(Ped2$id, Ped1$id)
     if (!is.null(DumPrefix)) {
-      DPnc <- nchar(DumPrefix)
-      SNPd <- SNPd[substr(SNPd,1,DPnc[1])!=DumPrefix[1] &
-                        substr(SNPd,1,DPnc[2])!=DumPrefix[2]]
+      for (x in seq_along(DumPrefix)) {
+        SNPd <- SNPd[substr(SNPd,1,nchar(DumPrefix[x])) != DumPrefix[x] ]
+      }
     }
   }
   if (sum(SNPd %in% Ped2$id)==0)  stop("none of 'SNPd' in Ped2")
@@ -298,14 +323,19 @@ PedCompare <- function(Ped1 = NULL,
   #===  Categorise  ===
   CatNames <- c("G", "D", "X")
 
-  Ped.a <- getAssignCat(PedY[, c("id.r", "dam.1", "sire.1")], SNPd)
+  Ped.a <- getAssignCat(PedY[, c("id.r", "dam.1", "sire.1")], SNPd,
+                        minSibSize = minSibSize)
   PedZ <- merge(PedY, Ped.a[, c("id", "id.cat", "dam.cat", "sire.cat")],
                 by.x="id.r", by.y="id", all.x=TRUE)
 
   if (Symmetrical) {  # take 'highest' category across the 2 pedigrees
-    Ped.b <- getAssignCat(PedY[, c("id", "dam.2", "sire.2")], SNPd)
+    Ped.b <- getAssignCat(PedY[, c("id", "dam.2", "sire.2")], SNPd,
+                          minSibSize = minSibSize)
     PedZ <- merge(PedZ, Ped.b[,c("id", "id.cat", "dam.cat", "sire.cat")],
                   by="id", all.x=TRUE, suffixes=c(".1", ".2"))
+    for (x in paste0(c("id", "dam", "sire"), ".cat.2")) {
+      PedZ[is.na(PedZ[,x]), x] <- "X"
+    }
     for (x in c(outer(c("id", "dam", "sire"), 1:2, paste, sep=".cat."))) {
       PedZ[,x] <- factor(PedZ[,x], levels=CatNames)
     }
@@ -387,17 +417,53 @@ PedCompare <- function(Ped1 = NULL,
   }
 
 
-  #===  out  ===========================
-  OUT <- c(list(Counts = Score,
-                Counts.detail = Counts.all,
-                MergedPed = PedZ,
-                ConsensusPed = PedC),
-           NoMatch)
+
+  #===  dummy match  ===================
   if (!NoDummies) {
-    OUT[["DummyMatch"]] <- setNames(DumPed[order(DumPed$id), c("id", "id.r")],
-                                    c("id.2", "id.1"))
+    DumPed$Sex <- ifelse(DumPed$id %in% Dummies$dam, 1, 2)
+    DumMatch <- merge(DumPed[, c("id", "id.r", "Sex")],
+                      PedZ[, c("id", "dam.class", "sire.class")],
+                      all.x = TRUE)
+
+    OffMatch <-  sapply(seq_along(DumMatch$id), function(i) {
+      k <- DumMatch$Sex[i]
+      tmp <- PedZ[which(PedZ[,Par[k,1]] == DumMatch$id.r[i] | PedZ[,Par[k,2]] == DumMatch$id[i]), ]
+      table(factor(tmp[, paste0(c("dam","sire")[k] ,".class")],
+                   levels = c("Match", "Mismatch", "P1only", "P2only")))
+    })
+
+    names(DumMatch)[1:2] <- c("id.2", "id.1")
+    rownames(OffMatch) <- paste0("off.", rownames(OffMatch))
+    DumMatch <- cbind(DumMatch, t(OffMatch))
+    DumMatch <- DumMatch[order(DumMatch$id.2), ]
+  } else {
+    DumMatch <- NULL
   }
-  return( OUT )
+
+
+  #===  plot  ==========================
+  if (Plot) {
+    cat.props <- Score[,"Total",] / max(Score["TT","Total",])
+    img <- tryCatch(
+      {
+        suppressWarnings(PlotPedComp(Counts = Score,
+                                     sameSize = any(cat.props > 0 & cat.props < 0.01)))
+      },
+      error = function(e) {
+        message("PlotPedComp: Plotting area too small")
+        return(NA)
+      })
+  }
+
+
+  #===  out  ===========================
+  return( c(list(Counts = Score,
+                 Counts.detail = Counts.all,
+                 MergedPed = PedZ,
+                 ConsensusPed = PedC,
+                 DummyMatch = DumMatch),
+            NoMatch) )
+
 }
 
 

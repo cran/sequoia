@@ -1,4 +1,4 @@
-#' @title Assign family IDs
+#' @title Assign Family IDs
 #'
 #' @description Add a column with family IDs (FIDs) to a pedigree, with each
 #'  number denoting a cluster of connected individuals.
@@ -29,9 +29,9 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
     stop("please provide either Ped or SeqList")
   } else if (is.null(Ped)) {
     if (any(names(SeqList)=="Pedigree")) {
-      Ped <- SeqList$Pedigree
+      Ped <- SeqList[["Pedigree"]]
     } else if (any(names(SeqList)=="PedigreePar")) {
-      Ped <- SeqList$PedigreePar
+      Ped <- SeqList[["PedigreePar"]]
     } else {
       stop("please provide either Ped or SeqList with element 'PedigreePar' or 'Pedigree'")
     }
@@ -138,19 +138,19 @@ GetDesc <- function(i, Ped) {
 
 
 #======================================================================
-#' @title backtransform IDs
+#' @title Back-transform IDs
 #'
 #' @description Reverse the joining of FID and IID in
 #' \code{\link{GenoConvert}} and \code{\link{LHConvert}}
 #'
 #' @details Note that the family IDs are the ones provided, and not
 #'  automatically updated. New, numeric ones can be obtained with
-#'   \code{\link{FindFamilies}}
+#'   \code{\link{FindFamilies}}.
 #'
-#' @param Ped Pedigree as returned by sequoia (e.g. \code{SeqOUT$Pedigree})
-#' @param FIDsep characters inbetween FID and IID in composite-ID
+#' @param Ped pedigree as returned by sequoia (e.g. \code{SeqOUT$Pedigree}).
+#' @param FIDsep characters inbetween FID and IID in composite-ID.
 #'
-#' @return a pedigree with 6 columns
+#' @return A pedigree with 6 columns
 #' \item{FID}{family ID of focal individual (offspring).}
 #' \item{id}{within-family of focal individual}
 #' \item{dam.FID}{original family ID of assigned dam}

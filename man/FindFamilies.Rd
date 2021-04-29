@@ -2,7 +2,7 @@
 % Please edit documentation in R/FindFamilies.R
 \name{FindFamilies}
 \alias{FindFamilies}
-\title{Assign family IDs}
+\title{Assign Family IDs}
 \usage{
 FindFamilies(Ped = NULL, SeqList = NULL, UseMaybeRel = FALSE)
 }

@@ -1,5 +1,5 @@
 #=======================================================
-#' @title Simulated genotypes
+#' @title Simulate Genotypes
 #'
 #' @description Simulate SNP genotype data from a pedigree, with optional
 #'   missingess and errors.
@@ -14,15 +14,15 @@
 #'   genepool according to the provided MAF.
 #'
 #'   Genotyping errors are generated following a user-definable 3x3 matrix with
-#'   probabilities that actual genotype i (rows) is observed as genotype j
-#'   (columns). This is specified as \code{ErrorFM}, which is a function of
-#'   \code{SnpError}. By default (\code{ErrorFM} = "version2.0"), \code{SnpError}
-#'   is interpreted as a locus-level error rate (rather than allele-level), and
-#'   equals the probability that a homozygote is observed as heterozygote, and
-#'   the probability that a heterozygote is observed as either homozygote (i.e.,
-#'   the probability that it is observed as AA = probability that observed as aa
-#'   = \code{SnpError}/2). The probability that one homozygote is observed as
-#'   the other is (\code{SnpError}/2\eqn{)^2}.
+#'   probabilities that actual genotype \eqn{i} (rows) is observed as genotype
+#'   \eqn{j} (columns). This is specified as \code{ErrorFM}, which is a function
+#'   of \code{SnpError}. By default (\code{ErrorFM} = "version2.0"),
+#'   \code{SnpError} is interpreted as a locus-level error rate (rather than
+#'   allele-level), and equals the probability that a homozygote is observed as
+#'   heterozygote, and the probability that a heterozygote is observed as either
+#'   homozygote (i.e., the probability that it is observed as AA = probability
+#'   that observed as aa = \code{SnpError}/2). The probability that one
+#'   homozygote is observed as the other is (\code{SnpError}/2\eqn{)^2}.
 #'
 #'   Note that this differs from versions up to 1.1.1, where a proportion of
 #'   \code{SnpError}*3/2 of genotypes were replaced with random genotypes. This
@@ -37,7 +37,7 @@
 #'   distribution, with many samples having call rates close to 1, and a
 #'   narrowing tail of lower call rates. The first shape parameter defaults to 1
 #'   (but see \code{\link{MkGenoErrors}}), and the second shape parameter is
-#'   defined via the mean as \code{CallRate}. For 99.9% of SNPs to have a call
+#'   defined via the mean as \code{CallRate}. For 99.9\% of SNPs to have a call
 #'   rate of 0.8 (0.9; 0.95) or higher, use a mean call rate of 0.969 (0.985;
 #'   0.993).
 #'
@@ -49,17 +49,17 @@
 #'   generating an error-free genotype matrix, and then calling
 #'   \code{\link{MkGenoErrors}} directly on subsets of the matrix.
 #'
-#' @param Pedigree  Dataframe, pedigree with the first three columns being id -
+#' @param Pedigree  dataframe, pedigree with the first three columns being id -
 #'   dam - sire. Column names are ignored, as are additional columns, with the
 #'   exception of a 'Sex' column when Inherit is not 'autosomal'.
 #' @param nSnp  number of SNPs to simulate.
-#' @param ParMis  Single number or vector length two with proportion of parents
+#' @param ParMis  single number or vector length two with proportion of parents
 #'   with fully missing genotype. Ignored if CallRate is a named vector.
 #' @param MAF  minimum minor allele frequency, and allele frequencies will be
 #'   sampled uniformly between this minimum and 0.5, OR a vector with minor
 #'   allele frequency at each locus. In both cases, this is the MAF among
 #'   pedigree founders, the MAF in the sample will deviate due to drift.
-#' @param CallRate Either a single number for the mean call rate (genotyping
+#' @param CallRate either a single number for the mean call rate (genotyping
 #'   success), OR a vector with the call rate at each SNP, OR a named vector
 #'   with the call rate for each individual. In the third case, ParMis is
 #'   ignored, and individuals in the pedigree (as id or parent) not included in
@@ -78,21 +78,15 @@
 #' @param Inherit  inheritance pattern, scalar or vector of length nSnp,
 #'   Defaults to 'autosomal'. An excel file included in the package has
 #'   inheritance patterns for the X and Y chromosome and mtDNA, and allows
-#'   custom inheritance patterns. Note that these are NOT currently supported by
-#'   the pedigree reconstruction with \code{\link{sequoia}} !
-#' @param InheritFile  file name for excel file with inheritance patterns,
-#'   requires library xlsx.
+#'   custom inheritance patterns. Note that these are experimental, and NOT
+#'   currently supported by the pedigree reconstruction with
+#'   \code{\link{sequoia}} !
+#' @param InheritFile  file name of file with inheritance patterns, with
+#'   extension csv, txt, xls or xlsx (the latter two require library xlsx).
 #' @param quiet suppress messages.
-#' @param PropLQ  [deprecated] proportion of low-quality samples.
-#' @param MisHQ  [deprecated] average missingness for high-quality samples,
-#'   assuming a beta-distribution with alpha = 1.
-#' @param MisLQ  [deprecated] average missingness in low-quality samples.
-#' @param ErHQ  [deprecated] error rate in high quality samples (defaults to
-#'   0.005).
-#' @param ErLQ  [deprecated] error rate in low quality samples.
 #'
-#' @return if \code{ReturnStats=FALSE} (the default), a matrix with genotype data in
-#'   sequoia's input format, encoded as 0/1/2/-9.
+#' @return If \code{ReturnStats=FALSE} (the default), a matrix with genotype
+#'   data in sequoia's input format, encoded as 0/1/2/-9.
 #'
 #'   If \code{ReturnStats=TRUE}, a named list with three elements: list
 #'   'ParamsIN', matrix 'SGeno', and list 'StatsOUT':
@@ -105,7 +99,7 @@
 #'   \item{IndivError}{Error rate per individual}
 #'   \item{IndivCallRate}{Non-missing per individual}
 #'
-#' @seealso the wrapper \code{\link{EstConf}} for repeated simulation and
+#' @seealso The wrapper \code{\link{EstConf}} for repeated simulation and
 #'   pedigree reconstruction; \code{\link{MkGenoErrors}} for fine control over
 #'   the distribution of genotyping errors in simulated data.
 #'
@@ -134,6 +128,11 @@
 #' EFM(0.01)
 #' GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = 0.2,
 #'  SnpError = 5e-3, ErrorFM = EFM)
+#'
+#' # combination of high & low quality SNPs
+#' Geno.HQ <- SimGeno(Ped_HSg5, nSnp=50, MAF=0.3, CallRate=runif(50, 0.7, 1))
+#' Geno.LQ <- SimGeno(Ped_HSg5, nSnp=20, MAF=0.1, CallRate=runif(20, 0.1, 5))
+#' Geno.HQLQ <- merge(Geno.HQ, Geno.LQ, by="row.names")
 #' }
 #'
 #' @importFrom stats rbinom runif rbeta
@@ -152,28 +151,11 @@ SimGeno <- function(Pedigree,
 					          OutFile = NA,
 					          Inherit = "autosomal",
 					          InheritFile = NA,
-					          quiet = FALSE,
-                    PropLQ, # 0,    # backwards compatability
-                    MisHQ, # 0.005,
-                    MisLQ, #0.30,
-                    ErHQ, #5e-4,
-                    ErLQ) #5e-3,
+					          quiet = FALSE)
 {
   if (is.null(OutFile)) stop("'OutFile' must be filename or NA")
-
   if (missing(Pedigree)) stop("please provide a pedigree to simulate from")
-  if (!class(Pedigree) %in% c("data.frame", "matrix"))  stop("Pedigree should be a dataframe with (at least) 3 columns")
-  if (ncol(Pedigree) < 3)  stop("Pedigree should be a dataframe with at least 3 columns (id - dam - sire)")
 
-  if ( !missing(PropLQ)) if (PropLQ!=0) stop("PropLQ, MisLQ, and ErLQ are deprecated, use CallRate")
-  if (!missing(MisHQ)) {
-     CallRate <- 1 - MisHQ
-     warning("NOTE: 'MisHQ' will be deprecated, please use 'CallRate'", immediate.=TRUE)
-  }
-  if (!missing(ErHQ)) {
-    SnpError <- ErHQ
-    warning("NOTE: 'ErHQ' will be deprecated, please use 'SnpError'", immediate.=TRUE)
-  }
 
   # unavoidable partial matching when 'Err' is specified instead of 'SnpError'
   if (is.numeric(ErrorFM)) {
@@ -183,9 +165,7 @@ SimGeno <- function(Pedigree,
 
   #================================
   # check input
-
   if(!(is.numeric(nSnp)) || nSnp<=0)  stop("nSnp should be a number greater than 0")
-
   if(length(ParMis)==1) ParMis <- rep(ParMis, 2)
 
   params <- list(ParMis1 = ParMis[1], ParMis2 = ParMis[2], MAF = MAF,
@@ -204,11 +184,12 @@ SimGeno <- function(Pedigree,
 
   if (length(CallRate) > 1) {
     if (is.null(names(CallRate))) {
-      if (length(CallRate) != nSnp)  stop("CallRate should be length 1 or nSnp, or a named vector")
+      if (length(CallRate) != nSnp)  stop("CallRate should be length 1, or length nSnp, or a named vector")
     } else {
       if (length(intersect(names(CallRate), Pedigree[,1]))==0) stop("names of CallRate vector do not match pedigree")
     }
   }
+
 
   # Error matrix: rows = actual, columns = observed
 	ErFunc <- ErrToM(Err=0.1, flavour=ErrorFM, Return="function")  # 0.1 is test value only
@@ -243,7 +224,6 @@ SimGeno <- function(Pedigree,
   nInd <- nrow(Ped)
   if (any(round(Q*nInd) %in% c(0,1)))  warning("some simulated SNPs have fixed alleles")
 
-
   #================================
   # simulate genotypes
   # founders: random draw of alleles under HWE
@@ -256,7 +236,7 @@ SimGeno <- function(Pedigree,
   #~~~~~~~~~~~~~~
   # divide pedigree into `generations': the parents of an individual must come
   # from earlier cohorts than itself, or from the founder population (gen 0)
-  Ped$gen <- getGenerations(Ped)[, "gen"]
+  Ped$gen <- getGenerations(Ped, StopIfInvalid=TRUE)
   nGen <- max(Ped$gen)
 
 
@@ -291,7 +271,7 @@ SimGeno <- function(Pedigree,
 
     if (!"Sex" %in% names(Ped))  stop("Inherit other than autosomal requires 'Sex' column in Ped")
     Ped$Sex[is.na(Ped$Sex)] <- 3
-    if (any(Ped$Sex == 4)) stop("GenoSim not yet implemented for hermaphrodites (Sex=4)")
+    if (any(Ped$Sex == 4)) stop("non-autosomal inheritance not yet implemented for hermaphrodites (Sex=4)")
     Ped$Sex[!Ped$Sex %in% 1:2] <- 3
 
     # inheritance patterns
@@ -300,7 +280,7 @@ SimGeno <- function(Pedigree,
       INHA <- Inherit
       rm(Inherit)
     } else {
-      INHA <- ReadSpecialInherit(InheritFile)  # array: inherit - off sex - geno off - dam - sire
+      INHA <- ReadSpecialInherit(InheritFile, quiet)  # array: inherit - off sex - geno off - dam - sire
     }
 
     # founders
@@ -339,19 +319,35 @@ SimGeno <- function(Pedigree,
   SGeno <- MkGenoErrors(SGeno, CallRate, SnpError, ErFunc)
 
   #================================
-  # Non-genotyped individuals
+  # Non-genotyped parents
 
   NotSampled <- which(apply(SGeno, 1, function(x) all(x==-9)))
 
   if (any(ParMis>0) & is.null(names((CallRate)))==1) {
-    for (p in 1:2) {
-      if (ParMis[p]>0) {
-        IsParent <- which(Ped[,1] %in% Ped[,p+1])
+    if (length(na.exclude(intersect(Ped[,2], Ped[,3]))) >0) {
+      if (ParMis[1] != ParMis[2]) {
+        stop("With hermaphrodites, 'ParMis' must be equal for dams & sires")
+#      } else if (!quiet) {
+#        message("detected hermaphrodites ... ")
       }
-      if (round(length(IsParent)*ParMis[p]) > 0) {
+      IsParent <- which(Ped[,1] %in% Ped[,2] | Ped[,1] %in% Ped[,3])
+      if (round(length(IsParent)*ParMis[1]) > 0) {
         NotSampled <- c(NotSampled,
-                        sample(IsParent, round(length(IsParent)*ParMis[p]),
+                        sample(IsParent, round(length(IsParent)*ParMis[1]),
                                replace=FALSE) )
+      }
+
+    } else {
+
+      for (p in 1:2) {
+        if (ParMis[p]>0) {
+          IsParent <- which(Ped[,1] %in% Ped[,p+1])
+        }
+        if (round(length(IsParent)*ParMis[p]) > 0) {
+          NotSampled <- c(NotSampled,
+                          sample(IsParent, round(length(IsParent)*ParMis[p]),
+                                 replace=FALSE) )
+        }
       }
     }
   }
@@ -393,14 +389,14 @@ SimGeno <- function(Pedigree,
 
 
 #=============================================================================
-#' @title Simulate genotyping errors
+#' @title Simulate Genotyping Errors
 #'
 #' @description Generate errors and missing values in a (simulated) genotype
-#'   matrix
+#'   matrix.
 #'
-#' @param SGeno  Matrix with genotype data in Sequoia's format: 1 row per
+#' @param SGeno  matrix with genotype data in Sequoia's format: 1 row per
 #'   individual, 1 column per SNP, and genotypes coded as 0/1/2.
-#' @param CallRate Either a single number for the mean call rate (genotyping
+#' @param CallRate either a single number for the mean call rate (genotyping
 #'   success), OR a vector with the call rate at each SNP, OR a named vector
 #'   with the call rate for each individual. In the third case, ParMis is
 #'   ignored, and individuals in the pedigree (as id or parent) not included in
@@ -416,7 +412,7 @@ SimGeno <- function(Pedigree,
 #' @param CallRate.shape as Error.shape, for per-SNP call rates.
 #'
 #' @return  The input genotype matrix, with some genotypes replaced, and some
-#'   set to missing (-9)
+#'   set to missing (-9).
 #'
 #' @examples
 #' data(Ped_HSg5)
@@ -446,7 +442,6 @@ MkGenoErrors <- function(SGeno,
 {
   nSnp <- ncol(SGeno)
   nInd <- nrow(SGeno)
-
 #  if (! all(SGeno %in% c(0,1,2)) ) stop("SGeno may only contain 0, 1, or 2")
 
   #~~~~~~~~~
@@ -476,9 +471,9 @@ MkGenoErrors <- function(SGeno,
       stop("ErrorFM(E) should return a 4x4 or 3x3 matrix")
     }
 
-#    for (l in 1:nSnp) {
-#      SGeno[,l] <- sapply(SGeno[,l], function(x) sample.int(3, 1, prob=RealToObs[l,x+1,]) -1 )
-#    } # rather slow; implemented in Fortran instead:
+    # for (l in 1:nSnp) {
+    #   SGeno[,l] <- sapply(SGeno[,l], function(x) sample.int(3, 1, prob=RealToObs[l,x+1,]) -1 )
+    # } # rather slow; implemented in Fortran instead:
     SGeno <- DoErrors(SGeno, RealToObs)
   }
 
@@ -515,15 +510,15 @@ MkGenoErrors <- function(SGeno,
 
 
 #=============================================================================
-#' @title Simulate genotyping errors
+#' @title Fortran Simulate Genotyping Errors
 #'
 #' @description Wrapper for Fortran function to simulate genotyping errors.
 #'
-#' @param SGeno matrix with genotype data, size nInd x nSnp
+#' @param SGeno matrix with genotype data, size nInd x nSnp.
 #' @param RealToObs array with conditional probability of observing genotype i
-#'   conditional on actual genotype j, size nSnp x 3 x 3
+#'   conditional on actual genotype j, size nSnp x 3 x 3.
 #'
-#' @return SGeno with errors
+#' @return \code{SGeno} with errors.
 #'
 #' @useDynLib sequoia, .registration = TRUE
 #'
@@ -542,64 +537,50 @@ DoErrors <- function(SGeno, RealToObs) {
 
 #=============================================================================
 
-#' @title Count generations
-#'
-#' @description For each individual in a pedigree, count the number of
-#'   generations since the most distant pedigree founder
-#'
-#' @param Ped  Dataframe, pedigree with the first three columns being ID - dam -
-#'   sire. Column names are ignored, as are additional columns.
-#'
-#' @return  The input pedigree with three columns added: gen, gen.dam, and
-#'   gen.sire
-#'
-#' @keywords internal
-
-getGenerations <- function(Ped) {
-  for (p in 2:3) {
-    Ped[which(Ped[,p]==0), p] <- NA
-  }
-
-  Ped$gen <- NA  # individual's generation
-  Ped$gen.dam <- NA
-  Ped$gen.sire <- NA
-  Ped$gen[is.na(Ped[,2]) & is.na(Ped[,3])] <- 0
-  for (x in 0:1000) {
-    Ped$gen.dam[is.na(Ped$gen.dam) & Ped[,2] %in% Ped[which(Ped$gen<=x), 1]] <- x
-    Ped$gen.sire[is.na(Ped$gen.sire) & Ped[,3] %in% Ped[which(Ped$gen<=x), 1]] <- x
-    Ped$gen[which(is.na(Ped$gen) &
-                   (Ped$gen.dam<=x | is.na(Ped[,2])) &
-                   (Ped$gen.sire<=x | is.na(Ped[,3])))] <- x+1
-    if (!any(is.na(Ped$gen)))  break
-  }
-  return( Ped[, c("gen", "gen.dam", "gen.sire")] )
-}
-
-
-#=============================================================================
-
-ReadSpecialInherit <- function(InheritFile) {
+ReadSpecialInherit <- function(InheritFile, quiet) {
   inherit.L <- list()
-  TypeNames <- names(xlsx::getSheets(xlsx::loadWorkbook(InheritFile)))
-  for (type in seq_along(TypeNames)) {
-    tmp <- xlsx::read.xlsx(InheritFile,  sheetIndex = type)  # "E:/sequoia_2/inherit.xlsx"
-    if (is.null(tmp))  next
+  if (tools::file_ext(InheritFile) %in% c("xls", "xlsx")) {
+    if (!requireNamespace("xlsx", quietly = TRUE)) {
+      if (interactive() & !quiet) {
+        ANS <- readline(prompt = paste("library 'xlsx' not found. Install Y/N? "))
+        if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
+      }
+      utils::install.packages("xlsx")
+    }
+    TypeNames <- names(xlsx::getSheets(xlsx::loadWorkbook(InheritFile)))
+    TmpL <- list()
+    for (type in seq_along(TypeNames)) {
+      TmpL[[type]] <-  xlsx::read.xlsx(InheritFile,  sheetIndex = type)
+    }
+
+  } else {
+    if (tools::file_ext(InheritFile)==".csv") {
+      TmpDF <- utils::read.csv(InheritFile, stringsAsFactors=FALSE)
+    } else {
+      TmpDF <- utils::read.table(InheritFile, header=TRUE, stringsAsFactors=FALSE)
+    }
+    if (ncol(TmpDF)!=8)  stop("InheritFile must have 8 columns (possible read error)")
+    TmpL <- plyr::dlply(TmpDF, "Mode", function(df) df[, -1])
+  }
+
+  for (type in seq_along(TmpL)) {
+    if (is.null(TmpL[[type]]))  next
     INH <- array(0, dim = c(3,4,4,4),  # off sex, geno off - dam - sire
                  dimnames = c(list(c("fem","male", "unk")),
                               lapply(1:3, function(i) c("aa", "aA", "Aa", "AA"))))
-    if (all(tmp$Sex == 3)) {
+    if (all(TmpL[[type]]$Sex == 3)) {
       for (i in 1:4) {
-        INH[3,i,,] <- t(matrix(as.matrix(tmp[,4:7])[,i], 4,4))
+        INH[3,i,,] <- t(matrix(as.matrix(TmpL[[type]][,4:7])[,i], 4,4))
       }
       for (s in 1:2) {
         INH[s,,,] <- INH[3,,,]
       }
 
-    } else if (all(tmp$Sex %in% 1:2)){
+    } else if (all(TmpL[[type]]$Sex %in% 1:2)){
       for (s in 1:2) {
-        if (!any(tmp$Sex == s)) next
+        if (!any(TmpL[[type]]$Sex == s)) next
         for (i in 1:4) {
-          INH[s,i,,] <- t(matrix(as.matrix(tmp[tmp$Sex==s, 4:7])[,i], 4,4))
+          INH[s,i,,] <- t(matrix(as.matrix(TmpL[[type]][TmpL[[type]]$Sex==s, 4:7])[,i], 4,4))
         }
       }
       INH[3,,,] <- apply(INH[1:2,,,], c(2:4), mean)

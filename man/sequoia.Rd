@@ -8,7 +8,8 @@ sequoia(
   GenoM = NULL,
   LifeHistData = NULL,
   SeqList = NULL,
-  MaxSibIter = 10,
+  Module = "ped",
+  MaxSibIter = 42,
   Err = 1e-04,
   ErrFlavour = "version2.0",
   MaxMismatch = NA,
@@ -17,6 +18,7 @@ sequoia(
   MaxSibshipSize = 100,
   DummyPrefix = c("F", "M"),
   Complex = "full",
+  Herm = "no",
   UseAge = "yes",
   args.AP = list(Flatten = NULL, Smooth = TRUE),
   FindMaybeRel = FALSE,
@@ -27,15 +29,14 @@ sequoia(
 }
 \arguments{
 \item{GenoM}{numeric matrix with genotype data: One row per individual, and
-one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
-\code{\link{GenoConvert}} to convert genotype files created in PLINK using
---recodeA or in Colony's 2-column format to this format.}
+one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
+\code{\link{GenoConvert}}.}
 
-\item{LifeHistData}{Dataframe with 3 columns (optionally 5):
+\item{LifeHistData}{dataframe with 3 columns (optionally 5):
  \describe{
- \item{ID}{max. 30 characters long,}
- \item{Sex}{1 = females, 2 = males, other = unknown, except 4 =
-   hermaphrodite,}
+ \item{ID}{max. 30 characters long}
+ \item{Sex}{1 = female, 2 = male, 3 = unknown, 4 = hermaphrodite,
+           other numbers or NA = unknown}
 \item{BirthYear }{birth or hatching year, integer, with missing values as NA
   or any negative value.}
 \item{BY.min}{minimum birth year, only used if BirthYear is missing}
@@ -43,30 +44,50 @@ one column per SNP, coded as 0, 1, 2 or -9 (missing). Use
 If the species has multiple generations per year, use an integer coding such
 that the candidate parents' `Birth year' is at least one smaller than their
 putative offspring's. Column names are ignored, so ensure column order is ID
-- sex - birth year (- BY.min - BY.max).}
+- sex - birth year (- BY.min - BY.max). Individuals do not need to be in the
+same order as in `GenoM', nor do all genotyped individuals need to be
+included.}
 
-\item{SeqList}{list with output from a previous run, containing the elements
-`Specs', `AgePriors' and/or `PedigreePar', as described below, to be used
-in the current run. If \code{SeqList$Specs} is provided, all other input
-parameter values except \code{MaxSibIter} are ignored.}
+\item{SeqList}{list with output from a previous run, to be re-used in the
+current run. Used are elements `PedigreePar', `LifeHist', `AgePriors',
+`Specs', and `ErrM', and these override the corresponding input parameters.
+Not all of these elements need to be present, and all other elements are
+ignored. If \code{SeqList$Specs} is provided, all  input parameters with
+the same name as its items are ignored, except
+\code{Module}/\code{MaxSibIter}.}
 
-\item{MaxSibIter}{number of iterations of sibship clustering, including
-assignment of grandparents to sibships and avuncular relationships between
-sibships. Set to 0 to not (yet) perform this step, which is by far the most
-time consuming and may take several hours for large datasets. Clustering
-continues until convergence or until MaxSibIter is reached.}
+\item{Module}{one of
+\describe{
+  \item{pre}{Only input check, return \code{SeqList$Specs}}
+  \item{dup}{Also check for duplicate genotypes}
+  \item{par}{Also perform parentage assignment (genotyped parents to
+    genotyped offspring)}
+  \item{ped}{(Also) perform full pedigree reconstruction, including
+    sibship clustering and grandparent assignment. By far the most time
+    consuming, and may take several hours for large datasets.}
+}
+NOTE: \emph{Until `MaxSibIter` is fully deprecated: if `MaxSibIter` differs
+from the default (\code{42}), and `Module` equals the default
+(\code{'ped'}), MaxSibIter overrides `Module`.}}
+
+\item{MaxSibIter}{\strong{[will be deprecated]} number of iterations of
+sibship clustering, including assignment of grandparents to sibships and
+avuncular relationships between sibships. Clustering continues until
+convergence or until MaxSibIter is reached. Set to 0 for parentage
+assignment only.}
 
 \item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix.
-If a matrix, this should be the probability of observed genotype (columns)
-conditional on actual genotype (rows). Each row must therefore sum to 1.}
+Details below. The error rate is presumed constant across SNPs, and
+missingness is presumed random with respect to actual genotype.}
 
-\item{ErrFlavour}{function that takes \code{Err} as input, and returns a 3x3
-matrix of observed (columns) conditional on actual (rows) genotypes, or
-choose from inbuilt ones as used in sequoia 'version2.0', 'version1.3', or
-'version1.1'. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}
+\item{ErrFlavour}{function that takes \code{Err} (single number) as input,
+and returns a 3x3 matrix of observed (columns) conditional on actual (rows)
+genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
+'version1.1', referring to the sequoia version in which they were the
+default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}
 
-\item{MaxMismatch}{DEPRECATED AND IGNORED. Now calculated using
-\code{\link{CalcMaxMismatch}}.}
+\item{MaxMismatch}{\strong{DEPRECATED AND IGNORED}. Now calculated
+automatically using \code{\link{CalcMaxMismatch}}.}
 
 \item{Tfilter}{threshold log10-likelihood ratio (LLR) between a proposed
 relationship versus unrelated, to select candidate relatives. Typically a
@@ -82,11 +103,17 @@ conservative assignments. Must be zero or positive.}
 generous safety margin is advised).}
 
 \item{DummyPrefix}{character vector of length 2 with prefixes for dummy dams
-(mothers) and sires (fathers); maximum 20 characters each.}
+(mothers) and sires (fathers); maximum 20 characters each. Length 3 vector
+in case of hermaphrodites (or default prefix 'H').}
 
-\item{Complex}{either "full" (default), "simp" (simplified, no explicit
-consideration of inbred relationships), "mono" (monogamous) or "herm"
-(hermaphrodites, otherwise like "full").}
+\item{Complex}{Breeding system complexity. Either "full" (default), "simp"
+(simplified, no explicit consideration of inbred relationships), "mono"
+(monogamous).}
+
+\item{Herm}{Hermaphrodites, either "no", "A" (distinguish between dam and
+sire role, default if at least 1 individual with sex=4), or "B" (no
+distinction between dam and sire role). Both of the latter deal with
+selfing.}
 
 \item{UseAge}{either "yes" (default), "no", or "extra" (additional rounds
 with extra reliance on ageprior, may boost assignments but increased risk
@@ -95,21 +122,22 @@ of erroneous assignments); used during full reconstruction only.}
 \item{args.AP}{list with arguments to be passed on to
 \code{\link{MakeAgePrior}}.}
 
-\item{FindMaybeRel}{DEPRECATED, advised to run \code{\link{GetMaybeRel}}
-separately. TRUE/FALSE to identify pairs of non-assigned likely relatives
-after pedigree reconstruction. Can be time-consuming in large datasets.}
+\item{FindMaybeRel}{\strong{DEPRECATED AND IGNORED}, advised to run
+\code{\link{GetMaybeRel}} separately. TRUE/FALSE to identify pairs of
+non-assigned likely relatives after pedigree reconstruction. Can be
+time-consuming in large datasets.}
 
-\item{CalcLLR}{calculate log-likelihood ratios for all assigned parents
-(genotyped + dummy; parent vs. otherwise related). Time-consuming in large
-datasets. Can be done separately with \code{\link{CalcOHLLR}}.}
+\item{CalcLLR}{TRUE/FALSE; calculate log-likelihood ratios for all assigned
+parents (genotyped + dummy; parent vs. otherwise related). Time-consuming
+in large datasets. Can be done separately with \code{\link{CalcOHLLR}}.}
 
 \item{quiet}{suppress messages: TRUE/FALSE/"verbose".}
 
 \item{Plot}{display plots from \code{\link{SnpStats}, \link{MakeAgePrior}},
 and \code{\link{SummarySeq}}. Defaults (NULL) to TRUE when quiet=FALSE or
-"verbose", and FALSE when quiet=TRUE. If you get errors an error 'figure
-margins too large', enlarge the plotting area (drag with mouse). 'invalid
-graphics state' error can be dealt with by clearing the plotting area with
+"verbose", and FALSE when quiet=TRUE. If you get error 'figure margins too
+large', enlarge the plotting area (drag with mouse). Error 'invalid
+graphics state' can be dealt with by clearing the plotting area with
 dev.off().}
 }
 \value{
@@ -117,13 +145,14 @@ A list with some or all of the following components:
 \item{AgePriors}{Matrix with age-difference based probability ratios for
   each relationship, used for full pedigree reconstruction; see
   \code{\link{MakeAgePrior}} for details. When running only parentage
-  assignment (MaxSibIter=0) the returned AgePriors has been updated to
+  assignment (\code{Module="par"}) the returned AgePriors has been updated to
   incorporate the information of the assigned parents, and is ready for use
   during full pedigree reconstruction.}
 \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
 their sex, estimated birth year (point estimate, upper and lower bound of
-95\% confidence interval), number of offspring, and offspring IDs (genotyped
-offspring only).}
+95\% confidence interval; see also \code{\link{CalcBYprobs}}), number of
+offspring, and offspring IDs. From version 2.1 onwards, this includes dummy
+offspring.}
 \item{DupGenotype}{Dataframe, duplicated genotypes (with different IDs,
  duplicate IDs are not allowed). The specified number of maximum mismatches
   is used here too. Note that this dataframe may include pairs of closely
@@ -166,6 +195,8 @@ reconstruction}
 \item{AgePriorExtra}{As AgePriors, but including columns for grandparents
  and avuncular pairs. NOT updated after parentage assignment, but returned
  as used during the run.}
+\item{DummyClones}{Hermaphrodites only: female-male dummy ID pairs that refer
+  to the same non-genotyped individual}
 
 List elements PedigreePar and Pedigree both have the following columns:
  \item{id}{Individual ID}
@@ -173,7 +204,9 @@ List elements PedigreePar and Pedigree both have the following columns:
  \item{sire}{Assigned father, or NA}
  \item{LLRdam}{Log10-Likelihood Ratio (LLR) of this female being the mother,
  versus the next most likely relationship between the focal individual and
- this female (see Details for relationships considered)}
+ this female. See Details below for relationships considered, and see
+ \code{\link{CalcPairLL}} for underlying likelihood values and further
+ details)}
  \item{LLRsire}{idem, for male parent}
  \item{LLRpair}{LLR for the parental pair, versus the next most likely
   configuration between the three individuals (with one or neither parent
@@ -191,12 +224,7 @@ Perform pedigree reconstruction based on SNP data, including
   parentage assignment and sibship clustering.
 }
 \details{
-Dummy parents of sibships are denoted by F0001, F0002, ... (mothers)
-  and M0001, M0002, ... (fathers), are appended to the bottom of the
-  pedigree, and may have been assigned real or dummy parents themselves (i.e.
-  sibship-grandparents). A dummy parent is not assigned to singletons.
-
-  For each pair of candidate relatives, the likelihoods are calculated
+For each pair of candidate relatives, the likelihoods are calculated
   of them being parent-offspring (PO), full siblings (FS), half siblings
   (HS), grandparent-grandoffspring (GG), full avuncular (niece/nephew -
   aunt/uncle; FA), half avuncular/great-grandparental/cousins (HA), or
@@ -204,8 +232,21 @@ Dummy parents of sibships are denoted by F0001, F0002, ... (mothers)
   the focal relationship and the most likely alternative exceed the threshold
   Tassign.
 
-  Further explanation of the various options and interpretation of the output
-  is provided in the vignette.
+  Dummy parents of sibships are denoted by F0001, F0002, ... (mothers)
+  and M0001, M0002, ... (fathers), are appended to the bottom of the
+  pedigree, and may have been assigned real or dummy parents themselves (i.e.
+  sibship-grandparents). A dummy parent is not assigned to singletons.
+
+  The genotyping error rate `Err` is by default at locus level, not allele
+  level: the probability to observe true homozygote \emph{aa} as heterozygote
+  \emph{Aa} is \eqn{\approx E}, and as alternate homozygote \emph{AA}
+  \eqn{(E/2)^2}; the probability to observe a true heterozygote as \emph{aa}
+  = the probability to observe it as \emph{AA} \eqn{= E/2}. This error
+  structure can be fully customised by providing a 3x3 matrix of observed
+  genotype (columns) conditional on actual genotype (rows) instead.
+
+  Full explanation of the various options and interpretation of the output is
+  provided in the vignette.
 }
 \section{Disclaimer}{
 
@@ -215,12 +256,13 @@ correct. Use of sequoia is entirely at your own risk.
 }
 
 \examples{
-# ===  EXAMPLE 1: simulate data  ===
+# ===  EXAMPLE 1: simulated data  ===
 data(SimGeno_example, LH_HSg5, package="sequoia")
 head(SimGeno_example[,1:10])
 head(LH_HSg5)
+# parentage assignment:
 SeqOUT <- sequoia(GenoM = SimGeno_example, Err = 0.005,
-                  LifeHistData = LH_HSg5, MaxSibIter = 0)
+                  LifeHistData = LH_HSg5, Module="par", Plot=TRUE)
 names(SeqOUT)
 SeqOUT$PedigreePar[34:42, ]
 
@@ -228,21 +270,29 @@ SeqOUT$PedigreePar[34:42, ]
 PC <- PedCompare(Ped_HSg5, SeqOUT$PedigreePar)
 PC$Counts["GG",,]
 
-\dontrun{
+\donttest{
+# parentage assignment + full pedigree reconstruction:
 SeqOUT2 <- sequoia(GenoM = SimGeno_example, Err = 0.005,
-                  LifeHistData = LH_HSg5, MaxSibIter = 10)
+                  LifeHistData = LH_HSg5, Module="ped", quiet="verbose")
 SeqOUT2$Pedigree[34:42, ]
 
 PC2 <- PedCompare(Ped_HSg5, SeqOUT2$Pedigree)
 PC2$Counts["GT",,]
+PC2$Counts[,,"dam"]
 
-# important to run with (approx.) correct genotyping error rate:
+# different kind of pedigree comparison:
+ComparePairs(Ped1=Ped_HSg5, Ped2=SeqOUT$PedigreePar, patmat=TRUE)
+
+# results overview:
+SummarySeq(SeqOUT2)
+
+# important to run with approx. correct genotyping error rate:
 SeqOUT2.b <- sequoia(GenoM = SimGeno_example, #  Err = 1e-4 by default
-                  LifeHistData = LH_HSg5, MaxSibIter = 10)
+                  LifeHistData = LH_HSg5, Module="ped", Plot=FALSE)
 PC2.b <- PedCompare(Ped_HSg5, SeqOUT2.b$Pedigree)
 PC2.b$Counts["GT",,]
-
-
+}
+\dontrun{
 # ===  EXAMPLE 2: real data  ===
 # ideally, select 400-700 SNPs: high MAF & low LD
 # save in 0/1/2/NA format (PLINK's --recodeA)
@@ -271,17 +321,27 @@ Huisman, J. (2017) Pedigree reconstruction from SNP data:
   Resources 17:1009--1024.
 }
 \seealso{
-\code{\link{GenoConvert}} to read in various data formats,
-  \code{\link{CheckGeno}}, \code{\link{SnpStats}} to calculate missingness
-  and allele frequencies, \code{\link{MakeAgePrior}} to estimate effect of
-  age on relationships, \code{\link{GetMaybeRel}} to find pairs of potential
-  relatives, \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to
-  visualise results, \code{\link{GetRelCat}} to turn a pedigree into pairwise
-  relationships, \code{\link{CalcOHLLR}} to calculate OH and LLR,
-  \code{\link{PedCompare}} and \code{\link{ComparePairs}} to compare to a
-  previous pedigree, \code{\link{EstConf}} and \code{\link{SimGeno}} to
-  estimate assignment errors, \code{\link{writeSeq}} to save results,
-  vignette("sequoia") for further details & FAQ.
+\itemize{
+  \item \code{\link{GenoConvert}} to read in various data formats,
+  \item \code{\link{CheckGeno}}, \code{\link{SnpStats}} to calculate
+    missingness and allele frequencies,
+  \item \code{\link{SimGeno}}  to simulate SNP data from a pedigree
+ \item \code{\link{MakeAgePrior}} to estimate effect of age on relationships,
+  \item \code{\link{GetMaybeRel}} to find pairs of potential relatives,
+  \item \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to visualise
+  results,
+  \item \code{\link{GetRelM}} to turn a pedigree into pairwise relationships,
+  \item \code{\link{CalcOHLLR}} to calculate Mendelian errors and LLR for any
+   pedigree,
+  \item \code{\link{CalcPairLL}} for likelihoods of various relationships
+   between specific pairs,
+  \item \code{\link{CalcBYprobs}} to estimate birth years,
+  \item \code{\link{PedCompare}} and \code{\link{ComparePairs}} to compare to
+  two pedigrees,
+  \item \code{\link{EstConf}} to estimate assignment errors,
+  \item \code{\link{writeSeq}} to save results,
+  \item vignette("sequoia") for detailed manual & FAQ.
+}
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

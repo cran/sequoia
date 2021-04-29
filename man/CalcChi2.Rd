@@ -2,14 +2,14 @@
 % Please edit documentation in R/SNPstats.R
 \name{CalcChi2}
 \alias{CalcChi2}
-\title{Perform chi-square test on observed vs expected genotypes}
+\title{Chi-square Test on Observed vs Expected Genotypes}
 \usage{
 CalcChi2(E, q, A.obs, ErrF)
 }
 \arguments{
-\item{E}{presumed genotyping error rate}
+\item{E}{presumed genotyping error rate.}
 
-\item{q}{allele frequency}
+\item{q}{allele frequency.}
 
 \item{A.obs}{array of dim 4x4x4 with counts of joined
 offspring-parent-parent at the SNPs}
@@ -21,7 +21,7 @@ in sequoia 'version2.0', 'version1.3', or 'version1.1'. See
 \code{\link{ErrToM}}.}
 }
 \value{
-the chisquare value of the test
+The chisquare value of the test.
 }
 \description{
 For one SNP and all offspring-parent-parent trios or single
@@ -38,6 +38,6 @@ for (l in 1:ncol(GenoM)) {
 } }
 }
 \seealso{
-\code{\link{EstErr}, \link{SnpStats}}
+\code{\link{EstErr}, \link{SnpStats}}.
 }
 \keyword{internal}

@@ -2,16 +2,16 @@
 % Please edit documentation in R/SNPstats.R
 \name{EstErr}
 \alias{EstErr}
-\title{Estimate genotyping error rate}
+\title{Estimate Genotyping Error Rate}
 \usage{
 EstErr(GenoM, Par, ErrFlavour = "version2.0")
 }
 \arguments{
-\item{GenoM}{Genotype matrix, in sequoia's format: 1 column per SNP, 1 row
+\item{GenoM}{genotype matrix, in sequoia's format: 1 column per SNP, 1 row
 per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
 IDs.}
 
-\item{Par}{Pedigree, only genotyped parents are used.}
+\item{Par}{pedigree dataframe, only genotyped parents are used.}
 
 \item{ErrFlavour}{function that takes the genotyping error rate \code{Err} as
 input, and returns a 3x3 matrix of observed (columns) conditional on actual
@@ -19,7 +19,7 @@ input, and returns a 3x3 matrix of observed (columns) conditional on actual
 'version2.0', 'version1.3', or 'version1.1'. See \code{\link{ErrToM}}.}
 }
 \value{
-a dataframe with columns:
+A dataframe with columns:
 \item{Err.hat}{Error rate, as estimated from the joined offspring-parent
   (-parent) genotypes and the presumed error structure (\code{ErrFlavour})}
 \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
@@ -31,6 +31,6 @@ a dataframe with columns:
 Estimate genotyping error rate from Mendelian errors per SNP.
 }
 \seealso{
-\code{\link{SnpStats}}
+\code{\link{SnpStats}}.
 }
 \keyword{internal}

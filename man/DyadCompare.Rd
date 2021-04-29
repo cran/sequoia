@@ -2,14 +2,14 @@
 % Please edit documentation in R/ComparePairs.R
 \name{DyadCompare}
 \alias{DyadCompare}
-\title{Compare dyads}
+\title{Compare Dyads}
 \usage{
 DyadCompare(Ped1 = NULL, Ped2 = NULL, na1 = c(NA, "0"))
 }
 \arguments{
-\item{Ped1}{Original pedigree, dataframe with 3 columns: id-dam-sire}
+\item{Ped1}{original pedigree, dataframe with 3 columns: id-dam-sire.}
 
-\item{Ped2}{Second (inferred) pedigree}
+\item{Ped2}{second (inferred) pedigree.}
 
 \item{na1}{the value for missing parents in Ped1.}
 }
@@ -17,21 +17,22 @@ DyadCompare(Ped1 = NULL, Ped2 = NULL, na1 = c(NA, "0"))
 A 3x3 table with the number of pairs assigned as full siblings (FS),
   half siblings (HS) or unrelated (U, including otherwise related) in the two
   pedigrees, with the classification in Ped1 on rows and that in Ped2 in
-  columns
+  columns.
 }
 \description{
 Count the number of half and full sibling pairs correctly and
-  incorrectly assigned. DEPRECATED - SEE \code{\link{ComparePairs}}
+  incorrectly assigned. DEPRECATED - PLEASE USE \code{\link{ComparePairs}}
 }
 \examples{
-\dontrun{
+\donttest{
 data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
 SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-                  MaxSibIter = 0)
+                  Module="par", quiet=TRUE, Plot=FALSE)
 DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
 }
 
 }
 \seealso{
-\code{\link{PedCompare}}
+\code{\link{ComparePairs}} which supersedes this function;
+  \code{\link{PedCompare}}
 }

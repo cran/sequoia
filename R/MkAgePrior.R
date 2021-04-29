@@ -5,21 +5,22 @@
 #======================================================================
 #======================================================================
 
-#' @title Age priors
+#' @title Age Priors
 #'
-#' @description For various categories of pairwise relatives (R), calculate
-#'   age-difference (A) based probability ratios \eqn{P(A|R) / P(A)} .
+#' @description Estimate probability ratios \eqn{P(R|A) / P(R)} for age
+#'   differences A and five categories of parent-offspring and sibling
+#'   relationships R.
 #'
-#' @details The ratio \eqn{P(A|R) / P(A)} is the ratio between the observed
+#'
+#' @details \eqn{\alpha_{A,R}} is the ratio between the observed
 #'   counts of pairs with age difference A and relationship R (\eqn{N_{A,R}}),
 #'   and the expected counts if age and relationship were independent
 #'   (\eqn{N_{.,.}*p_A*p_R}).
 #'
-#'   During pedigree reconstruction, the ratios \eqn{P(A|R) / P(A)} calculated
-#'   here are multiplied by the age-independent genetic-only \eqn{P(R|G)} to
-#'   obtain a probability that the pair are relatives of type R conditional on
-#'   both their age difference and their genotypes (i.e. using Bayes' theorem,
-#'   \eqn{P(R|A, G) =P(A|R) / P(A) * P(R|G)}).
+#'   During pedigree reconstruction, \eqn{\alpha_{A,R}} are multiplied by the
+#'   genetic-only \eqn{P(R|G)} to obtain a probability that the
+#'   pair are relatives of type R conditional on both their age difference and
+#'   their genotypes.
 #'
 #'   The age-difference prior is used for pairs of genotyped individuals, as
 #'   well as for dummy individuals. This assumes that the propensity for a pair
@@ -27,41 +28,8 @@
 #'   relationship, so that the ratio \eqn{P(A|R) / P(A)} does not differ between
 #'   sampled and unsampled pairs.
 #'
-#' @section CAUTION: The small sample correction with \code{Smooth} and/or
-#'   \code{Flatten} prevents errors in one dataset, but may introduce errors in
-#'   another; a single solution that fits to the wide variety of life histories
-#'   and datasets is impossible. Please do inspect the matrix, e.g. with
-#'   \code{PlotAgePrior}.
-#'
-#' @section Single cohort: When no birth year information is given, or all
-#'   individuals have the same birth year, it is assumed that a single cohort has
-#'   been analysed and a matrix with 0's and 1's is returned. When
-#'   \code{Discrete=FALSE}, avuncular pairs are assumed potentially present,
-#'   while when \code{Discrete=TRUE} avuncular is not considered as a
-#'   relationship possibility.
-#'
-#' @section Other time units: "Birth year" may be in any arbitrary time unit
-#'   relevant to the species (day, month, decade), as long as parents are never
-#'   born in the same time unit as their offspring, but always before their
-#'   putative offspring (e.g. parent's BirthYear= 1 (or 2001) and offspring
-#'   BirthYear=5 (or 2005)). Negative numbers and NA's are interpreted as unknown,
-#'   and fractional numbers are not allowed.
-#'
-#' @section Maximum parental age: The number of rows in the output ageprior
-#'   matrix equals the maximum parental age +1 (the first row is for age
-#'   difference 0). The maximum parental age equals:
-#'  \itemize{
-#'  \item{}{the maximum age of parents if a pedigree is provided, or}
-#'  \item{}{the (largest) value of \code{MaxAgeParent}, or}
-#'  \item{}{1, if generations are discrete, or}
-#'  \item{}{the maximum range of birth years in LifeHistData (including BY.min
-#'  and BY.max, when provided)}}
-#'  Exception is when \code{MaxAgeParent} is larger than the maximum age of
-#'  parents in the provided skeleton pedigree, then \code{MaxAgeParent} is used.
-#'  Thus, \code{MaxAgeParent} can be used when the birth year range in
-#'  LifeHistData and/or the age distribution of assigned parents does not
-#'  capture the absolutely maximum age of parents. Not adjusting this may hinder
-#'  subsequent assignment of both dummy parents and grandparents.
+#'   For further details, see the vignette.
+#
 #'
 #' @param Pedigree dataframe with id - dam - sire in columns 1-3, and optional
 #'   column with birth years. Other columns are ignored.
@@ -75,10 +43,8 @@
 #'   LifeHistData.
 #' @param MaxAgeParent  maximum age of a parent, a single number (max across
 #'   dams and sires) or a vector of length two (dams, sires). If NULL, it will
-#'   be estimated from the data. If there are fewer than 20 parents of either
-#'   sex assigned, \code{MaxAgeParent} is set to the maximum age difference in
-#'   the birth year column of \code{Pedigree} or \code{LifeHistData}.
-#' @param Discrete  Discrete generations? By default (NULL), discrete
+#'   be estimated from the pedigree. See details below.
+#' @param Discrete  discrete generations? By default (NULL), discrete
 #'   generations are assumed if all parent-offspring pairs have an age
 #'   difference of 1, and all siblings an age difference of 0, and there are at
 #'   least 20 pairs of each category (mother, father, maternal sibling, paternal
@@ -86,21 +52,21 @@
 #'   \code{Discrete=TRUE} (explicitly or deduced), \code{Smooth} and
 #'   \code{Flatten} are always automatically set to \code{FALSE}. Use
 #'   \code{Discrete=FALSE} to enforce (potential for) overlapping generations.
-#' @param Flatten To deal with small sample sizes for some or all relationships,
-#'   calculate weighed average between the observed age difference distribution
-#'   among relatives and a flat (0/1) distribution. When \code{Flatten=NULL}
-#'   (the default) automatically set to TRUE when there are fewer than 20
-#'   parents with known age of either sex assigned, or fewer than 20 maternal or
-#'   paternal siblings with known age difference. Also advisable if the sampled
-#'   relative pairs with known age difference are non-typical of the pedigree as
-#'   a whole.
-#' @param lambdaNW  Control weighing factors when \code{Flatten=TRUE}. Weights
+#' @param Flatten logical. To deal with small sample sizes for some or all
+#'   relationships, calculate weighed average between the observed age
+#'   difference distribution among relatives and a flat (0/1) distribution. When
+#'   \code{Flatten=NULL} (the default) automatically set to TRUE when there are
+#'   fewer than 20 parents with known age of either sex assigned, or fewer than
+#'   20 maternal or paternal siblings with known age difference. Also advisable
+#'   if the sampled relative pairs with known age difference are non-typical of
+#'   the pedigree as a whole.
+#' @param lambdaNW  control weighing factors when \code{Flatten=TRUE}. Weights
 #'   are calculated as \eqn{W(R) = 1 - exp(-lambdaNW * N(R))}, where \eqn{N(R)}
 #'   is the number of pairs with relationship R for which the age difference is
 #'   known. Large values (>0.2) put strong emphasis on the pedigree, small
 #'   values (<0.0001) cause the pedigree to be ignored. Default results in
 #'   \eqn{W=0.5} for \eqn{N=100}.
-#' @param Smooth Smooth the tails of and any dips in the distribution? Sets dips
+#' @param Smooth smooth the tails of and any dips in the distribution? Sets dips
 #'   (<10\% of average of neighbouring ages) to the average of the neighbouring
 #'   ages, sets the age after the end (oldest observed age) to LR(end)/2, and
 #'   assigns a small value (0.001) to the ages before the front (youngest
@@ -108,18 +74,21 @@
 #'   are less likely to cause problems than dips, and are more likely to be
 #'   genuine characteristics of the species. Is set to \code{FALSE} when
 #'   generations do not overlap (\code{Discrete=TRUE}).
-#' @param Plot  plot a heatmap of the results? Only when \code{Pedigree} is
-#'   provided
+#' @param Plot  plot a heatmap of the results?
 #' @param Return  return only a matrix with the likelihood-ratio \eqn{P(A|R) /
-#'   P(A)} (\code{"LR"}) or a list including also various intermediate statistics
-#'   (\code{"all"}) ?
-#' @param quiet suppress messages
+#'   P(A)} (\code{"LR"}) or a list including also various intermediate
+#'   statistics (\code{"all"}) ?
+#' @param quiet suppress messages.
+#'
 #'
 #' @return A matrix with the probability ratio of the age difference between two
 #'   individuals conditional on them being a certain type of relative
-#'   (\eqn{P(A|R)}) versus being a random draw from the sample (\eqn{P(A)}). For
-#'   siblings and avuncular pairs, this is the absolute age difference.
+#'   (\eqn{P(A|R)}) versus being a random draw from the sample (\eqn{P(A)}).
+#'   Assuming conditional independence, this equals the probability ratio of
+#'   being a certain type of relative conditional on the age difference, versus
+#'   being a random draw.
 #'
+#
 #'   The matrix has one row per age difference (0 - nAgeClasses) and five
 #'   columns, one for each relationship type, with abbreviations:
 #'   \item{M}{Mothers}
@@ -128,44 +97,102 @@
 #'   \item{MS}{Maternal half-siblings}
 #'   \item{PS}{Paternal half-siblings}
 #'
-#'   When \code{Return}='all', a list is returned with in addition to this
-#'   matrix ('LR.RU.A') the following elements:
+#'   When \code{Return}='all', a list is returned with the following elements:
 #'    \item{BirthYearRange}{vector length 2}
-#'    \item{MaxAgeParent}{single number, estimated from the data or provided}
-#'    \item{tblA.R}{matrix with the counts per age difference (0 -
-#'   nAgeClasses) and the five relationship types as for 'LR.RU.A', plus a
-#'   column 'X' with age differences across all pairs of individuals, including
-#'   those in LifeHistData but not in Pedigree.}
+#'    \item{MaxAgeParent}{vector length 2, see details}
+#'    \item{tblA.R}{matrix with the counts per age difference (rows) /
+#'      relationship (columns) combination, plus a column 'X' with age
+#'      differences across all pairs of individuals}
+#'   \item{PA.R}{Proportions, i.e. \code{tblA.R} divided by its \code{colSums},
+#'     with full-sibling correction applied if necessary (see vignette).}
+#'    \item{LR.RU.A.raw}{Proportions \code{PA.R} standardised by global age
+#'      difference distribution (column 'X'); \code{LR.RU.A} prior to flattening
+#'      and smoothing}
 #'    \item{Weights}{vector length 4, the weights used to flatten the
 #'     distributions}
-#'    \item{LR.RU.A.unweighed}{matrix with nAgeClasses+1 rows and 5 columns;
-#'     LR.RU.A prior to flattening and smoothing}
-#'    \item{Specs.AP}{the names of the input Pedigree and LifeHistData (or
-#'    NULL), the 'effective' settings of Discrete, Smooth, and Flatten, and the
-#'    value of lambdaNW}
+#'     \item{LR.RU.A}{the ageprior, flattend and/or smoothed}
+#'    \item{Specs.AP}{the names of the input \code{Pedigree} and
+#'    \code{LifeHistData} (or \code{NULL}), \code{lambdaNW}, and the 'effective'
+#'      settings (i.e. after any automatic update) of \code{Discrete},
+#'      \code{Smooth}, and \code{Flatten}.}
 #'
-#' @seealso \code{\link{sequoia}} (and its argument \code{args.AP}),
+#'
+#' @section CAUTION:
+#'   The small sample correction with \code{Smooth} and/or \code{Flatten}
+#'   prevents errors in one dataset, but may introduce errors in another; a
+#'   single solution that fits to the wide variety of life histories and
+#'   datasets is impossible. Please do inspect the matrix, e.g. with
+#'   \code{PlotAgePrior}, and adjust the input parameters and/or the output
+#'   matrix as necessary.
+#'
+#' @section Single cohort:
+#'   When all individuals in \code{LifeHistData} have the same birth year, it is
+#'   assumed that \code{Discrete=TRUE} and \code{MaxAgeParent=1}. Consequently,
+#'   it is assumed there are no avuncular pairs present in the sample; cousins
+#'   are considered as alternative. To enforce overlapping generations, and
+#'   thereby the consideration of full- and half- avuncular relationships, set
+#'   \code{MaxAgeParent} to some value greater than \eqn{1}.
+#'
+#'  When no birth year information is given at all, a single cohort is assumed,
+#'  and the same rules apply.
+#'
+#'
+#' @section Other time units:
+#'   "Birth year" may be in any arbitrary time unit relevant to the species
+#'   (day, month, decade), as long as parents are always born before their
+#'   putative offspring, and never in the same time unit (e.g. parent's
+#'   BirthYear= 1 (or 2001) and offspring BirthYear=5 (or 2005)). Negative
+#'   numbers and NA's are interpreted as unknown, and fractional numbers are not
+#'   allowed.
+#'
+#' @section MaxAgeParent:
+#'   The maximum parental age for each sex equals the maximum of:
+#'  \itemize{
+#'    \item the maximum age of parents in \code{Pedigree},
+#'    \item the input parameter \code{MaxAgeParent},
+#'    \item the maximum range of birth years in \code{LifeHistData} (including
+#'      BY.min and BY.max). Only used if both of the previous are \code{NA}, or
+#'      if there are fewer than 20 parents of either sex assigned.
+#'    \item 1, if \code{Discrete=TRUE} or the previous three are all \code{NA}
+#'  }
+#'  If the age distribution of assigned parents does not capture the maximum
+#'  possible age of parents, it is advised to specify \code{MaxAgeParent} for
+#'  one or both sexes. Not doing so may hinder subsequent assignment of both
+#'  dummy parents and grandparents.
+#'
+#'  @section grandparents & avuncular
+#'  The agepriors for grand-parental and avuncular pairs is calculated from
+#'  these by \code{\link{sequoia}}, and included in its output as
+#'  `AgePriorExtra`.
+#'
+#'
+#' @seealso \code{\link{sequoia}} and its argument \code{args.AP},
 #'   \code{\link{PlotAgePrior}} for visualisation. The age vignette gives
 #'   further details, mathematical justification, and some examples.
 #'
 #' @examples
-#' data(LH_HSg5, Ped_HSg5, package="sequoia")
+#' # without pedigree or lifehistdata:
+#' MakeAgePrior()
+#' MakeAgePrior(MaxAgeParent = c(2,3))
+#' MakeAgePrior(Discrete=TRUE)
 #'
-#' # no pedigree available:
-#' MakeAgePrior(LifeHistData = LH_HSg5)
-#' MakeAgePrior(LifeHistData = LH_HSg5, Discrete=TRUE)
-#' MakeAgePrior(LifeHistData = LH_HSg5, MaxAgeParent = c(2,3))
-#' \dontrun{
+#' # single cohort:
+#' MakeAgePrior(LifeHistData = data.frame(ID = letters[1:5], Sex=3,
+#'   BirthYear=1984))
+#'
+#' # overlapping generations:
+#' data(Ped_griffin, SeqOUT_griffin, package="sequoia")
+#' # without pedigree: MaxAgeParent = max age difference between any pair +1
+#' MakeAgePrior(LifeHistData = SeqOUT_griffin$LifeHist)
 #' # with pedigree:
-#' MakeAgePrior(Pedigree=Ped_HSg5[1:100,], LifeHistData = LH_HSg5)
-#' MakeAgePrior(Ped_HSg5[1:100,], LH_HSg5, Discrete=FALSE)
-#' # With 'Flatten', the value depens on the no. pairs per relationship:
-#' MakeAgePrior(Ped_HSg5[1:100,], LH_HSg5, Flatten=TRUE)
-#' AP.all <- MakeAgePrior(Ped_HSg5[1:200,], LH_HSg5, Flatten=TRUE)
-#' AP.all$tblA.R
-#' }
+#' MakeAgePrior(Pedigree=Ped_griffin,
+#'              LifeHistData=SeqOUT_griffin$LifeHist,
+#'              Smooth=FALSE, Flatten=FALSE)
+#' # with small-sample correction:
+#' MakeAgePrior(Pedigree=Ped_griffin,
+#'              LifeHistData=SeqOUT_griffin$LifeHist,
+#'              Smooth=TRUE, Flatten=TRUE)
 #'
-#' @importFrom stats setNames
 #'
 #' @export
 
@@ -180,36 +207,23 @@ MakeAgePrior <- function(Pedigree = NULL,
 												 Return = "LR",
 												 quiet = FALSE)
 {
-  call.AP <- as.list(match.call())
-  # Input check
-	if (is.null(LifeHistData)) {
-    if (!is.null(Pedigree) && any(c("BY", "BirthYear", "birthyear", "Birthyear")
-		 %in% colnames(Pedigree))) {
-      LifeHistData <- data.frame(id = Pedigree[,1],
+  call.AP <- as.list(match.call()[-1L])
+
+  # Input check ----
+
+	if (is.null(LifeHistData) & !is.null(Pedigree)) {
+	  BY.column <- tolower(colnames(Pedigree)) %in% c("by", "birthyear")
+	  if (any(BY.column)) {
+	    LifeHistData <- data.frame(ID = Pedigree[,1],
                                  Sex = 3,
+	                               BirthYear = Pedigree[, BY.column],
                                  stringsAsFactors = FALSE)
-			for (yy in c("BY", "BirthYear", "birthyear", "Birthyear")) {
-				if (yy %in% colnames(Pedigree)) {
-					LifeHistData$BirthYear <- Pedigree[, yy]
-				}
-			}
-    } else {
-      LifeHistData <- data.frame(id = NA,
-                                 Sex = 3,
-                                 BirthYear = NA)
-    }
+	  }
 	}
-  LifeHistData <- CheckLH(LifeHistData)
-  LifeHistData$BirthYear[which(LifeHistData$BirthYear < 0)] <- NA
-  if (any(colnames(LifeHistData) %in% c("BY.min", "BY.max"))) {
-    LifeHistData$BY.min[which(LifeHistData$BY.min < 0)] <- NA
-    LifeHistData$BY.max[which(LifeHistData$BY.max < 0)] <- NA
-    BYrange <- suppressWarnings(range(unlist(LifeHistData[,
-                        c("BirthYear", "BY.min", "BY.max")]), na.rm=TRUE))
-  } else if (any(!is.na(LifeHistData$BirthYear))) {
-    BYrange <- suppressWarnings(range(LifeHistData$BirthYear, na.rm=TRUE))
-  } else {
-    BYrange <- NA
+
+  LifeHistData <- CheckLH(LifeHistData, gID = Pedigree[,1], sorted=FALSE)
+  for (x in c("BirthYear", "BY.min", "BY.max")) {
+    LifeHistData[which(LifeHistData[,x] < 0), x] <- NA
   }
 
 	if (is.null(lambdaNW) | is.na(lambdaNW))  lambdaNW <- -log(0.5)/100  # used for Flatten
@@ -223,52 +237,56 @@ MakeAgePrior <- function(Pedigree = NULL,
 	if (!(is.null(Flatten) || Flatten %in% c(TRUE, FALSE))) {
 		stop("'Flatten' must be TRUE, FALSE, or NULL")
 	}
-	if (!Smooth %in% c(TRUE, FALSE))  stop("'Smooht' must be TRUE or FALSE")
+	if (!Smooth %in% c(TRUE, FALSE))  stop("'Smooth' must be TRUE or FALSE")
 
 	# ~~ maximum age of parents ~~
-  if (is.null(MaxAgeParent) || all(is.na(MaxAgeParent))) {
-    if (!is.null(Discrete) && Discrete) {
-      MaxAgePO <- c(1,1)
-    } else if (all(is.na(BYrange))) {
-      stop("Must provide MaxAgeParent and/or birth years in LifeHistData when Discrete=FALSE")
-    } else {
-      MaxAgePO <- rep(max(1, min(diff(BYrange), 99)), 2)
-    }
+  BYrange <- suppressWarnings(range(unlist(LifeHistData[,
+                        c("BirthYear", "BY.min", "BY.max")]), na.rm=TRUE))
+
+  if (!is.null(Discrete) && Discrete) {
+    MaxAgePO <- c(1,1)
   } else {
+    MaxAgePO <- rep(max(1, min(abs(diff(BYrange))+1, 99)), 2)
+    # +1 allows all indivs to be siblings
+    # if large age difference in LifeHistData, limit to 99
+    # NOT ANYMORE: if all birth years unknown, single cohort + discrete generations assumed
+  }
+  # check MaxAgeParent input, change MaxAgePO if specified:
+  if (!is.null(MaxAgeParent) && any(!is.na(MaxAgeParent))) {
     if (length(MaxAgeParent)==1) {
       MaxAgeParent <- rep(MaxAgeParent, 2)
     } else if (length(MaxAgeParent) > 2) {
       stop("MaxAgeParent must be NULL, a single number, or length 2 vector")
     }
+    if (!is.null(Discrete) && Discrete && (MaxAgeParent[1] != MaxAgeParent[2])) {
+      stop("When Discrete=TRUE, MaxAgeParent must be identical for dams & sires (?)")
+    }
     for (p in 1:2) {
       if (!is.na(MaxAgeParent[p]) && (MaxAgeParent[p]<0 || !is.wholenumber(MaxAgeParent[p]))) {
         stop("'MaxAgeParent' must be a positive whole number")
       }
+      if (!is.na(MaxAgeParent[p])) {
+        MaxAgePO[p] <- MaxAgeParent[p]
+      } # else: use default from BYrange
     }
-    if (!is.null(Discrete) && Discrete && (MaxAgeParent[1] != MaxAgeParent[2])) {
-      stop("When Discrete=TRUE, MaxAgeParent must be identical for dams & sires (?)")
-    } else {
-      MaxAgePO <- rep(max(1, min(diff(BYrange), 99)), 2)
-      for (p in 1:2) {
-        if (!is.na(MaxAgeParent[p])) {
-          MaxAgePO[p] <- MaxAgeParent[p]
-        } # else: use default from BYrange
-      }
+  } else {
+    MaxAgeParent <- c(NA, NA)
+    if (all(is.na(BYrange)) && (is.null(Discrete) || !Discrete)) {
+      stop("Must provide MaxAgeParent and/or birth years in LifeHistData when Discrete=FALSE")
     }
   }
   if (max(MaxAgePO) > 100)  stop("MaxAgePO must be smaller than 100; consider a different time unit")
 	names(MaxAgePO) <- c("M", "P")
 
-  MaxT = max(diff(BYrange), MaxAgePO, na.rm=TRUE)
-  RR <- c("M", "P", "FS", "MS", "PS")  # relatedness categories considered
 
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-  ReturnDefault <- function(MaxP, MaxT,  Return, Disc=Discrete, quietR=quiet) {
-    if (is.null(Disc))  Disc <- FALSE
-		if (!quietR)  message("Ageprior: Default 0/1, ",
+  # functions to generate & return default ageprior ----
+  ReturnDefault <- function(MaxP, Return, Disc=Discrete, quietR=quiet) {
+    if (is.null(Disc))  Disc <- all(MaxP == 1)
+		if (!quietR)  message("Ageprior: Flat 0/1, ",
                           ifelse(Disc, "discrete","overlapping"),
-                          " generations, MaxAgeParent=", MaxP[1],",",MaxP[2])
-    LR.RU.A.default <- MkAPdefault(MaxP, MaxT, Disc)
+                          " generations, MaxAgeParent = ", MaxP[1],",",MaxP[2])
+    LR.RU.A.default <- MkAPdefault(MaxP, Disc)
     if (Plot)  PlotAgePrior(LR.RU.A.default)
   	if (Return == "all") {
 	    Specs.AP <- list(Pedigree = call.AP[["Pedigree"]],
@@ -290,227 +308,213 @@ MakeAgePrior <- function(Pedigree = NULL,
     }
   }
 
-	MkAPdefault <- function(MaxP, MaxT, Disc) {
-		AP.default <- matrix(1, MaxT+1, 5,
-                            dimnames=list(0:MaxT, RR))
-		if(!is.null(Disc) && Disc) {  # always: MaxP[1]==MaxP[2]
-			AP.default[,] <- 0
-			AP.default[MaxP[1]+1, c("M","P")] <- 1
-			AP.default[1, c("FS","MS","PS")] <- 1
+  RR <- c("M", "P", "FS", "MS", "PS")  # relatedness categories considered
 
-  	} else {
-			AP.default[,] <- 1
-			AP.default[1, c("M", "P")] <- 0
-			if (MaxP[1] < MaxT) {
-				AP.default[((MaxP[1]+1):MaxT)+1, "M"] <- 0
-				AP.default[(MaxP[1]:MaxT)+1, c("FS", "MS")] <- 0
-			}
-			if (MaxP[2] < MaxT) {
-				AP.default[((MaxP[2]+1):MaxT)+1, "P"] <- 0
-				AP.default[(MaxP[2]:MaxT)+1, c("FS", "PS")] <- 0
-			}
-  	}
-		return( AP.default )
-	}
+  MkAPdefault <- function(MaxP, Disc) {
+    AP <- matrix(1, max(MaxP)+2, 5,
+                 dimnames=list(0:(max(MaxP)+1), RR))
+    if(!is.null(Disc) && Disc) {  # always: MaxP[1]==MaxP[2]
+      AP[,] <- 0
+      AP[MaxP[1]+1, c("M","P")] <- 1
+      AP[1, c("FS","MS","PS")] <- 1
+
+    } else {
+      AP[,] <- 1
+      AP[1, c("M", "P")] <- 0
+      AP[(MaxP[1]+2):nrow(AP), "M"] <- 0
+      AP[(MaxP[2]+2):nrow(AP), "P"] <- 0
+      AP[(MaxP[1]+1):nrow(AP), c("FS", "MS")] <- 0
+      AP[(MaxP[2]+1):nrow(AP), c("FS", "PS")] <- 0
+    }
+    return( AP )
+  }
 	#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-	# No pedigree or no parents w. known age: return default 0/1 prior
-  if (is.null(Pedigree) | all(is.na(LifeHistData$BirthYear))) {
-    OUT <- ReturnDefault(MaxAgePO, MaxT, Return)
-    return( OUT )
-  }
-  Ped <- PedPolish(Pedigree, ZeroToNA=TRUE)
-  Ped <- merge(Ped, LifeHistData[,c("ID","BirthYear")], by.x="id", by.y="ID", all.x=TRUE)
-  if (sum(!is.na(Ped$dam) | !is.na(Ped$sire)) ==0) {
-    OUT <- ReturnDefault(MaxAgePO, MaxT, Return)
-    return( OUT )
-  }
-
-  # age difference per relatedness category
-  Ped.R <- Ped[! (is.na(Ped$dam) & is.na(Ped$sire)), ]  # individuals with at least 1 parent (quicker)
-  Ped.R <- merge(Ped.R, setNames(Ped[, c("id", "BirthYear")], c("dam", "BirthYear.dam")), all.x=TRUE)
-  Ped.R <- merge(Ped.R, setNames(Ped[, c("id", "BirthYear")], c("sire", "BirthYear.sire")), all.x=TRUE)
-  Ped.R$Age.dam <- with(Ped.R, BirthYear - BirthYear.dam)
-  Ped.R$Age.sire <- with(Ped.R, BirthYear - BirthYear.sire)
-
-  NAK.R <- setNames(rep(0,5), RR)  # Number Age Known given Relationship
-  NAK.R["M"] <- sum(!is.na(Ped.R$Age.dam))
-  NAK.R["P"] <- sum(!is.na(Ped.R$Age.sire))
-	MinPairs.AgeKnown <- 20   # minimum no. mother-offspring or father-offspring pairs w known age diff
-	for (p in 1:2) {
-	  ParAge <- Ped.R[, paste0("Age.",c("dam","sire")[p])]
-		if (NAK.R[p]>0) {
-			if (MaxAgePO[p] == diff(BYrange) && any(!is.na(ParAge)) && NAK.R[p] >= MinPairs.AgeKnown) {
-				MaxAgePO[p] <- max(ParAge, na.rm=TRUE)
-			} else {
-				MaxAgePO[p] <- max(ParAge, MaxAgePO[p], na.rm=TRUE)
-			}
-		}
-	}
-  if (!is.null(MaxAgeParent) & !quiet) {
-		for (p in 1:2) {
-			if (!is.na(MaxAgePO[p]) && !is.na(MaxAgeParent[p]) && MaxAgePO[p] > MaxAgeParent[p]) {
-				warning("Some ", c("dams", "sires")[p], " older than MaxAgeParent, using new estimate")
-			}
-		}
-  }
-
-  BYrange <- c(min = min(c(Ped$BirthYear, LifeHistData$BirthYear), na.rm=TRUE),
-               max = max(c(Ped$BirthYear, LifeHistData$BirthYear), na.rm=TRUE))
-  MaxT = max(diff(BYrange), MaxAgePO, na.rm=TRUE)
-	if (is.null(Discrete) || !Discrete) {
-		if (Smooth)  MaxT <- MaxT +2	# space for a smooth-tail
+	# return if no pedigree, no birthyears, or no parents ----
+	Ped <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=TRUE)
+	if (is.null(Pedigree) | all(is.na(LifeHistData$BirthYear)) |
+	    sum(!is.na(Ped$dam) | !is.na(Ped$sire)) ==0) {
+	  return( ReturnDefault(MaxAgePO, Return) )
 	}
 
-  if (all(NAK.R[c("M","P")]==0)) {
-    OUT <- ReturnDefault(MaxAgePO, MaxT, Return)
-    return( OUT )
-  }
+  # MaxT: no. rows in tables
+  MaxT <- max(MaxAgePO+1, diff(BYrange))
+  if ((is.null(Discrete) || !Discrete) & Smooth)  MaxT <- MaxT +2 	# space for a smooth-tail
 
-	# ~~~~~~~~~~~~~~~
 
-  tblA.R <- matrix(NA, MaxT+1, length(RR)+1, dimnames=list(0:MaxT, c(RR, "X")))
-  tblA.R[, "M"] <- table(factor(Ped.R$Age.dam, levels=0:MaxT))
-  tblA.R[, "P"] <- table(factor(Ped.R$Age.sire, levels=0:MaxT))
+  # counts per age & relationship ----
+  Ped.LH <- merge(Ped[, c("id", "dam", "sire")], LifeHistData[,c("ID","BirthYear")],
+                  by.x="id", by.y="ID",	all.x=TRUE)  # WAS: all=TRUE
+  # note: some individuals in LifeHistData may be irrelevant to pedigree of SNPd indivs
 
-  # Siblings
-	RCM <- sapply(seq_along(Ped.R$id), GetRelCat, Ped.R[,c("id","dam","sire")], GenBack=1)  # slow.
+  Ped.R <- Ped.LH[! (is.na(Ped.LH$dam) & is.na(Ped.LH$sire)), ]  # individuals with at least 1 parent (quicker)
+  Ped.R <- merge(PedPolish(Ped.R[,1:3]), Ped.LH[, c("id", "BirthYear")])  # BY for dropped & re-added indivs
+
+  RelA <- GetRelA(Ped.R, patmat=TRUE, GenBack=1)
+
   AgeDifM <- outer(Ped.R$BirthYear, Ped.R$BirthYear, "-")
-  diag(AgeDifM) <- NA
-  tblA.R[, "FS"] <- table(factor(abs(AgeDifM[RCM == "FS"]), levels=0:MaxT)) /2
-  tblA.R[, "MS"] <- table(factor(abs(AgeDifM[RCM %in% c("FS", "MHS")]), levels=0:MaxT)) /2
-  tblA.R[, "PS"] <- table(factor(abs(AgeDifM[RCM %in% c("FS", "PHS")]), levels=0:MaxT)) /2
+  tblA.R <- sapply(c("M", "P", "FS", "MHS", "PHS"),
+                function(r) table(factor(AgeDifM[RelA[,,r]==1], levels = 0:MaxT)))
+  # maternal siblings = maternal half-siblings + full siblings
+  tblA.R <- cbind(tblA.R,
+                  "MS" = tblA.R[,"MHS"] + tblA.R[,"FS"],
+                  "PS" = tblA.R[,"PHS"] + tblA.R[,"FS"])
+  tblA.R <- tblA.R[, c("M", "P", "FS", "MS", "PS")]
 
   # Reference: age difference distribution across all pairs of individuals
-  # *NOT* tblA.R[, "X"] <- table(factor(abs(AgeDifM), levels=0:MaxT))/2  : Ped.R is only indivs with at least 1 parent)
-	Ped.LH <- merge(Ped[, colnames(Ped)!="BirthYear"], LifeHistData[,c("ID","BirthYear")],
-	                by.x="id", by.y="ID",	all=TRUE)
-	tbl.AgeDifs <- CountAgeDif(Ped.LH$BirthYear, BYrange)  # quicker than table(outer()), see below
-  tblA.R[, "X"] <- tbl.AgeDifs[0:MaxT+1]
-	tblA.R[is.na(tblA.R)] <- 0
+  tbl.AgeDifs <- CountAgeDif(Ped.LH$BirthYear, BYrange)  # quicker than table(outer()), function below
+  tblA.R <- cbind(tblA.R, "X" = tbl.AgeDifs[0:MaxT+1])  # irrespective of Relationship
+  tblA.R[is.na(tblA.R)] <- 0
 
-  # note: some individuals in LifeHistData may be irrelevant to pedigree of SNPd indivs
-	NAK.R <- apply(tblA.R, 2, sum, na.rm=TRUE)
-	if (!is.null(Flatten) && !Flatten && (is.null(Discrete) || !Discrete)) {
-		for (p in 1:2) {
-			if (NAK.R[p] < 5) {
-				warning("Fewer than 5 ", c("mother","father")[p],
-											"-offspring pairs with known age difference, changing to Flatten=TRUE",
-								immediate.=TRUE)
-	      Flatten <- TRUE
-			} else if (NAK.R[p] < MinPairs.AgeKnown) {
-				message("Fewer than 20 ", c("mother","father")[p],
-											"-offspring pairs with known age difference, please consider Flatten=TRUE")
-			}
-		}
-	}
+  if (any(tblA.R["0", c("M", "P")] > 0))  stop("Some parent-offspring pairs have age difference 0")
+  tblA.R["0", ] <- tblA.R["0", ] / 2   # sibs & 'X' pairs with agedif 0 counted twice
 
-	#~~~~~~~~~~~~~~~~~
-	if (((all(MaxAgePO == 1) & (is.null(MaxAgeParent) || all(MaxAgeParent==1 & !is.na(MaxAgeParent)))) |
-	    (!is.null(MaxAgeParent) && !is.na(MaxAgeParent[1]) && all(MaxAgePO == MaxAgeParent[1]))) &
-	    all(tblA.R[-1, c("FS", "MS", "PS")]==0)) {
-		if (is.null(Discrete) & all(NAK.R[c("M","P", "MS", "PS")]>MinPairs.AgeKnown)) {
-			Discrete <- TRUE
-			if (Smooth) {
-				MaxT <- MaxT -2  # remove space for smooth-tail again
+
+  # return if no parents of known age ----
+  NAK.R <- apply(tblA.R, 2, sum, na.rm=TRUE)
+  if (all(NAK.R[c("M","P")]==0)) {
+    return( ReturnDefault(MaxAgePO, Return) )
+  }
+  # TODO: estimate min. MaxAgePO from sibling age difference?
+
+
+  MinPairs.AgeKnown <- 20   # minimum no. mother-offspring or father-offspring pairs w known age diff
+
+
+  # update MaxAgePO ----
+  ParAge <- suppressWarnings(
+    apply(tblA.R[, c("M", "P")], 2, function(x) max(which(x > 0)) -1) )  # 1st row = agedif 0
+
+  for (p in 1:2) {
+    if (MaxAgePO[p] == (diff(BYrange)+1) & is.na(MaxAgeParent[p]) &
+        NAK.R[p] >= MinPairs.AgeKnown) {   # ignore MaxAgePO: derived from LifeHistData
+      MaxAgePO[p] <- max(ParAge[p], na.rm=TRUE)
+    } else {
+      MaxAgePO[p] <- max(ParAge[p], MaxAgePO[p], na.rm=TRUE)
+    }
+  }
+
+  if (any(!is.na(MaxAgeParent) & MaxAgePO > MaxAgeParent & !quiet))
+    warning("Some pedigree parents older than MaxAgeParent, using new estimate")
+
+
+	# check/set Discrete ----
+  if (MaxAgePO[1] == MaxAgePO[2] & all(tblA.R[- (MaxAgePO[1]+1), c("M", "P")] == 0) &  # all parents have same age
+  all(tblA.R[-1, c("FS", "MS", "PS")]==0)) {  # all siblings have agedif 0
+    if (all(NAK.R[c("M","P", "MS", "PS")] > MinPairs.AgeKnown)) {   # sufficient evidence for discrete gen.
+      if ((is.null(Discrete) || !Discrete) & Smooth) {
+        MaxT <- MaxT -2  # remove space for smooth-tail again
 				tblA.R <- tblA.R[1:(MaxT +1), ]
-			}
-		}
-	} else {
-		if (!is.null(Discrete) && Discrete) {
-			stop("Discrete=TRUE, but some parents have age >1 or some siblings have age difference >0")
-		}
-	}
-	if (is.null(Discrete))  Discrete <- FALSE
-  if (Discrete)   Smooth <- FALSE
-  if (is.null(Flatten)) {
-		if (any(NAK.R[c("M","P", "MS", "PS")] < MinPairs.AgeKnown) & !Discrete) {
-			Flatten <- TRUE
-		} else {
-			Flatten <- FALSE  # more precise AP speeds up computation
-		}
+      }
+      if (is.null(Discrete))  Discrete <- TRUE
+    } else if (is.null(Discrete)) {
+      Discrete <- FALSE   # inconclusive: assume overlapping.
+    }
+  } else {  # evidence for overlapping generations
+    if (!is.null(Discrete) && Discrete) {
+      stop("Discrete=TRUE, but some parents have age >1 or some siblings have age difference >0")
+    }
+    Discrete <- FALSE
+  }
+  if (Discrete) {
+    Flatten <- FALSE   # ignore user-specified
+    Smooth <- FALSE
+    return( ReturnDefault(MaxAgePO, Return) )
   }
 
 
-	#~~~~~~~~~~~~~~~~~
+  # set Flatten ----
+  if (!Discrete && any(MaxAgeParent > ParAge, na.rm=TRUE)) {
+    if (!quiet && !is.null(Flatten) && !Flatten) {
+          warning("All pedigree parents younger than MaxAgeParent, ",
+         "I changed to Flatten=TRUE to adjust ageprior to specified MaxAgeParent")
+      }
+      Flatten <- TRUE
+  }
 
+  if (any(NAK.R[c("M","P", "MS", "PS")] < MinPairs.AgeKnown) & !Discrete) {
+    if (is.null(Flatten) || Flatten) {
+      Flatten <- TRUE
+    } else if (!Flatten) {
+      if (any(NAK.R[c("M","P", "MS", "PS")] < 5)) {
+        Flatten <- TRUE   # overrule user-specified
+        warning("Fewer than 5 mother-offspring and/or father-offspring pairs with ",
+          "known age difference, changing to Flatten=TRUE", immediate.=TRUE)
+      } else {
+        message("Fewer than ", MinPairs.AgeKnown , "  mother-offspring and/or ",
+        "father-offspring pair with known age difference, please consider Flatten=TRUE")
+      }
+    }
+  } else if (is.null(Flatten)) {
+    Flatten <- FALSE  # more precise AP speeds up computation
+  }
+
+
+	# Counts to proportions ----
   PA.R <- sweep(tblA.R, 2, NAK.R, "/")
-	PA.R[is.nan(PA.R)] <- 1.0
 
   FSuseHS <- FALSE
-  if (NAK.R["FS"] / min(NAK.R[c("MS", "PS")]) < 0.5 & all(NAK.R[c("MS", "PS")]>MinPairs.AgeKnown)) {
+  if (NAK.R["FS"] / min(NAK.R[c("MS", "PS")]) < 0.5 &   # NAK.R["FS"]==0 |
+                        all(NAK.R[c("MS", "PS")]>MinPairs.AgeKnown)) {
     if (!Smooth | all(NAK.R[c("MS", "PS")] > 5*MinPairs.AgeKnown)) {
       FS.tmp <- PA.R[,"MS"] * PA.R[,"PS"]
       FS.tmp <- FS.tmp/sum(FS.tmp)
     } else {
       FS.tmp <- apply(PA.R[, c("MS", "PS")], 1, mean)
     }
-    PA.R[,"FS"] <- (PA.R[,"FS"] + FS.tmp)/2
+    if (NAK.R["FS"]>0) {
+      PA.R[,"FS"] <- (PA.R[,"FS"] + FS.tmp)/2
+    } else {
+      PA.R[,"FS"] <- FS.tmp
+    }
     FSuseHS <- TRUE
   }
 
-#  PA.R <- sweep(PA.R, 2, colSums(PA.R, na.rm=TRUE), "/")  **superseded**
+  PA.R[is.nan(PA.R)] <- 1.0
+
   for (r in RR) {
-    if (any(!PA.R[,r] %in% c(0,1))) {
+    if (!all(PA.R[,r] %in% c(0,1))) {
       PA.R[,r] <- PA.R[,r] / sum(PA.R[,r], na.rm=TRUE)
     }
   }
   PA.R[is.na(PA.R)] <- 0
 
-  middle <- function(V,i) {
-    if (i>1 & i<length(V)) {
-      (V[i-1] + V[i+1])/2
-    } else if (i==1) {
-      V[i+1]
-    } else if (i==length(V)) {
-      V[i-1]
-    }
-  }
-  ungap <- function(V, gap) {
-    if(length(gap)==0)  return( V )
-    if (gap[1]>1 & gap[length(gap)]<length(V)) {
-      dYdX <- (V[gap[length(gap)]+1] - V[gap[1]-1]) / (length(gap)+1)
+
+  # prob ratio Related/Unrelated given Age difference ----
+  LR.RU.A.par <- PA.R[,RR]  # same dim & dimnames
+  for (r in RR) {
+    if (!all(PA.R[,r] %in% c(0,1))) {
+      LR.RU.A.par[,r] <- PA.R[, r] / PA.R[,"X"]
     } else {
-      dYdX <- 0
+      LR.RU.A.par[,r] <- PA.R[, r]
     }
-    for (i in seq_along(gap)) {
-      if (gap[1]==1) {
-        V[gap[i]] <- V[gap[length(gap)]+1] - i*dYdX
-      } else {
-        V[gap[i]] <- V[gap[1]-1] + i*dYdX
-      }
-    }
-    V
   }
+  LR.RU.A.par[!is.finite(LR.RU.A.par)] <- 0   # if PA.R[,"X"]==0
 
-  # ~~~~~~~~~~~~~~~
-  # probability ratio Related/Unrelated given Age difference
-  if(any(!PA.R[, RR] %in% c(0,1))) {
-    LR.RU.A.par <- sweep(PA.R[, RR], 1, PA.R[,"X"], "/")
-  } else {
-    LR.RU.A.par <- PA.R[, RR]
-  }
-  LR.RU.A.par[is.na(LR.RU.A.par)] <- 0   # if PA.R[,"X"]==0
+
+  # Flatten ----
   LR.RU.A <- LR.RU.A.par
-
   W.R <- 1 - exp(-lambdaNW * NAK.R[RR])
   if (Flatten) {
     # Weight of tblA.R versus flat prior, as function of sample size N
-	  # default: lambdaNW = -log(0.5)/100 : <50% weight if N<100, and >50% if N>100
+    # default: lambdaNW = -log(0.5)/100 : <50% weight if N<100, and >50% if N>100
     if (FSuseHS) {
       W.R["FS"] <- 1-exp(-lambdaNW * mean(c(NAK.R["FS"], min(NAK.R[c("MS", "PS")]))))
     }
-    W.R <- c(W.R, MGM=W.R[["M"]], PGF=W.R[["P"]], MGF=1/mean(1/W.R[c("P","M")]),
-             UA=1/mean(1/W.R))
-
-		LR.RU.A.default <- MkAPdefault(MaxAgePO, MaxT, Disc=Discrete)
-
+    LR.RU.A.default <- MkAPdefault(MaxP = pmax(MaxAgePO, MaxAgeParent, na.rm=TRUE),  # for input > pedigree-observed
+                                   Disc=Discrete)
+    nx <- max(nrow(LR.RU.A.default), nrow(LR.RU.A.par))
+    if (nrow(LR.RU.A.default) < nx) {
+      LR.RU.A.default <- rbind(LR.RU.A.default,
+                               matrix(0, nx-nrow(LR.RU.A.default), 5))
+    }
     for (r in RR) {
       LR.RU.A[, r] <- W.R[r] * LR.RU.A.par[, r] + (1 - W.R[r]) * LR.RU.A.default[, r]
     }
   }
 
-  MinP = 0.001
+
+  # Smooth ----
   if (Smooth) {
 		#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     SmoothAP <- function(V, MinP) {
@@ -538,16 +542,19 @@ MakeAgePrior <- function(Pedigree = NULL,
     }
 		#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    for (r in 1:ncol(LR.RU.A)) {
-      LR.RU.A[, r] <- SmoothAP(LR.RU.A[, r], MinP = MinP)  # MinP = max(MinP, 1-W.R[r]))
-    }
+    LR.RU.A <- apply(LR.RU.A, 2, SmoothAP, MinP = 0.001)
   }
   LR.RU.A[1, c("M", "P")] <- 0
   LR.RU.A[is.na(LR.RU.A)] <- 0
   LR.RU.A <- round(LR.RU.A,3)
 
 
-  #~~~~~~~~~~~~~~~
+  # Out ----
+
+  # safety check
+  if (!all(apply(LR.RU.A, 2, function(x) any(x > 0))))
+    stop("AgePriors error: some relationships are impossible for all age differences")
+
   Specs.AP <- list(Pedigree = call.AP[["Pedigree"]],
                    LifeHistData = call.AP[["LifeHistData"]],
                    Discrete = Discrete,
@@ -555,16 +562,18 @@ MakeAgePrior <- function(Pedigree = NULL,
                    lambdaNW = lambdaNW,
                    Smooth = Smooth)
 
+  if (Smooth)  MaxAgePO <- MaxAgePO +2   # smoothed tail
+
   OUT <- list(BirthYearRange = BYrange,
               MaxAgeParent = MaxAgePO,
               tblA.R = tblA.R,
               PA.R = PA.R,
+              LR.RU.A.raw = round(LR.RU.A.par,3),
               Weights = round(W.R,4),
-              LR.RU.A.unweighed = round(LR.RU.A.par,3),
               LR.RU.A = LR.RU.A,
               Specs.AP = Specs.AP)
   if (Plot) {
-		PlotAgePrior( AP = OUT[["LR.RU.A"]] )
+    PlotAgePrior( AP = OUT[["LR.RU.A"]] )
   }
 	if (!quiet)  message("Ageprior: Pedigree-based, ",
 	                     ifelse(Discrete, "discrete ","overlapping "), "generations",
@@ -581,107 +590,18 @@ MakeAgePrior <- function(Pedigree = NULL,
 }
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#' @title Plot age priors
-#'
-#' @description visualise the age-difference based prior probability ratios as a
-#'   heatmap
-#'
-#' @param AP  matrix with age priors (P(A|R)/P(A)) with age differences in rows
-#'  and relationships in columns; by default M: maternal parent (mother), P: paternal
-#'  parent (father), FS: full siblings, MS: maternal siblings (full + half),
-#'  PS: paternal siblings.
-#' @param legend if TRUE, a new plotting window is started and
-#'   \code{\link{layout}} is used to plot a legend next to the main plot. Set to
-#'   FALSE if you want to add it as panel to an existing plot (e.g. with
-#'   par(mfcol=c(2,2))).
-#'
-#' @return a heatmap
-#'
-#' @seealso \code{\link{MakeAgePrior}}, \code{\link{SummarySeq}}
-#'
-#' @importFrom graphics layout par image axis mtext abline
-#'
-#' @examples
-#' \dontrun{
-#' PlotAgePrior(SeqOUT$AgePriors)
-#' }
-#'
-#' @export
-
-PlotAgePrior <- function(AP = NULL, legend=TRUE)
-{
-  if (is.data.frame(AP))  AP <- as.matrix(AP)
-  if (!is.matrix(AP))  stop("AP must be a matrix")
-  if (any(AP < 0 | AP > 1000) | any(!is.double(AP)))
-    stop("AP must be a numeric matrix with values >0 & < 1000")
-  RR <- colnames(AP)
-  if (ncol(AP)==15 && all(c("M", "P", "FS", "MS", "PS", "MGF", "PGM", "MFA", "PPA") %in% RR)) {  # re-arrange for clarity
-    RR <- c("M", "P", "FS", "MS", "PS",
-        "MGM", "MGF", "PGM", "PGF",
-        "MFA", "PFA", "MMA", "MPA", "PMA", "PPA")
-  }
-
-  # trim off rows with only zero's. First row: A=0
-  MaxA <- min(max(which(apply(AP, 1, function(x) any(x>0)))) +1, nrow(AP))
-  if (!is.null(rownames(AP))) {
-    AA <- as.numeric(rownames(AP))[1:MaxA]
-  } else {
-    AA <- 1:MaxA
-  }
-
-	stretch <- function(V, x=10) {
-  	a <- list()
-  	for (i in 1:(length(V)-1)) {
-  	  a[[i]] <- seq(V[i], V[i+1], length.out=x+1)[1:x]
-  	}
-	  return(c(unlist(a), V[length(V)]))
-	}
-	flip <- function(M, dim=2)  apply(M, dim, function(x) rev(x))
-
-	#~~~  heatmap  ~~~~~~~
-	brks <- c(1:5, 10,20,50)
-	brks <- c(0, 1/1001, rev(1/brks[-1]), brks) - 1e-5
-	brks.f <- stretch(brks, x=10)
-	mids <- (brks.f[-length(brks.f)] + brks.f[-1])/2
-	cols <- c(1, grDevices::hcl.colors(89, "Light Grays"), grDevices::hcl.colors(70, "Greens", rev=TRUE))
-
-	if (legend) {
-	  oldpar <- par(no.readonly = TRUE)
-  	ly <- layout(matrix(c(1,2), nrow=1), widths=c(.8, .2))
-  	par(mai=c(.9,.9,.2,.1))
-	}
-	image(x=t(AP[1:MaxA, RR]), y=AA, xaxt="n", yaxt=ifelse(length(AA)<5, "n", "s"), las=1,
-	      breaks = brks.f, col = cols,
-	      ylab="Age difference (A)", cex.lab=1.1)
-  if (length(AA)<5)  axis(side=2, at=AA, labels=AA, las=1, cex.lab=1.1)
-	axis(side=1, at=seq(0,1,along.with=RR), line=-0.5, labels=RR,
-	     cex.axis=ifelse(length(RR)==5, 1.1, 0.8),
-	     las = ifelse(length(RR)==5, 1, 2),
-	     tick=FALSE)
-	if (any(AA<0)) abline(h=-0.4, col=2)
-	mtext("Relationship (R)", side=1, line=2, cex=1.1)
-
-	if (legend) {
-  	par(mai=c(1.1,.3,0.5,.7))  # legend
-  	E <- try(image(t(as.matrix(mids)), axes=FALSE, frame.plot=TRUE, breaks = brks.f, col = cols))
-  	if (is.null(E)) {  # sometimes doesn't fit in plotting window
-    	axis(side=4, at=seq(0, 1,length.out=length(brks)), labels=round(brks, 3), las=1, cex.axis=0.8)
-    	axis(side=4, at=seq(0, 1,length.out=length(brks)), labels=FALSE, tck=0.2) # tcl=0.5)
-      axis(side=2, at=seq(0, 1,length.out=length(brks)), labels=FALSE, tck=0.2)
-    	mtext(("P(A|R)/P(A)"), side=3, line=0.5, cex=1)
-  	} else {
-  	  par(mai=rep(0,4))
-      graphics::plot.new()  # so that can continue normally
-  	}
-  	par(oldpar)  # restore old par settings
-	}
-}
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' @title Tabulate Age Differences
+#'
+#' @description Count no. pairs per age difference from birth years. Quicker
+#'   than \code{table(outer())}.
+#'
+#' @param BirthYear  numeric vector with birth years.
+#' @param BYrange  range to limit counts to.
+#'
+#' @keywords internal
 
 CountAgeDif <- function(BirthYear, BYrange = range(BirthYear)) {
 	BYf <- factor(BirthYear, levels=c(BYrange[1]:BYrange[2]))
@@ -693,10 +613,70 @@ CountAgeDif <- function(BirthYear, BYrange = range(BirthYear)) {
 	AA <- outer(as.numeric(levels(BYf)), as.numeric(levels(BYf)), "-")
 	BY.cnt <- apply(BYM, 2, sum, na.rm=TRUE)
 	tmp <- outer(BY.cnt, BY.cnt, "*")
-	A.cnt <- setNames(rep(0, max(AA)+1), 0:max(AA))
+	A.cnt <- stats::setNames(rep(0, max(AA)+1), 0:max(AA))
 	for (a in 0:max(AA)) {
 		A.cnt[a+1] <- sum(tmp[AA == a])
 	}
 	A.cnt["0"] <- A.cnt["0"] -sum(!is.na(BYM[,1]))   # self
 	return( A.cnt )
+}
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' @title LLR-age from Ageprior Matrix
+#'
+#' @description Get log10-likelihood ratios for a specific age difference from
+#'   matrix \code{AgePriorExtra}.
+#'
+#' @param AgePriorExtra matrix in \code{\link{sequoia}} output
+#' @param agedif vector with age differences, in whole numbers. Must occur in
+#'   rownames of \code{AgePriorExtra}.
+#' @param patmat numeric vector; choose maternal (1), paternal (2) relatives, or
+#'   for each relationship the most-likely alternative (3).
+#'
+#' @return A matrix with \code{nrow} equal to the length of \code{agedif}, and 7
+#'   columns: PO-FS-HS-GP-FA-HA-U.
+#'
+#' @examples
+#' data(SeqOUT_griffin, package="sequoia")
+#' PairsG <- data.frame(ID1="i122_2007_M",
+#'                      ID2 = c("i124_2007_M", "i042_2003_F", "i083_2005_M"),
+#'                      AgeDif = c(0,4,2))
+#' cbind(PairsG,
+#'       GetLLRAge(SeqOUT_griffin$AgePriorExtra,
+#'                 agedif = PairsG$AgeDif, patmat=rep(2,3)))
+#'
+#' @export
+
+GetLLRAge <- function(AgePriorExtra, agedif, patmat) {
+  a <- as.character(agedif)
+  k <- patmat
+  if (!all(k %in% c(1,2,3)))  stop("patmat must be 1 (mat), 2 (pat), or 3 (unk)")
+  if (!all(a %in% rownames(AgePriorExtra)))  stop("some agedif not in AgePriorExtra")
+  if (length(a) != length(k))  stop("agedif and patmat must have same length")
+
+  R <- list("M" = list("M", "FS", "MS", c("MGM", "MGF"), "MFA", c("MMA", "MPA")),
+            "P" = list("P", "FS", "PS", c("PGM", "PGF"), "PFA", c("PMA", "PPA")))
+
+  ALR <- matrix(0, length(a), 7,
+                dimnames = list(seq_along(a),
+                                c("PO", "FS", "HS", "GP", "FA", "HA", "U")))
+  for (i in seq_along(a)) {
+    ALRtmp <- matrix(NA, 2, 6,
+                     dimnames=list(c("mat", "pat"),
+                                   c("PO", "FS", "HS", "GP", "FA", "HA")))
+    for (x in 1:2) {
+      if (k[i]<3 & x!=k[i])  next
+      ALRtmp[x,] <- log10(sapply(1:6, function(r) mean(AgePriorExtra[a[i], R[[x]][[r]]])))
+    }
+    if (k[i]==3) {
+      ALR[i, 1:6] <- apply(ALRtmp, 2, max)
+    } else {
+      ALR[i, 1:6] <- ALRtmp[k[i],]
+    }
+  }
+
+  return( round(ALR, 2) )
 }

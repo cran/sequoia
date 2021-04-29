@@ -2,7 +2,7 @@
 % Please edit documentation in R/GenoConvert.R
 \name{LHConvert}
 \alias{LHConvert}
-\title{Extract sex and birthyear from PLINK file}
+\title{Extract Sex and Birth Year from PLINK File}
 \usage{
 LHConvert(
   PlinkFile = NULL,
@@ -13,13 +13,13 @@ LHConvert(
 )
 }
 \arguments{
-\item{PlinkFile}{character string with name of genotype file to be converted}
+\item{PlinkFile}{character string with name of genotype file to be converted.}
 
-\item{UseFID}{Use the family ID column. The resulting ids (rownames of GenoM)
-will be in the form FID__IID}
+\item{UseFID}{use the family ID column. The resulting ids (rownames of GenoM)
+will be in the form FID__IID.}
 
 \item{SwapSex}{change the coding from PLINK default (1=male, 2=female) to
-sequoia default (1=female, 2=male); any other numbers are set to NA}
+sequoia default (1=female, 2=male); any other numbers are set to NA.}
 
 \item{FIDsep}{characters inbetween FID and IID in composite-ID. By default a
 double underscore is used, to avoid problems when some IIDs contain an
@@ -30,8 +30,8 @@ case of conflicts, LifeHistData takes priority, with a warning. If
 UseFID=TRUE, IDs in LifeHistData are assumed to be already as FID__IID.}
 }
 \value{
-a dataframe with id, sex and birth year, which can be used as input
- for \code{\link{sequoia}}
+A dataframe with id, sex and birth year, which can be used as input
+ for \code{\link{sequoia}}.
 }
 \description{
 Convert the first six columns of a PLINK .fam, .ped or
@@ -42,8 +42,6 @@ Convert the first six columns of a PLINK .fam, .ped or
 The first 6 columns of PLINK .fam, .ped and .raw files are by
 default FID - IID - father ID (ignored) - mother ID (ignored) - sex -
 phenotype.
-
-When additionally a
 }
 \examples{
 \dontrun{
@@ -56,5 +54,5 @@ LH.new <- LHConvert(PlinkFile, UseFID = TRUE, FIDsep = "__",
 }
 \seealso{
 \code{\link{GenoConvert}}, \code{\link{PedStripFID}} to reverse
- \code{UseFID}
+ \code{UseFID}.
 }

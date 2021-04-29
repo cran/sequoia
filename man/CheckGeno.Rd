@@ -2,24 +2,37 @@
 % Please edit documentation in R/CheckGeno.R
 \name{CheckGeno}
 \alias{CheckGeno}
-\title{check GenoM}
+\title{Check Genotype Matrix}
 \usage{
-CheckGeno(GenoM, quiet = FALSE, Plot = FALSE)
+CheckGeno(
+  GenoM,
+  quiet = FALSE,
+  Plot = FALSE,
+  Return = "GenoM",
+  DumPrefix = c("F0", "M0")
+)
 }
 \arguments{
-\item{GenoM}{the genotype matrix}
+\item{GenoM}{the genotype matrix.}
 
-\item{quiet}{suppress messages}
+\item{quiet}{suppress messages.}
 
-\item{Plot}{display the plots of \code{\link{SnpStats}}}
+\item{Plot}{display the plots of \code{\link{SnpStats}}.}
+
+\item{Return}{either 'GenoM' to return the cleaned-up genotype matrix, or
+'excl' to return a list with excluded SNPs and individuals (see Value).}
+
+\item{DumPrefix}{length 2 vector, to check if these don't occur among
+genotyped individuals.}
 }
 \value{
-a list with, if any are found:
+If \code{Return='excl'} a list with, if any are found:
  \item{ExcludedSNPs}{SNPs scored for <10% of individuals; automatically
    excluded when running \code{\link{sequoia}}}
  \item{ExcludedSnps-mono}{monomorphic (fixed) SNPs; automatically excluded
-   when running \code{\link{sequoia}}. Column numbers are *after* removal of
-    \code{ExcludedSNPs}, if any.}
+   when running \code{\link{sequoia}}. This includes nearly-fixed SNPs with
+   MAF \eqn{= 1/2N}. Column numbers are *after* removal of
+   \code{ExcludedSNPs}, if any.}
  \item{ExcludedIndiv}{Individuals scored for <5% of SNPs; these cannot be
    reliably included during pedigree reconstruction. Individual call rate is
    calculated after removal of 'Excluded SNPs'}
@@ -27,10 +40,14 @@ a list with, if any are found:
    recommended to be filtered out}
  \item{Indiv-LowCallRate}{individuals scored for <50% of SNPs; strongly
    recommended to be filtered out}
+
+When \code{Return='excl'} the return is \code{\link{invisible}}, i.e. a check
+is run and warnings or errors are always displayed, but nothing may be
+returned.
 }
 \description{
 Check that the provided genotype matrix is in the correct
-  format, and check for low call rate samples and SNPs
+  format, and check for low call rate samples and SNPs.
 }
 \section{Thresholds}{
  Appropriate call rate thresholds for SNPs and
@@ -41,9 +58,14 @@ Check that the provided genotype matrix is in the correct
 }
 
 \examples{
-\dontrun{
+\donttest{
+data(Ped_HSg5)
 GenoM <- SimGeno(Ped_HSg5, nSnp=400, CallRate = runif(400, 0.2, 0.8))
-Excl <- CheckGeno(GenoM)
+# quick alternative:
+GenoM.checked <- CheckGeno(GenoM)
+
+# user supervised alternative:
+Excl <- CheckGeno(GenoM, Return = "excl")
 GenoM.orig <- GenoM   # make a 'backup' copy
 if ("ExcludedSnps" \%in\% names(Excl))
   GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
@@ -69,5 +91,5 @@ GoodSamples <- rownames(GenoM)[ IndivCallRate > 0.8]
 \seealso{
 \code{\link{SnpStats}} to calculate SNP call rates;
   \code{\link{CalcOHLLR}} to count the number of SNPs scored in both focal
-  individual and parent
+  individual and parent.
 }

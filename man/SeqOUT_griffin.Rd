@@ -17,14 +17,15 @@ based on the griffin pedigree.
 \examples{
 \dontrun{
 GenoS <- SimGeno(Ped.griffin, nSnp=400, ParMis=0.4)
-griffin.sex <- sapply(Ped.griffin$ID,
-                    function(x) substr(x, start=nchar(x), stop=nchar(x)))
-LH_griffin <- data.frame(ID = Ped_griffin$ID,
+griffin.sex <- sapply(as.character(Ped_griffin$id), function(x)
+                      substr(x, start=nchar(x), stop=nchar(x)))
+LH.griffin <- data.frame(ID = Ped_griffin$id,
                          Sex = ifelse(griffin.sex=="F", 1, 2),
-                         BirthYear = Ped_griffin$BY)
-SeqOUT_griffin <- sequoia(GenoS, LH_griffin,
-                  MaxSibIter = 10,
-                  args.AP = list(Smooth = FALSE)) }
+                         BirthYear = Ped_griffin$birthyear)
+SeqOUT.GX <- sequoia(GenoS, LH.griffin,
+                     Module = "ped",
+                     args.AP = list(Smooth = FALSE))
+}
 }
 \seealso{
 \code{\link{Ped_griffin}, \link{sequoia}}

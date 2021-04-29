@@ -2,7 +2,7 @@
 % Please edit documentation in R/Simulate.R
 \name{SimGeno}
 \alias{SimGeno}
-\title{Simulated genotypes}
+\title{Simulate Genotypes}
 \usage{
 SimGeno(
   Pedigree,
@@ -16,22 +16,17 @@ SimGeno(
   OutFile = NA,
   Inherit = "autosomal",
   InheritFile = NA,
-  quiet = FALSE,
-  PropLQ,
-  MisHQ,
-  MisLQ,
-  ErHQ,
-  ErLQ
+  quiet = FALSE
 )
 }
 \arguments{
-\item{Pedigree}{Dataframe, pedigree with the first three columns being id -
+\item{Pedigree}{dataframe, pedigree with the first three columns being id -
 dam - sire. Column names are ignored, as are additional columns, with the
 exception of a 'Sex' column when Inherit is not 'autosomal'.}
 
 \item{nSnp}{number of SNPs to simulate.}
 
-\item{ParMis}{Single number or vector length two with proportion of parents
+\item{ParMis}{single number or vector length two with proportion of parents
 with fully missing genotype. Ignored if CallRate is a named vector.}
 
 \item{MAF}{minimum minor allele frequency, and allele frequencies will be
@@ -39,7 +34,7 @@ sampled uniformly between this minimum and 0.5, OR a vector with minor
 allele frequency at each locus. In both cases, this is the MAF among
 pedigree founders, the MAF in the sample will deviate due to drift.}
 
-\item{CallRate}{Either a single number for the mean call rate (genotyping
+\item{CallRate}{either a single number for the mean call rate (genotyping
 success), OR a vector with the call rate at each SNP, OR a named vector
 with the call rate for each individual. In the third case, ParMis is
 ignored, and individuals in the pedigree (as id or parent) not included in
@@ -63,29 +58,18 @@ results within R.}
 \item{Inherit}{inheritance pattern, scalar or vector of length nSnp,
 Defaults to 'autosomal'. An excel file included in the package has
 inheritance patterns for the X and Y chromosome and mtDNA, and allows
-custom inheritance patterns. Note that these are NOT currently supported by
-the pedigree reconstruction with \code{\link{sequoia}} !}
+custom inheritance patterns. Note that these are experimental, and NOT
+currently supported by the pedigree reconstruction with
+\code{\link{sequoia}} !}
 
-\item{InheritFile}{file name for excel file with inheritance patterns,
-requires library xlsx.}
+\item{InheritFile}{file name of file with inheritance patterns, with
+extension csv, txt, xls or xlsx (the latter two require library xlsx).}
 
 \item{quiet}{suppress messages.}
-
-\item{PropLQ}{[deprecated] proportion of low-quality samples.}
-
-\item{MisHQ}{[deprecated] average missingness for high-quality samples,
-assuming a beta-distribution with alpha = 1.}
-
-\item{MisLQ}{[deprecated] average missingness in low-quality samples.}
-
-\item{ErHQ}{[deprecated] error rate in high quality samples (defaults to
-0.005).}
-
-\item{ErLQ}{[deprecated] error rate in low quality samples.}
 }
 \value{
-if \code{ReturnStats=FALSE} (the default), a matrix with genotype data in
-  sequoia's input format, encoded as 0/1/2/-9.
+If \code{ReturnStats=FALSE} (the default), a matrix with genotype
+  data in sequoia's input format, encoded as 0/1/2/-9.
 
   If \code{ReturnStats=TRUE}, a named list with three elements: list
   'ParamsIN', matrix 'SGeno', and list 'StatsOUT':
@@ -113,15 +97,15 @@ Please ensure the pedigree is a valid pedigree, for example by first
   genepool according to the provided MAF.
 
   Genotyping errors are generated following a user-definable 3x3 matrix with
-  probabilities that actual genotype i (rows) is observed as genotype j
-  (columns). This is specified as \code{ErrorFM}, which is a function of
-  \code{SnpError}. By default (\code{ErrorFM} = "version2.0"), \code{SnpError}
-  is interpreted as a locus-level error rate (rather than allele-level), and
-  equals the probability that a homozygote is observed as heterozygote, and
-  the probability that a heterozygote is observed as either homozygote (i.e.,
-  the probability that it is observed as AA = probability that observed as aa
-  = \code{SnpError}/2). The probability that one homozygote is observed as
-  the other is (\code{SnpError}/2\eqn{)^2}.
+  probabilities that actual genotype \eqn{i} (rows) is observed as genotype
+  \eqn{j} (columns). This is specified as \code{ErrorFM}, which is a function
+  of \code{SnpError}. By default (\code{ErrorFM} = "version2.0"),
+  \code{SnpError} is interpreted as a locus-level error rate (rather than
+  allele-level), and equals the probability that a homozygote is observed as
+  heterozygote, and the probability that a heterozygote is observed as either
+  homozygote (i.e., the probability that it is observed as AA = probability
+  that observed as aa = \code{SnpError}/2). The probability that one
+  homozygote is observed as the other is (\code{SnpError}/2\eqn{)^2}.
 
   Note that this differs from versions up to 1.1.1, where a proportion of
   \code{SnpError}*3/2 of genotypes were replaced with random genotypes. This
@@ -136,7 +120,7 @@ Please ensure the pedigree is a valid pedigree, for example by first
   distribution, with many samples having call rates close to 1, and a
   narrowing tail of lower call rates. The first shape parameter defaults to 1
   (but see \code{\link{MkGenoErrors}}), and the second shape parameter is
-  defined via the mean as \code{CallRate}. For 99.9% of SNPs to have a call
+  defined via the mean as \code{CallRate}. For 99.9\% of SNPs to have a call
   rate of 0.8 (0.9; 0.95) or higher, use a mean call rate of 0.969 (0.985;
   0.993).
 
@@ -173,11 +157,16 @@ EFM <- function(E) {   # Whalen, Gorjanc & Hickey 2018
 EFM(0.01)
 GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = 0.2,
  SnpError = 5e-3, ErrorFM = EFM)
+
+# combination of high & low quality SNPs
+Geno.HQ <- SimGeno(Ped_HSg5, nSnp=50, MAF=0.3, CallRate=runif(50, 0.7, 1))
+Geno.LQ <- SimGeno(Ped_HSg5, nSnp=20, MAF=0.1, CallRate=runif(20, 0.1, 5))
+Geno.HQLQ <- merge(Geno.HQ, Geno.LQ, by="row.names")
 }
 
 }
 \seealso{
-the wrapper \code{\link{EstConf}} for repeated simulation and
+The wrapper \code{\link{EstConf}} for repeated simulation and
   pedigree reconstruction; \code{\link{MkGenoErrors}} for fine control over
   the distribution of genotyping errors in simulated data.
 }

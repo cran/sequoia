@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Jisca Huisman ( jisca.huisman @ gmail.com )" />
+
+<meta name="date" content="2020-10-19" />
+
+<title>PedCompare Example (Griffin Pedigree)</title>
+
+<script src="data:application/javascript;base64,Ly8gUGFuZG9jIDIuOSBhZGRzIGF0dHJpYnV0ZXMgb24gYm90aCBoZWFkZXIgYW5kIGRpdi4gV2UgcmVtb3ZlIHRoZSBmb3JtZXIgKHRvCi8vIGJlIGNvbXBhdGlibGUgd2l0aCB0aGUgYmVoYXZpb3Igb2YgUGFuZG9jIDwgMi44KS4KZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsIGZ1bmN0aW9uKGUpIHsKICB2YXIgaHMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCJkaXYuc2VjdGlvbltjbGFzcyo9J2xldmVsJ10gPiA6Zmlyc3QtY2hpbGQiKTsKICB2YXIgaSwgaCwgYTsKICBmb3IgKGkgPSAwOyBpIDwgaHMubGVuZ3RoOyBpKyspIHsKICAgIGggPSBoc1tpXTsKICAgIGlmICghL15oWzEtNl0kL2kudGVzdChoLnRhZ05hbWUpKSBjb250aW51ZTsgIC8vIGl0IHNob3VsZCBiZSBhIGhlYWRlciBoMS1oNgogICAgYSA9IGguYXR0cmlidXRlczsKICAgIHdoaWxlIChhLmxlbmd0aCA+IDApIGgucmVtb3ZlQXR0cmlidXRlKGFbMF0ubmFtZSk7CiAgfQp9KTsK"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<link rel="stylesheet" href="data:text/css,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" type="text/css" />
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">PedCompare Example (Griffin Pedigree)</h1>
+<h4 class="author">Jisca Huisman ( jisca.huisman @ gmail.com )</h4>
+<h4 class="date">19 Oct 2020</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#example-pedcompare"><span class="toc-section-number">1</span> Example: PedCompare</a>
+<ul>
+<li><a href="#why-compare-pedigrees"><span class="toc-section-number">1.1</span> Why compare pedigrees</a></li>
+<li><a href="#study-population"><span class="toc-section-number">1.2</span> Study population</a></li>
+<li><a href="#comparing-pedigrees"><span class="toc-section-number">1.3</span> Comparing pedigrees</a></li>
+<li><a href="#mismatch"><span class="toc-section-number">1.4</span> Mismatch</a></li>
+<li><a href="#pedigree1-only"><span class="toc-section-number">1.5</span> Pedigree1-only</a></li>
+<li><a href="#pedigree2-only-newly-assigned-mum"><span class="toc-section-number">1.6</span> Pedigree2-only (newly assigned mum)</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="example-pedcompare" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Example: PedCompare</h1>
+<div id="why-compare-pedigrees" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> Why compare pedigrees</h2>
+<p>It is often worthwhile to compare a newly inferred genetic pedigree to an older (field-)pedigree, as no dataset is flawless, nor is genetic pedigree reconstruction infallible.</p>
+<p>Discrepancies between the pedigrees may bring to light mislabeled samples, incorrect birth or death years, or incorrectly inferred pedigree links. For example, if an individual’s genetically inferred mother differs from its field-observed mother, this may be due to a mislabeled DNA sample, a pedigree inference error, an error in the field records, or egg dumping/adoption. Eliminating possibilities and tracking down the most likely scenario can be rather time consuming, but will increase the overall quality of the dataset and pedigree.</p>
+<p>In addition, the pedigree comparison may be able to match dummy parents in the genetic pedigree to real, non-genotyped parents in the field pedigree. This allows pedigree records (offspring number, mates, etc.) to be combined with phenotypic records (age, size, etc.) of those non-genotyped individuals.</p>
+<p>Here, the process is illustrated by comparing genetically assigned and field observed mothers in a fictional population of griffins.</p>
+</div>
+<div id="study-population" class="section level2" number="1.2">
+<h2><span class="header-section-number">1.2</span> Study population</h2>
+<p>Nests have been monitored in a small, closed population of griffins, where each year exactly 20 baby griffins hatch. The mother of most individuals is known from field observations (example data <code>FieldMums_griffin</code> included in the package). From 2001 to 2010, most hatchlings are tagged, and sampled for SNP genotyping. From this, a genetic pedigree has been reconstructed (example data <code>SeqOUT_griffin</code>). Breeding females without tags, are given a two-colour code <a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>. This may including females who have lost their tags.</p>
+</div>
+<div id="comparing-pedigrees" class="section level2" number="1.3">
+<h2><span class="header-section-number">1.3</span> Comparing pedigrees</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sequoia)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(SeqOUT_griffin, FieldMums_griffin, <span class="at">package=</span><span class="st">&quot;sequoia&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>PCG  <span class="ot">&lt;-</span> <span class="fu">PedCompare</span>(<span class="at">Ped1 =</span> <span class="fu">cbind</span>(FieldMums_griffin,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>                                <span class="at">sire =</span> <span class="cn">NA</span>),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">Ped2 =</span> SeqOUT_griffin<span class="sc">$</span>Pedigree,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">SNPd =</span> SeqOUT_griffin<span class="sc">$</span>PedigreePar<span class="sc">$</span>id,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>                   <span class="at">Symmetrical =</span> <span class="cn">TRUE</span>, <span class="at">Plot=</span><span class="cn">FALSE</span>)</span></code></pre></div>
+<p>In essence, <code>PedCompare()</code> lies the two pedigrees side-by-side and classifies each individual’s parent as being the same in the two pedigrees (<code>Match</code>) or not (<code>Mismatch</code>), or only having a parent in only one of the pedigrees (<code>P1only</code> or <code>P2only</code>).</p>
+<p>While <code>Match</code> versus <code>Mismatch</code> is straightforward when all individuals are genotyped, and all IDs are (thus) consistent between the two pedigrees, it becomes more complicated when non-genotyped individuals and dummy IDs are involved. <code>PedCompare()</code> tries to match each sibship-dummy-parent in Pedigree2 (F0001, F0002, etc.) to a non-genotyped parent in Pedigree1 (here these are the IDs consisting of 2 colours: PinkBlue, BlueRed, etc.).</p>
+<div id="mergedped" class="section level3" number="1.3.1">
+<h3><span class="header-section-number">1.3.1</span> <code>$MergedPed</code></h3>
+<p>The side-by-side pedigrees are given in the list element <code>$MergedPed</code> of the output:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>PCG<span class="sc">$</span>MergedPed[<span class="fu">c</span>(<span class="dv">127</span><span class="sc">:</span><span class="dv">133</span>), <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>, <span class="st">&quot;dam.class&quot;</span>)]</span></code></pre></div>
+<pre><code>##              id       dam.1       dam.2 dam.class
+## 127 i144_2008_M GreenYellow       F0001     Match
+## 128 i145_2008_F i132_2007_F i132_2007_F     Match
+## 129 i147_2008_F  YellowBlue       F0001  Mismatch
+## 130 i148_2008_F GreenYellow       F0002  Mismatch
+## 131 i149_2008_F i126_2007_F i126_2007_F     Match
+## 132 i151_2008_F i108_2006_F i108_2006_F     Match
+## 133 i153_2008_F        &lt;NA&gt;        &lt;NA&gt;         _</code></pre>
+<p>This part-pedigree for example shows that individuals i165_2009_F and i166_2009_F have the non-genotyped female ‘PinkBlue’ as field observed mother (<code>dam.1</code> = dam in Pedigree1). The pair are also genetically assigned as maternal siblings, with ‘F0006’ as dummy ID for the mother (<code>dam.2</code>). And, while the ID of the mother differs between the two pedigrees, it is nonetheless considered a <code>Match</code> (<code>dam.class</code>, short for classification).</p>
+<div id="id-columns" class="section level4" number="1.3.1.1">
+<h4><span class="header-section-number">1.3.1.1</span> id columns</h4>
+<p>A point of clarification on the <code>id</code> columns:</p>
+<ul>
+<li>column <code>id</code> are the ids common to both pedigrees, plus those only occurring in Pedigree2 (typically the dummy IDs F0001, F0002 etc.)<br />
+</li>
+<li>column <code>id.r</code> are the ‘consensus’ ids, plus those only occurring in Pedigree1</li>
+</ul>
+<p>For example, ‘PinkBlue’ does not have a mother in Pedigree1 (first row in <code>MergedPed</code> below: <code>id.r=PinkBlue</code>, <code>dam.1=NA</code>). Pedigree2 tells us that ‘F0006’ has genetic mother ‘F0007’, which is not hugely informative of itself (<code>MergedPed</code>: <code>id=F0006</code>, <code>dam.2=F0007</code>). But <code>PedCompare()</code> then tells us that this means that ‘PinkBlue’ (<code>id.r</code>) has ‘YellowPink’ as mother (<code>dam.r</code>), which has a lot more meaning (to someone working in the field).</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># subset some individuals:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>these <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;i177_2009_M&quot;</span>, <span class="st">&quot;i179_2009_M&quot;</span>, <span class="st">&quot;i165_2009_F&quot;</span>, <span class="st">&quot;i166_2009_F&quot;</span>, <span class="st">&quot;F0006&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>           <span class="st">&quot;F0007&quot;</span>, <span class="st">&quot;YellowPink&quot;</span>, <span class="st">&quot;PinkBlue&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="fu">list</span>(<span class="at">Ped1 =</span> FieldMums_griffin[FieldMums_griffin<span class="sc">$</span>id <span class="sc">%in%</span> these, ], </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                  <span class="at">Ped2 =</span> SeqOUT_griffin<span class="sc">$</span>Pedigree[SeqOUT_griffin<span class="sc">$</span>Pedigree<span class="sc">$</span>id <span class="sc">%in%</span> these, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>]),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>             <span class="at">caption =</span> <span class="st">&quot;Subsets of Pedigree1 (left) and Pedigree2 (right)&quot;</span>)</span></code></pre></div>
+<table class="kable_wrapper">
+<caption>
+<span id="tab:id-idr-sep">Table 1.1: </span>Subsets of Pedigree1 (left) and Pedigree2 (right)
+</caption>
+<tbody>
+<tr>
+<td>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">id</th>
+<th align="left">mum</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">113</td>
+<td align="left">i165_2009_F</td>
+<td align="left">PinkBlue</td>
+</tr>
+<tr class="even">
+<td align="left">114</td>
+<td align="left">i166_2009_F</td>
+<td align="left">PinkBlue</td>
+</tr>
+<tr class="odd">
+<td align="left">122</td>
+<td align="left">i177_2009_M</td>
+<td align="left">YellowPink</td>
+</tr>
+<tr class="even">
+<td align="left">123</td>
+<td align="left">i179_2009_M</td>
+<td align="left">YellowPink</td>
+</tr>
+</tbody>
+</table>
+</td>
+<td>
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">id</th>
+<th align="left">dam</th>
+<th align="left">sire</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">112</td>
+<td align="left">i165_2009_F</td>
+<td align="left">F0006</td>
+<td align="left">i121_2007_M</td>
+</tr>
+<tr class="even">
+<td align="left">113</td>
+<td align="left">i166_2009_F</td>
+<td align="left">F0006</td>
+<td align="left">i144_2008_M</td>
+</tr>
+<tr class="odd">
+<td align="left">121</td>
+<td align="left">i177_2009_M</td>
+<td align="left">F0007</td>
+<td align="left">M0011</td>
+</tr>
+<tr class="even">
+<td align="left">122</td>
+<td align="left">i179_2009_M</td>
+<td align="left">F0007</td>
+<td align="left">i144_2008_M</td>
+</tr>
+<tr class="odd">
+<td align="left">148</td>
+<td align="left">F0006</td>
+<td align="left">F0007</td>
+<td align="left">i109_2006_M</td>
+</tr>
+<tr class="even">
+<td align="left">149</td>
+<td align="left">F0007</td>
+<td align="left">NA</td>
+<td align="left">NA</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>PCG<span class="sc">$</span>MergedPed[PCG<span class="sc">$</span>MergedPed<span class="sc">$</span>id <span class="sc">%in%</span> these, </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;id.r&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>, <span class="st">&quot;dam.r&quot;</span>)]</span></code></pre></div>
+<pre><code>##              id        id.r      dam.1 dam.2      dam.r
+## 6         F0006    PinkBlue       &lt;NA&gt; F0007 YellowPink
+## 7         F0007  YellowPink       &lt;NA&gt;  &lt;NA&gt;       &lt;NA&gt;
+## 140 i165_2009_F i165_2009_F   PinkBlue F0006   PinkBlue
+## 141 i166_2009_F i166_2009_F   PinkBlue F0006   PinkBlue
+## 149 i177_2009_M i177_2009_M YellowPink F0007 YellowPink
+## 150 i179_2009_M i179_2009_M YellowPink F0007 YellowPink</code></pre>
+</div>
+</div>
+<div id="dummymatch" class="section level3" number="1.3.2">
+<h3><span class="header-section-number">1.3.2</span> <code>$DummyMatch</code></h3>
+<p>The output list element <code>$DummyMatch</code> summarises the matches:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(PCG<span class="sc">$</span>DummyMatch[, <span class="sc">-</span><span class="fu">c</span>(<span class="dv">3</span><span class="sc">:</span><span class="dv">5</span>)], <span class="at">n=</span><span class="dv">6</span>)</span></code></pre></div>
+<pre><code>##    id.2        id.1 off.Match off.Mismatch off.P1only off.P2only
+## 1 F0001 GreenYellow         3            2          0          0
+## 2 F0002     nomatch         0            2          0          0
+## 3 F0003     BlueRed         4            4          0          3
+## 4 F0004   RedOrange         3            0          0          0
+## 5 F0005     nomatch         0            0          0          2
+## 6 F0006    PinkBlue         3            0          0          0</code></pre>
+<p>For the match between ‘F0006’ in Pedigree2 and ‘PinkBlue’ in Pedigree1 (bottom row), there are 3 matching offspring, and no offspring by ‘PinkBlue’ that are genetically assigned to a different sibship cluster or mother (<code>off.Mismatch</code>) or have no genetic mother assigned (<code>off.P1only</code>), nor are there any members of the genetic sibship F0006 with no mother in Pedigree1 (<code>off.P2only</code>). Thus, a perfect one-to-one match.</p>
+<p>For genetic sibship ‘F0003’, however, the situation is more complicated, and this will be worked through in detail below.</p>
+<p>‘nomatch’ in the <code>id.1</code> column indicates either that none of the individuals in this genetic sibship had a field-observed mother, or that the field-observed mother is matched to a different genetic sibship, with which there was a larger overlap.</p>
+</div>
+<div id="counts" class="section level3" number="1.3.3">
+<h3><span class="header-section-number">1.3.3</span> <code>$Counts</code></h3>
+<p>The total number of matches and mismatches is summarised in the 3D array <code>$Counts</code>, which can be visualised with <code>PlotPedComp()</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">PlotPedComp</span>(PCG<span class="sc">$</span>Counts)</span></code></pre></div>
+<p><img src="data:image/png;base64,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8RnrlPJQZ+WYitHx8GrfW4jIbMLPxAFgFz6oyHYdvX2y94K/e9ToObPm85gSCKqaeywErLG1FBozoJ5RMn9EgVN4arydUqlTqtRXoQ0XohxToY2FgPzfxtktw3tBDyjJfZKZPvEbwdSVHwvq6O2TvYOZ+yo0ZkDuW2v71dktG4MnBwy5L8T8IrIw4VtghR58X8C6tu3o6oHm9a4yEC1rnojE1Z0S+vpS137i23JryB4Ynvy/ctonJx/6jNQg/TW/zSoquRsLUk5njwDUPcnh7omnXSdf0j3py4Jh/0mvkTE6oxhH/xnV8Do9mXs1MXhkLRy9fbJhsP+QyOqED7CKig8fWGUgtRKIj9POGKlQQudW8nwdX3mgOxQLqkgGlXJMheF1Jk/swyEfkm/k9Pas3AyxuuxfJz7oPfMO5eRL7lGfLzGIIzw0aOQPDSk4t4cSiN/PkDt4ZI116+2TwfwisjqLPtBI4pOWyERreyQzj1Iic7EFRpQrPDQItr+ILI8BRpQh7HdJknOw75USeoGJyBwW7QNh5wxZH49SInOxBUZEREJigBERkZAYYEREJCQGGBERCYkBRkREQmKAERGRkBhgREQkJOvORi9JktlVICIi6+KdmEREJCR2IRIRkZAYYEREJCQGGBERCYkBRkREQmKAERGRkBhgREQkJAYYEREJiQFGRERCYoAREZGQGGBERCQkBhgREQmJAUZEREJigBERkZAYYEREJCQGGBERCYkBRkREQmKAERGRkBhgREQkJAYYEREJiQFGRERCYoAREZGQGGBERCQkBhgREQmJAUZEREJigBERkZAYYEREJCQGGBERCYkBRkREQmKAERGRkBhgREQkJAYYEREJiQFGRERCYoAREZGQGGBERCQkBhgREQmJAUZEREJigBERkZAYYEREJCQGGBERCYkBRkREQmKAERGRkBhgREQkJAYYEREJiQFGRERCYoAREZGQGGBERCQkBhgREQnp/wMILcztrVSJ7gAAAABJRU5ErkJggg==" /><!-- --></p>
+<p>Since there are no sires in our field pedigree, we will have a look at the <code>dam</code> slice only:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>PCG<span class="sc">$</span>Counts[,,<span class="st">&quot;dam&quot;</span>]</span></code></pre></div>
+<pre><code>##     class
+## cat  Total Match Mismatch P1only P2only
+##   GG    65    61        4      0      0
+##   GD    38    16        7      0     15
+##   GT   107    77       11      1     18
+##   DG     6     0        0      0      6
+##   DD     3     0        0      0      3
+##   DT     9     0        0      0      9
+##   TT   127    77       11      2     37</code></pre>
+<p>The counts for each classification are subdivided into various categories (rows), based on whether the focal individual (first letter) and parent (second letter) are <strong>G</strong>enotyped or a <strong>D</strong>ummy individual, as well as the <strong>T</strong>otals. The totals counts includes individuals in Pedigree1 who are neither genotyped nor ‘dummifiable’, such as a non-genotyped parent with a single offspring, and therefore exceeds the sum of <strong>G</strong> and <strong>D</strong>.</p>
+<p>We will go through each of the three classes of discrepancies in turn – <code>Mismatch</code>, <code>P1only</code> (only field mum), and <code>P2only</code> (only genetic mum).</p>
+</div>
+</div>
+<div id="mismatch" class="section level2" number="1.4">
+<h2><span class="header-section-number">1.4</span> Mismatch</h2>
+<p>To get more detail on the 11 mismatches, we head back to <code>$MergedPed</code>. For brevity, we display only the columns in which we’re currently interested:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>PCG<span class="sc">$</span>MergedPed[<span class="fu">which</span>(PCG<span class="sc">$</span>MergedPed<span class="sc">$</span>dam.class <span class="sc">==</span> <span class="st">&quot;Mismatch&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>, <span class="st">&quot;id.dam.cat&quot;</span>)]</span></code></pre></div>
+<pre><code>##              id       dam.1       dam.2 id.dam.cat
+## 100 i108_2006_F   GreenBlue i081_2005_F         GG
+## 111 i122_2007_M   GreenBlue i081_2005_F         GG
+## 112 i123_2007_F OrangeGreen       F0003         GD
+## 113 i124_2007_M   GreenBlue i081_2005_F         GG
+## 117 i130_2007_F OrangeGreen       F0003         GD
+## 118 i131_2007_F OrangeGreen       F0003         GD
+## 120 i133_2007_F OrangeGreen       F0003         GD
+## 125 i142_2008_M   GreenBlue i081_2005_F         GG
+## 129 i147_2008_F  YellowBlue       F0001         GD
+## 130 i148_2008_F GreenYellow       F0002         GD
+## 137 i159_2008_F  YellowBlue       F0002         GD</code></pre>
+<p>Thus while there are 11 individuals with mismatching mothers, there are only 4 unique mothers involved, which we will look at in turn.</p>
+<div id="mismatch-issue1-greenblue" class="section level3" number="1.4.1">
+<h3><span class="header-section-number">1.4.1</span> Mismatch Issue1: GreenBlue</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>PedM <span class="ot">&lt;-</span> PCG<span class="sc">$</span>MergedPed[, <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>)]   <span class="co"># short-hand to minimise typing</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># does the mismatch affect all of GreenBlue&#39;s offspring?</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.1</span> <span class="sc">==</span> <span class="st">&quot;GreenBlue&quot;</span>), ]</span></code></pre></div>
+<pre><code>##              id     dam.1       dam.2
+## 100 i108_2006_F GreenBlue i081_2005_F
+## 111 i122_2007_M GreenBlue i081_2005_F
+## 113 i124_2007_M GreenBlue i081_2005_F
+## 125 i142_2008_M GreenBlue i081_2005_F</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># &gt; yes, these 4 are all of her known offspring</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co"># does genetic mother i081_2005_F have any field-observed offspring?</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.1</span> <span class="sc">==</span> <span class="st">&quot;i081_2005_F&quot;</span>), ]</span></code></pre></div>
+<pre><code>## [1] id    dam.1 dam.2
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># no.</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># does i081_2005_F have any other genetic offspring?</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.2</span> <span class="sc">==</span> <span class="st">&quot;i081_2005_F&quot;</span>), ]</span></code></pre></div>
+<pre><code>##              id     dam.1       dam.2
+## 100 i108_2006_F GreenBlue i081_2005_F
+## 111 i122_2007_M GreenBlue i081_2005_F
+## 113 i124_2007_M GreenBlue i081_2005_F
+## 125 i142_2008_M GreenBlue i081_2005_F</code></pre>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># no.</span></span></code></pre></div>
+<p>It seems ‘GreenBlue’ is a perfect match with ‘i081_2005_F’: all four of GreenBlue’s observed offspring are genetically assigned i081_2005_F as mother, and all four of i081_2005_F’s genetic offspring have GreenBlue as observed mother. Perhaps this female lost her tag, was therefore not recognised, and received a new field ID. Field records may be able to back this theory up, or disprove it: Did GreenBlue look about 1 year old when first recorded in 2007? Was i081_2005_F ever seen in or after the 2006 breeding season? Does i081_2005_F have a known death date? If so, was there a post-mortem, or was she presumed dead because she had not seen for several months/years?</p>
+<p>An alternative explanation might be a pedigree inference error, but this is highly unlikely when offspring and parent are both genotyped (<code>id.dam.cat = &#39;GG&#39;</code>), and only plausible with a limited number of SNPs with low call rate and high genotyping error rate. The four assignments are independent if they were done during parentage assignment, but not necessarily so during full pedigree reconstruction: they may first have been clustered as maternal siblings, and subsequently the dummy mother may have been replaced by i081_2005_F.</p>
+<p>Dummy individuals in Pedigree2 are never matched to genotyped individuals in Pedigree1, even if there is a perfect match such as here – there is almost always something odd going on that requires user inspection.</p>
+<p><strong>Resolution: Merge IDs ‘i081_2005_F’ and ‘GreenBlue’ </strong></p>
+</div>
+<div id="mismatch-issue2-orangegreen" class="section level3" number="1.4.2">
+<h3><span class="header-section-number">1.4.2</span> Mismatch Issue2: OrangeGreen</h3>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># why is this flagged as a mismatch?</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.1</span> <span class="sc">==</span> <span class="st">&quot;OrangeGreen&quot;</span>), ]</span></code></pre></div>
+<pre><code>##              id       dam.1 dam.2
+## 112 i123_2007_F OrangeGreen F0003
+## 117 i130_2007_F OrangeGreen F0003
+## 118 i131_2007_F OrangeGreen F0003
+## 120 i133_2007_F OrangeGreen F0003</code></pre>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># all of OrangeGreen&#39;s offspring are in sibship F0003</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.2</span> <span class="sc">==</span> <span class="st">&quot;F0003&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>)]</span></code></pre></div>
+<pre><code>##              id       dam.1 dam.2
+## 2         F0002        &lt;NA&gt; F0003
+## 16        F0016        &lt;NA&gt; F0003
+## 27        M0011        &lt;NA&gt; F0003
+## 112 i123_2007_F OrangeGreen F0003
+## 117 i130_2007_F OrangeGreen F0003
+## 118 i131_2007_F OrangeGreen F0003
+## 120 i133_2007_F OrangeGreen F0003
+## 136 i158_2008_M     BlueRed F0003
+## 138 i160_2008_F     BlueRed F0003
+## 143 i170_2009_F     BlueRed F0003
+## 145 i173_2009_F     BlueRed F0003</code></pre>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># but sibship F0003 is split across two field mothers</span></span></code></pre></div>
+<p>So, the genetic sibship with ‘F0003’ as dummy mother includes individuals with two different field-observed mothers, ‘OrangeGreen’ and ‘BlueRed’. OrangeGreen’s offspring hatched in 2007, and BlueRed’s in 2008 and 2009. Perhaps this female was not regularly monitored, was not recognised at the start of the 2008 breeding season, and got a new ID?</p>
+<p>As for the previous case, field records that could disprove this theory are census records of BlueRed in or before 2007, or of OrangeGreen in or after 2008 (or if they were seen together!). Records backing up this theory are notes like ‘this could be…’ or ‘looks similar to …’ when BlueRed was first described. This cautionary approach to use a new ID is advisable, as it is often much easier to combine the records of two IDs later on, than to try to tease apart records under a single ID into their respective IDs.</p>
+<p>An alternative explanation is again a pedigree inference error, namely that <code>sequoia</code> has erroneously merged two actual sibships. This may sporadically happen when the two mothers are closely related. When the mothers are related by <span class="math inline">\(&gt;0.5\)</span> (closer than regular full siblings, due to inbreeding), such erroneous merging can happen even with large powerful SNP sets.</p>
+<p><strong>Resolution: <em>Probably</em> merge IDs OrangeGreen’ and ‘BlueRed’ </strong></p>
+</div>
+<div id="mismatch-issue3-yellowblue" class="section level3" number="1.4.3">
+<h3><span class="header-section-number">1.4.3</span> Mismatch Issue3: YellowBlue</h3>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># as before</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.1</span> <span class="sc">==</span> <span class="st">&quot;YellowBlue&quot;</span>), ]</span></code></pre></div>
+<pre><code>##              id      dam.1 dam.2
+## 129 i147_2008_F YellowBlue F0001
+## 137 i159_2008_F YellowBlue F0002</code></pre>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># something odd going on involving sibships F0001 &amp; F0002</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>PedM[<span class="fu">which</span>(PedM<span class="sc">$</span>dam<span class="fl">.2</span> <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;F0001&quot;</span>, <span class="st">&quot;F0002&quot;</span>)), ]</span></code></pre></div>
+<pre><code>##              id       dam.1 dam.2
+## 110 i121_2007_M GreenYellow F0001
+## 121 i135_2007_F GreenYellow F0001
+## 127 i144_2008_M GreenYellow F0001
+## 129 i147_2008_F  YellowBlue F0001
+## 130 i148_2008_F GreenYellow F0002
+## 137 i159_2008_F  YellowBlue F0002</code></pre>
+<p>so:</p>
+<ul>
+<li>i147_2008_F has field mum YellowBlue, but its three genetic sibs suggest GreenYellow as mum</li>
+<li>i148_2008_F has field mum GreenYellow, but its genetic sib (i159_2008_F) suggest YellowBlue as mum</li>
+</ul>
+<p>A likely explanation is that the samples of these individuals were accidentally swapped around in the lab during DNA extraction, i.e. that genotype ‘i147_2008_F’ belongs to field id ‘i148_2008_F’, and <em>v.v.</em>. Lab notes might shed light on this theory, e.g. was the DNA extracted in the same batch? Where the samples adjacent on the same 96-well plate?</p>
+<p>An alternative explanation is sloppy handwriting or typing error. Whether in this case genotype ‘i147_2008_F’ belongs to field id ‘i147_2008_FM’ or ‘i148_2008_F’ depends on when this mixup happened, i.e. whether the field data are swapped between the individuals too.</p>
+<p>A pedigree inference error seems unlikely in this particular case – individuals may occasionally get assigned to the wrong sibship, due to genotyping errors, a low call rate sample, or an uncommon draw in the Mendelian inheritance lottery, but it seems highly unlikely that this would result in two individuals swapping place.</p>
+<p><strong>Resolution: Swap IDs ‘i147_2008_F’ and ‘i148_2008_F’ in genetic data <em>(and/or in field data)</em> </strong></p>
+</div>
+<div id="mismatch-issue4-greenyellow" class="section level3" number="1.4.4">
+<h3><span class="header-section-number">1.4.4</span> Mismatch Issue4: GreenYellow</h3>
+<p>This turned out to be the same as Issue3!</p>
+</div>
+</div>
+<div id="pedigree1-only" class="section level2" number="1.5">
+<h2><span class="header-section-number">1.5</span> Pedigree1-only</h2>
+<div id="general" class="section level3" number="1.5.1">
+<h3><span class="header-section-number">1.5.1</span> General</h3>
+<p>The second class of discrepancies are individuals who have a parent assigned in Pedigree1 (the field-observation-based pedigree), but not in Pedigree2 (the genetically inferred pedigree), i.e. there is no genetic confirmation of the field parent. It is important here to distinguish between:</p>
+<ol style="list-style-type: decimal">
+<li>Parent and/or siblings in Pedigree1 are definitely not closely genetically related to the focal individual<br />
+</li>
+<li>Parent and/or siblings in Pedigree1 <em>are</em> a genetic match, but not assigned due to
+<ul>
+<li>lacking birth year information (who is the parent and who is the offspring?),<br />
+</li>
+<li>ambiguity about what kind of second degree relative the sibling in Pedigree 1 is, or<br />
+</li>
+<li>the likelihood ratio falling short of the assignment threshold.<br />
+</li>
+</ul></li>
+<li>Parent and siblings are not genotyped, or have such a low call rate that they are automatically excluded; i.e. there is no evidence one way or another.</li>
+</ol>
+<p>A range of tools is available to help distinguish between these three alternatives:</p>
+<ul>
+<li><code>CalcOHLLR()</code>: Calculate Mendelian errors and parental LLR for the parents assigned in Pedigree1; any genetic incompatibilities will stand out as outliers (if the SNP panel is powerful enough)<br />
+</li>
+<li><code>getAssignCat()</code>: get an (anti-conservative) indication which of the non-genotyped individuals in Pedigree1 could get dummy ID stand-ins during genetic pedigree reconstruction; non-‘dummyfiable’ parents suggest the third alternative and are no reason for worry</li>
+<li><code>GetMaybeRel()</code>: find all pairs of individuals that are likely relatives, but not assigned (2nd alternative)</li>
+<li><code>CalcPairLL()</code>: For a batch of pairs, get the likelihoods of them being PO, FS, HS, …; i.e. get the data underlying the parental LLR or the LLR in the <code>GetMaybeRel()</code> output.<br />
+</li>
+<li>Genomic relatedness: especially if there are many more SNPs scored than those used for pedigree reconstruction, the genomic relatedness can provide an additional clue on whether or not two individuals are closely related.</li>
+</ul>
+</div>
+<div id="griffins" class="section level3" number="1.5.2">
+<h3><span class="header-section-number">1.5.2</span> Griffins</h3>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>PCG<span class="sc">$</span>MergedPed[<span class="fu">which</span>(PCG<span class="sc">$</span>MergedPed<span class="sc">$</span>dam.class <span class="sc">==</span> <span class="st">&quot;P1only&quot;</span>), </span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>              <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;id.r&quot;</span>, <span class="st">&quot;dam.1&quot;</span>, <span class="st">&quot;dam.2&quot;</span>, <span class="st">&quot;id.dam.cat&quot;</span>)]</span></code></pre></div>
+<pre><code>##              id        id.r    dam.1 dam.2 id.dam.cat
+## 65  i057_2003_M i057_2003_M GreenRed  &lt;NA&gt;         GX
+## 174        &lt;NA&gt; i053_2003_M GreenRed  &lt;NA&gt;         XX</code></pre>
+<p>The <code>id.dam.cat = &#39;XX&#39;</code> indicates that neither the focal individual nor their dam in Pedigree1 is genotyped or ‘dummifiable’ (has at the very minimum one genotyped offspring, see <code>?getAssignCat</code>). Thus there is in this case simply no way of genetically testing whether or not these two are indeed maternal siblings, as the field data indicates.</p>
+<p>Genetic data could become available in the future, due to DNA sampling of i053_2003_M’s offspring, or of himself (e.g. post-mortem). This is one of the reasons why it is recommended to rerun pedigree analysis with all individuals when additional individuals have been genotyped.</p>
+</div>
+</div>
+<div id="pedigree2-only-newly-assigned-mum" class="section level2" number="1.6">
+<h2><span class="header-section-number">1.6</span> Pedigree2-only (newly assigned mum)</h2>
+<div id="general-1" class="section level3" number="1.6.1">
+<h3><span class="header-section-number">1.6.1</span> General</h3>
+<p>Analogous to the Pedigree1-only classification, it is here useful to differentiate between</p>
+<ol style="list-style-type: decimal">
+<li>The new genetic assignment is impossible or extremely unlikely based on field data
+<ul>
+<li>The assigned parent died before the birth year of the putative offspring</li>
+<li>The putative offspring’s parents are known with great certainty</li>
+<li>The spatial locations of the assigned parent-pair were too far apart around the time of conception for them to have mated</li>
+<li>The putative offspring is a dummy individual, but the assigned mother’s offspring are all accounted for:
+<ul>
+<li>SNP genotyped and different ID, or</li>
+<li>different sex, or</li>
+<li>definite death date before breeding age</li>
+<li>birth year incompatible with dummy individual’s offspring</li>
+</ul></li>
+</ul></li>
+<li>The assignment is quite likely based on field data
+<ul>
+<li>The assigned mother was not seen in the breeding season her new offspring was born (e.g. bred outside the study area)</li>
+<li>The offspring and newly assigned mother are part of the same social group</li>
+</ul></li>
+<li>There is no field data to suggest one way or the other</li>
+</ol>
+<p>When the field data indicate that a newly assigned parent is highly implausible, there are various possible explanations, such as:</p>
+<ul>
+<li>Sample mislabeling (offspring or parent sample)<br />
+</li>
+<li>Parent-offspring pair assigned the wrong way around (i.e. actual offspring assigned as parent), due to missing/incorrect birth years, or as a low-confidence dummy–dummy pedigree link</li>
+<li>A presumed-dead individual emigrated and re-immigrated, or mistaken identity during post-mortem (i.e. incorrect death date).</li>
+</ul>
+</div>
+<div id="griffins-1" class="section level3" number="1.6.2">
+<h3><span class="header-section-number">1.6.2</span> Griffins</h3>
+<p>As example, let’s take the assignment of ‘YellowPink’ (aka F0007) as mother of ‘PinkBlue’ (aka F0006):</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>SeqOUT_griffin<span class="sc">$</span>DummyIDs[<span class="fu">c</span>(<span class="dv">6</span>,<span class="dv">7</span>), <span class="fu">c</span>(<span class="st">&quot;id&quot;</span>, <span class="st">&quot;dam&quot;</span>, <span class="st">&quot;BY.est&quot;</span>, <span class="st">&quot;NumOff&quot;</span>, <span class="st">&quot;O1&quot;</span>, <span class="st">&quot;O2&quot;</span>, <span class="st">&quot;O3&quot;</span>, <span class="st">&quot;O4&quot;</span>)]</span></code></pre></div>
+<pre><code>##        id   dam BY.est NumOff          O1          O2          O3    O4
+## 148 F0006 F0007   2008      3 i165_2009_F i166_2009_F i175_2009_M  &lt;NA&gt;
+## 149 F0007  &lt;NA&gt;   2007      4 i141_2008_M i177_2009_M i179_2009_M F0006</code></pre>
+<!--- other example: 140,146,8  -->
+<p>Dummy - dummy pedigree links as these have a higher error rate than genotyped - genotyped pedigree links, especially when the sibships are small, as all genetic information is ‘second hand’. They are therefore worth checking if independent data is available.</p>
+<p>The question here is whether it is plausible that YellowPink had a non-genotyped daughter in 2008 that survived to breeding age. She had one genotyped offspring in 2008 (‘i141_2008_M’), so the nest was monitored that year. Field and lab records will indicate whether there were any additional hatchlings that were not sampled, or not successfully genotyped (+ tag loss of PinkBlue). If YellowPink had only one female, non-genotyped, potentially-surviving offspring that year, then that hatchling’s data can be combined with PinkBlue’s breeding records. If she definitely had no offspring that are unaccounted for, the pedigree is most likely incorrect and the parent-offspring link would best be removed.</p>
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>with animal-friendly spray paint<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

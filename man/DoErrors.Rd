@@ -2,18 +2,18 @@
 % Please edit documentation in R/Simulate.R
 \name{DoErrors}
 \alias{DoErrors}
-\title{Simulate genotyping errors}
+\title{Fortran Simulate Genotyping Errors}
 \usage{
 DoErrors(SGeno, RealToObs)
 }
 \arguments{
-\item{SGeno}{matrix with genotype data, size nInd x nSnp}
+\item{SGeno}{matrix with genotype data, size nInd x nSnp.}
 
 \item{RealToObs}{array with conditional probability of observing genotype i
-conditional on actual genotype j, size nSnp x 3 x 3}
+conditional on actual genotype j, size nSnp x 3 x 3.}
 }
 \value{
-SGeno with errors
+\code{SGeno} with errors.
 }
 \description{
 Wrapper for Fortran function to simulate genotyping errors.

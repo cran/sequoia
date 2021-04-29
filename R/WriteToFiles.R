@@ -1,33 +1,33 @@
-#' @title write sequoia output to excel or text files
+#' @title Write Sequoia Output to File
 #'
 #' @description The various list elements returned by \code{sequoia} are each
 #'   written to text files in the specified folder, or to separate sheets in a
 #'   single excel file (requires library \pkg{xlsx}).
 #'
 #' @details The text files can be used as input for the stand-alone Fortran
-#'   version of #'   sequoia, e.g. when the genotype data is too large for R.
-#'   See \code{vignette('sequoia')} for further details.
+#'   version of sequoia, e.g. when the genotype data is too large for R. See
+#'   \code{vignette('sequoia')} for further details.
 #'
-#' @param SeqList the list returned by \code{\link{sequoia}}, to be written out.
-#' @param GenoM  the matrix with genetic data (optional). Ignored if
+#' @param SeqList list returned by \code{\link{sequoia}}, to be written out.
+#' @param GenoM  matrix with genetic data (optional). Ignored if
 #'   OutFormat='xls', as the resulting file could become too large for excel.
-#' @param MaybeRel a list with results from \code{\link{GetMaybeRel}} (optional).
-#' @param PedComp a list with results from \code{\link{PedCompare}} (optional).
+#' @param MaybeRel list with results from \code{\link{GetMaybeRel}} (optional).
+#' @param PedComp list with results from \code{\link{PedCompare}} (optional).
 #'   \code{SeqList$DummyIDs} is combined with \code{PedComp$DummyMatch} if both
 #'   are provided.
 #' @param OutFormat 'xls' or 'txt'.
 #' @param folder the directory where the text files will be written; will be
 #'   created if it does not already exists. Relative to the current working
 #'   directory, or NULL for current working directory. Ignored if
-#'   OutFormat='xls'.
+#'   \code{OutFormat='xls'}.
 #' @param file the name of the excel file to write to, ignored if
-#'   OutFormat='txt'.
+#'   \code{OutFormat='txt'}.
 #' @param ForVersion choose '1' for back-compatibility with stand-alone sequoia
 #'   versions 1.x
 #' @param quiet suppress messages.
 #'
 #' @seealso \code{\link{writeColumns}} to write to a text file, using white
-#'   space padding to keep columns aligned
+#'   space padding to keep columns aligned.
 #'
 #' @examples
 #' \dontrun{
@@ -63,23 +63,33 @@ writeSeq <- function(SeqList,
 
   if (!is.null(GenoM)) {
     if (!is.matrix(GenoM) & !is.data.frame(GenoM))  stop("GenoM should be a matrix")
-    if (any(SeqList[["LifeHist"]]$Sex==4)) {  # hermaphrodites - pretend 2 clones of opposite sex
-      GenoM <- herm_clone_Geno(GenoM, SeqList[["LifeHist"]], herm.suf=c("f", "m"))
+    if ("PedigreePar" %in% names(SeqList)) {
+      if (!all(rownames(GenoM) %in% SeqList$PedigreePar$id)) {
+        stop("Not all ids in 'GenoM' occur in SeqList$PedigreePar")
+      } else if (!all(rownames(GenoM) == SeqList$PedigreePar$id)) {
+        stop("rownames of 'GenoM' do not match order of ids in SeqList$PedigreePar")
+      }
     }
-    if ("PedigreePar" %in% names(SeqList) && !all(rownames(GenoM) %in% SeqList$PedigreePar$id)) {
-      stop("Not all ids in 'GenoM' occur in SeqList$PedigreePar")
+    if ("LifeHist" %in% names(SeqList)) {
+      if (length(intersect(SeqList[["LifeHist"]]$ID, rownames(GenoM))) == 0) {
+        stop("rownames of 'GenoM' shares no common IDs with 'LifeHist' in SeqList")
+      }
     }
     if(nrow(GenoM)!= SeqList$Specs$NumberIndivGenotyped) {
-      ANS <- readline(prompt = paste("Number of individuals according to Specs differs from number of rows in GenoM (", SeqList$Specs$NumberIndivGenotyped, "/", nrow(GenoM), ").\n Press Y to continue and fix manually in `SequoiaSpecs.txt' "))
+      ANS <- readline(prompt = paste("Number of individuals according to Specs differs",
+      " from number of rows in GenoM (", SeqList$Specs$NumberIndivGenotyped, "/", nrow(GenoM),
+      ").\n Press Y to continue and fix manually in `SequoiaSpecs.txt' "))
       if (!substr(ANS, 1, 1) %in% c("Y", "y")) {
         stop()
       }
     }
     if(ncol(GenoM)!= SeqList$Specs$NumberSnps) {
-      stop(paste("Number of SNPs according to Specs differs from number of rows in GenoM (", SeqList$Specs$NNumberSnps, "vs", ncol(GenoM), ")"))
+      stop(paste("Number of SNPs according to Specs differs from number of rows in GenoM (",
+                 SeqList$Specs$NumberSnps, "vs", ncol(GenoM), ")"))
     }
   }
 
+  # write excel file ----
   if (OutFormat == "xlsx") OutFormat <- "xls"
   if (OutFormat == "xls") {
     if (!requireNamespace("xlsx", quietly = TRUE)) {
@@ -91,42 +101,52 @@ writeSeq <- function(SeqList,
     }
     write.seq.xls(SeqList, file=file, PedComp=PedComp, quiet=quiet)
 
+
+  # txt: check if folder & files exist ----
   } else if (OutFormat == "txt") {
   curdir <- getwd()
   if (is.null(folder)) folder = curdir
   dir.create(folder, showWarnings = FALSE)
   setwd(folder)
-  if (any(file.exists("Geno.txt", "Specs.txt", "AgePriors.txt", "Parents.txt")) &
+  if (any(file.exists("Geno.txt", "Specs.txt", "AgePriors.txt", "Parents.txt",
+                      "Readme.txt")) &
       interactive() & !quiet) {
     ANS <- readline(prompt = paste("Writing data to '", folder,
-                                   "' will overwrite existing files. Continue Y/N? "))
+                                   "' will overwrite existing file(s). Continue Y/N? "))
     if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) {
       setwd(curdir)
       stop()
     }
   }
-  write(paste("These files were created by R package sequoia on ", date()),
-        file="README.txt")
 
+  # prep specs ----
   SpecsOUT <- cbind("Genofile" = "Geno.txt",
                     "LHfile" = "LifeHist.txt",
                     "nIndLH" = nrow(SeqList[["LifeHist"]]),
                     SeqList$Specs)
-  SpecsOUT$Complexity <- c("full"=2, "simp"=1, "mono"=0, "herm"=4)[SpecsOUT$Complexity]
+  SpecsOUT$Complexity <- c("mono"=0, "simp"=1, "full"=2)[SpecsOUT$Complexity]
+  SpecsOUT$Herm <- c("no"=0, "A"=1, "B"=2)[SpecsOUT$Herm]                           
   SpecsOUT$UseAge <- c("extra"=2, "yes"=1, "no"=0)[SpecsOUT$UseAge]
   SpecsOUT$FindMaybeRel <- as.numeric(SpecsOUT$FindMaybeRel)
   SpecsOUT$CalcLLR <- as.numeric(SpecsOUT$CalcLLR)
-  if (SpecsOUT$MaxSibIter <= 0)  SpecsOUT$MaxSibIter <- 10
   for (x in c("SequoiaVersion", "TimeStart", "TimeEnd")) {
     if (!x %in% names(SpecsOUT))  next   # if SeqList from version 1.x
     SpecsOUT[[x]] <- as.character(SpecsOUT[[x]])
   }
   if (ForVersion == 1) {
     SpecsOUT <- SpecsOUT[!names(SpecsOUT) %in% c("MaxMismatchOH", "MaxMismatchME")]
+    if (SpecsOUT$MaxSibIter <= 0)  SpecsOUT$MaxSibIter <- 10
+  } else {
+    SpecsOUT$MaxSibIter <- 42
   }
+  SpecsOUT <- SpecsOUT[!names(SpecsOUT) %in% "Module"]  # run-time option for stand-alone sequoia.
 
+
+  # write text files ----
   OPT <- options()
   options(scipen = 10)
+  write(paste("These files were created by R package sequoia on ", date()),
+        file="README.txt")
   if (!is.null(GenoM)) utils::write.table(GenoM, file="Geno.txt",
               quote=FALSE, row.names=TRUE, col.names=FALSE)
   utils::write.table(as.data.frame(t(SpecsOUT)), file="SequoiaSpecs.txt",
@@ -196,19 +216,13 @@ write.parents <- function(ParentDF, LifeHistData, GenoM, file="Parents.txt") {
   names(ParentDF)[1:3] <- c("id", "dam", "sire")
   names(LifeHistData) <- c("ID", "Sex", "BirthYear")
 
-  if (!is.null(LifeHistData) & any(LifeHistData$Sex==4)) {
-    GenoM <- herm_clone_Geno(GenoM, LifeHistData, herm.suf=c("f", "m"))
-    Par <- herm_clone_Ped(Ped = ParentDF, LH = LifeHistData, herm.suf=c("f", "m"))
-  } else {
-    Par <- ParentDF
-  }
-  Par <- MergeFill(Par,
-               data.frame(id = rownames(GenoM),
-                          LLRdam = NA, LLRsire = NA, LLRpair = NA,
-                          OHdam = NA, OHsire = NA, MEpair = NA,
-                          rowid = NA, rowdam = NA, rowsire = NA,
-                          stringsAsFactors=FALSE),
-               by = "id", all = TRUE)
+  Par <- MergeFill(ParentDF,
+                   data.frame(id = rownames(GenoM),
+                              LLRdam = NA, LLRsire = NA, LLRpair = NA,
+                              OHdam = NA, OHsire = NA, MEpair = NA,
+                              rowid = NA, rowdam = NA, rowsire = NA,
+                              stringsAsFactors=FALSE),
+                   by = "id", all = TRUE)
   rownames(Par) <- as.character(Par$id)
   Par <- Par[rownames(GenoM), ]    # merge ignores sort=FALSE
   for (x in c("dam", "sire")) Par[is.na(Par[, x]), x] <- "NA"
@@ -244,20 +258,16 @@ write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
     if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
   }
 
-  if ("Pedigree" %in% names(SeqList)) {
+  if ("Pedigree" %in% names(SeqList))
     xlsx::write.xlsx(SeqList[["Pedigree"]], file = file, sheetName="Pedigree",
              col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
-    if ("PedigreePar" %in% names(SeqList)) {
-      xlsx::write.xlsx(SeqList$PedigreePar, file = file, sheetName="Parents",
-             col.names=TRUE, row.names=FALSE, append=TRUE, showNA=FALSE)
-    }
-  } else if ("PedigreePar" %in% names(SeqList)) {
+  if ("PedigreePar" %in% names(SeqList))
     xlsx::write.xlsx(SeqList$PedigreePar, file = file, sheetName="Parents",
              col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
-  } else {
+  if (!any(c("Pedigree", "PedigreePar") %in% names(SeqList)))
     xlsx::write.xlsx("None", file = file, sheetName="Parents",
              col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
-  }
+
   xlsx::write.xlsx(t(SeqList$Specs), file = file, sheetName="Run parameters",
              col.names=FALSE, row.names=TRUE, append=TRUE, showNA=FALSE)
 
@@ -296,10 +306,10 @@ write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
 
 
 #======================================================================
-#' @title write data to a file column-wise
+#' @title Write Data to a File Column-wise
 #'
-#' @description write data.frame or matrix to a text file, using white
-#' space padding to keep columns aligned as in \code{print}
+#' @description Write data.frame or matrix to a text file, using white
+#' space padding to keep columns aligned as in \code{print}.
 #'
 #' @param x the object to be written, preferably a matrix or data frame.
 #'  If not, it is attempted to coerce x to a matrix.
@@ -307,10 +317,10 @@ write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
 #' @param row.names a logical value indicating whether the row names of x are
 #'  to be written along with x.
 #' @param col.names a logical value indicating whether the column names of x
-#'  are to be written along with x
+#'  are to be written along with x.
 #'
 #' @export
-#'
+
 writeColumns <- function(x, file="", row.names=TRUE,
                          col.names=TRUE) {
   M <- as.matrix(x)

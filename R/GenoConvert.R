@@ -1,77 +1,86 @@
-#' @title Convert genotype data
+#' @title Convert Genotype Data
 #'
 #' @description Convert genotype data in various formats to sequoia's
-#'   1-column-per-marker format or Colony's 2-column-per-marker format.
+#'   1-column-per-marker format or Colony's 2-columns-per-marker format.
 #'
-#' @section Input formats:
-#' The following formats can be specified by \code{InFormat}:
-#' \describe{
-#'   \item{single}{1 column per marker, otherwise unspecified}
-#'   \item{double}{2 columns per marker, otherwise unspecified}
-#'   \item{col}{(Colony) genotypes are coded as numeric values, missing as 0, in
-#'   2 columns per marker. Column 1 contains IDs.}
-#'   \item{ped}{(PLINK) genotypes are coded as A, C, T, G, missing as 0, in 2
-#'   columns per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
-#'   6 ignored). }
-#'   \item{raw}{(PLINK) genotypes are coded as 0, 1, 2, missing as NA, in 1
-#'   column per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
-#'   6 ignored), and there is a header row.}
-#'   \item{seq}{(sequoia) genotypes are coded as 0, 1, 2, missing as \eqn{-9},
-#'   in 1 column per marker. Column 1 contains IDs, there is no header row.}
-#'   }
-#'
-#'  For each InFormat, its default values for \code{Missing, header, IDcol,
-#'  FIDcol}, and \code{dropcol} can be overruled by specifying the corresponding
-#'  input parameters.
-#'
-#' @param InFile character string with name of genotype file to be converted
-#' @param InData dataframe or matrix with genotypes to be converted
+#' @param InFile character string with name of genotype file to be converted.
+#' @param InData dataframe or matrix with genotypes to be converted.
 #' @param InFormat One of 'single', 'double', 'col', 'ped', 'raw', or 'seq', see
 #'   Details.
 #' @param OutFile character string with name of converted file. If NA, return
 #'   matrix with genotypes in console (default); if NULL, write to
 #'   'GenoForSequoia.txt' in current working directory.
-#' @param OutFormat as InFormat, currently only 'seq' and 'col' are implemented.
-#' @param Missing vector with symbols interpreted as missing data.
+#' @param OutFormat as \code{InFormat}; only 'seq' and 'col' are implemented.
+#' @param Missing vector with symbols interpreted as missing data. '0' is
+#'   missing data for InFormats 'col' and 'ped' only.
 #' @param sep vector with field separator strings that will be tried on
-#'   \code{InFile}. The OutFile separator uses the write.table default, i.e. one
-#'   blank space
-#' @param header a logical value indicating whether the file contains the names
-#'   of the variables as its first line. If NA (default), set to TRUE for 'raw',
-#'   and FALSE otherwise.
-#' @param IDcol single number giving the column which contains the individual
-#'   IDs; 0 indicates the rownames (for InData only). If NA (default), set to 2
-#'   for InFormat 'raw' and 'ped', and otherwise to 1 for InFile and 0
-#'   (rownames) for InData, except when InData has a column labeled 'ID'.
-#' @param FIDcol  column which contains the individual IDs, if any are wished to
+#'   \code{InFile}. The \code{OutFile} separator uses the
+#'   \code{\link[utils]{write.table}} default, i.e. one blank space.
+#' @param header a logical value indicating whether the file contains a header
+#'   as its first line. If NA (default), set to TRUE for 'raw', and FALSE
+#'   otherwise.
+#' @param IDcol number giving the column with individual IDs; 0 indicates the
+#'   rownames (for InData only). If NA (default), set to 2 for InFormat 'raw'
+#'   and 'ped', and otherwise to 1 for InFile and 0 (rownames) for InData,
+#'   except when InData has a column labeled 'ID'.
+#' @param FIDcol  column with the family IDs, if any are wished to
 #'   be used. This is column 1 for InFormat 'raw' and 'seq', but those are by
 #'   default not used.
 #' @param FIDsep string used to paste FID and IID together into a composite-ID
-#'   (value passed to \code{paste}'s \code{collapse}). This joining can be
-#'    reversed using \code{\link{PedStripFID}}.
+#'   (value passed to \code{\link{paste}}'s \code{collapse}). This joining can
+#'   be reversed using \code{\link{PedStripFID}}.
 #' @param dropcol  columns to exclude from the output data, on top of IDcol and
 #'   FIDcol (which become rownames). When NA, defaults to columns 3-6 for
 #'   InFormat 'raw' and 'seq'. Can also be used to drop some SNPs, see example
 #'   below on how to do this for the 2-columns-per-SNP input formats.
-#' @param quiet suppress messages and warnings
+#' @param quiet suppress messages and warnings.
 #'
 #' @return A genotype matrix in the specified output format. If 'OutFile' is
 #'   specified, the matrix is written to this file and nothing is returned
 #'   inside R. When converting to 0/1/2 format, 2 is the homozygote for the
 #'   minor allele, and 0 the homozygote for the major allele.
 #'
-#' @section Error messages: An occasional error when reading in a file with
-#'   GenoConvert is that 'rows have unequal length'. GenoConvert makes use of
+#' @details The first two arguments are interchangeable, and can be given
+#'   unnamed. The first argument is assumed to be a file name if it is of class
+#'   'character' and length 1, and to be the genetic data if it is a matrix or
+#'   dataframe.
+#'
+#'
+#' @section Input formats:
+#' The following formats can be specified by \code{InFormat}:
+#' \describe{
+#'   \item{seq}{(sequoia) genotypes are coded as 0, 1, 2, missing as \eqn{-9},
+#'   in 1 column per marker. Column 1 contains IDs, there is no header row.}
+#'   \item{raw}{(PLINK) genotypes are coded as 0, 1, 2, missing as NA, in 1
+#'   column per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
+#'   6 ignored), and there is a header row. This is produced by PLINK's option
+#'   --recodeA}
+#'   \item{ped}{(PLINK) genotypes are coded as A, C, T, G, missing as 0, in 2
+#'   columns per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
+#'   6 ignored). }
+#'   \item{col}{(Colony) genotypes are coded as numeric values, missing as 0, in
+#'   2 columns per marker. Column 1 contains IDs.}
+#'   \item{single}{1 column per marker, otherwise unspecified}
+#'   \item{double}{2 columns per marker, otherwise unspecified}
+#'   }
+#'  For each \code{InFormat}, its default values for \code{Missing, header,
+#'  IDcol, FIDcol}, and \code{dropcol} can be overruled by specifying the
+#'  corresponding input parameters.
+#'
+#'
+#' @section Error messages:
+#'   Occasionally when reading in a file \code{GenoConvert} may give an error
+#'   that 'rows have unequal length'. GenoConvert makes use of
 #'   \code{\link{readLines}} and \code{\link{strsplit}}, which is much faster
 #'   than \code{\link{read.table}} for large datafiles, but also more sensitive
 #'   to unusual line endings, unusual end-of-file characters, or invisible
 #'   characters (spaces or tabs) after the end of some lines. In these cases,
 #'   try to read the data from file using read.table or read.csv, and then use
-#'   GenoConvert on the matrix, see example.
+#'   \code{GenoConvert} on this dataframe or matrix, see example.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @seealso \code{\link{CheckGeno}, \link{SnpStats}, \link{LHConvert}}
+#' @seealso \code{\link{CheckGeno}, \link{SnpStats}, \link{LHConvert}}.
 #'
 #' @examples
 #' \dontrun{
@@ -86,9 +95,8 @@
 #' GenoM <- GenoConvert(InFile = "PlinkOUT.raw")
 #'
 #' # save time on file conversion next time:
-#' write.table(GenoM, file="Geno_for_sequoia.txt", quote=FALSE,
-#'   col.names=FALSE)
-#' GenoM <- read.table("Geno_for_sequoia.txt", row.names=1, header=FALSE)
+#' write.table(GenoM, file="Geno_sequoia.txt", quote=FALSE, col.names=FALSE)
+#' GenoM <- as.matrix(read.table("Geno_sequoia.txt", row.names=1, header=FALSE))
 #'
 #' # drop some SNPs, e.g. after a warning of >2 alleles:
 #' dropSNP <- c(5,68,101,128)
@@ -104,11 +112,12 @@
 #'
 #' @export
 
-GenoConvert <- function(InFile = NULL,
+
+GenoConvert <- function(InData = NULL,
+                        InFile = NULL,
                         InFormat = "raw",
                         OutFile = NA,
                         OutFormat = "seq",
-                        InData = NULL,
                         Missing = c("-9", "??", "?", "NA", "NULL",
                                     c("0")[InFormat %in% c("col","ped")]),
                         sep = c(" ", "\t", ",", ";"),
@@ -124,13 +133,18 @@ GenoConvert <- function(InFile = NULL,
 
   } else if (!is.null(InFile) & !is.null(InData)) {
     stop("please provide either 'InFile' or 'InData', not both")
+  }
+  if (length(InData)==1 & class(InData)=="character") {
+    InFile <- InData
+    InData <- NULL
+  } else if (is.matrix(InFile) | is.data.frame(InFile)) {
+    InData <- InFile
+    InFile <- NULL
+  }
 
-  } else if (!is.null(InFile)) {
+  if (!is.null(InFile)) {
     if (is.character(InFile)) {
       if (!file.exists(InFile)) stop("cannot find 'InFile'")
-    } else if (is.matrix(InFile) | is.data.frame(InFile)) {
-      InData <- InFile
-      InFile <- NULL
     } else {
       stop("'InFile' in unknown format, should be character string.")
     }
@@ -295,7 +309,7 @@ GenoConvert <- function(InFile = NULL,
   if (OutFormat == "seq") {
     GenoOUT <- GenoTmp2
     GenoOUT[is.na(GenoOUT)] <- -9
-    CheckGeno(GenoOUT, quiet=quiet)
+    CheckGeno(GenoOUT, quiet=quiet, Return = "excl")  # returns invisibly
 
   } else if (OutFormat == "col") {
     dc <- list("0" = c(1,1), "1" = c(1,2), "2" = c(2,2), "-9" = c(0,0))
@@ -324,7 +338,7 @@ GenoConvert <- function(InFile = NULL,
 #######################################################################
 #######################################################################
 
-#' @title Extract sex and birthyear from PLINK file
+#' @title Extract Sex and Birth Year from PLINK File
 #'
 #' @description Convert the first six columns of a PLINK .fam, .ped or
 #'  .raw file into a three-column lifehistory file for sequoia. Optionally
@@ -334,13 +348,11 @@ GenoConvert <- function(InFile = NULL,
 #' default FID - IID - father ID (ignored) - mother ID (ignored) - sex -
 #' phenotype.
 #'
-#' When additionally a
-#'
-#' @param PlinkFile character string with name of genotype file to be converted
-#' @param UseFID Use the family ID column. The resulting ids (rownames of GenoM)
-#'   will be in the form FID__IID
+#' @param PlinkFile character string with name of genotype file to be converted.
+#' @param UseFID use the family ID column. The resulting ids (rownames of GenoM)
+#'   will be in the form FID__IID.
 #' @param SwapSex change the coding from PLINK default (1=male, 2=female) to
-#'   sequoia default (1=female, 2=male); any other numbers are set to NA
+#'   sequoia default (1=female, 2=male); any other numbers are set to NA.
 #' @param FIDsep characters inbetween FID and IID in composite-ID. By default a
 #'   double underscore is used, to avoid problems when some IIDs contain an
 #'   underscore. Only used when UseFID=TRUE.
@@ -348,11 +360,11 @@ GenoConvert <- function(InFile = NULL,
 #'   case of conflicts, LifeHistData takes priority, with a warning. If
 #'   UseFID=TRUE, IDs in LifeHistData are assumed to be already as FID__IID.
 #'
-#' @return a dataframe with id, sex and birth year, which can be used as input
-#'  for \code{\link{sequoia}}
+#' @return A dataframe with id, sex and birth year, which can be used as input
+#'  for \code{\link{sequoia}}.
 #'
 #' @seealso \code{\link{GenoConvert}}, \code{\link{PedStripFID}} to reverse
-#'  \code{UseFID}
+#'  \code{UseFID}.
 #'
 #' @examples
 #' \dontrun{
@@ -371,7 +383,7 @@ LHConvert <- function(PlinkFile = NULL, UseFID = FALSE,
   if (!file.exists(PlinkFile)) stop("cannot find 'PlinkFile'")
   if (UseFID & FIDsep %in% c("", " ", "\t", "\n")) stop("sep can not be whitespace")
   if (!is.null(LifeHistData)) {
-    LHIN <- CheckLH(LifeHistData)
+    LHIN <- CheckLH(LifeHistData, sorted=FALSE)
   }
 
   ncol <- length(scan(PlinkFile, nlines=1, what="real", quiet=TRUE))

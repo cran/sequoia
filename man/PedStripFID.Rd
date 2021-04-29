@@ -2,17 +2,17 @@
 % Please edit documentation in R/FindFamilies.R
 \name{PedStripFID}
 \alias{PedStripFID}
-\title{backtransform IDs}
+\title{Back-transform IDs}
 \usage{
 PedStripFID(Ped, FIDsep = "__")
 }
 \arguments{
-\item{Ped}{Pedigree as returned by sequoia (e.g. \code{SeqOUT$Pedigree})}
+\item{Ped}{pedigree as returned by sequoia (e.g. \code{SeqOUT$Pedigree}).}
 
-\item{FIDsep}{characters inbetween FID and IID in composite-ID}
+\item{FIDsep}{characters inbetween FID and IID in composite-ID.}
 }
 \value{
-a pedigree with 6 columns
+A pedigree with 6 columns
 \item{FID}{family ID of focal individual (offspring).}
 \item{id}{within-family of focal individual}
 \item{dam.FID}{original family ID of assigned dam}
@@ -27,5 +27,5 @@ Reverse the joining of FID and IID in
 \details{
 Note that the family IDs are the ones provided, and not
  automatically updated. New, numeric ones can be obtained with
-  \code{\link{FindFamilies}}
+  \code{\link{FindFamilies}}.
 }

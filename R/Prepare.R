@@ -1,204 +1,379 @@
-#============================================================================
-#' @title preparations
+
+#=======================================================================
+#=======================================================================
+#' @title Specs to PARAM
 #'
-#' @description Check parameter values and save as named vector.
+#' @description Convert 1-row dataframe \code{Specs} into list \code{PARAM},
+#'   optionally including various other objects in the list.
 #'
-#' @details  Please do not increasing the number of SNPs or individuals beyond
-#'   the numbers present in the datasets, as this may cause R to crash.
+#' @param Specs 1-row dataframe, element of \code{\link{sequoia}} output list.
+#' @param ... other objects to append to the list, such as \code{ErrM} and
+#'   \code{quiet}.
 #'
-#' @param GenoM matrix with genotype data, size nInd x nSnp
-#' @param LifeHistData Dataframe with 3 columns:
-#'  \describe{
-#'  \item{ID}{max. 30 characters long,}
-#'  \item{Sex}{1 = females, 2 = males, other numbers = unknown,}
-#'  \item{Birth Year}{(or hatching year) Zero and negative numbers are
-#'    interpreted as missing values.}}
-#' @param nAgeClasses Number of age classes (= no. rows in AgePriors)
-#' @param MaxSibIter Maximum number of iterations of sibship clustering
-#'   (up to 42).
-#' @param Err Estimated genotyping error rate.
-#' @param MaxMismatchV Maximum number of loci at which (1) a duplicate sample
-#'   mismatches; (2) candidate parent and offspring are allowed to be opposite
-#'   homozygotes; (3) parent-parent-offspring trios can have Mendelian errors.
-#' @param Tfilter Threshold log-likelihood ratio between a proposed relationship
-#'   versus unrelated, to select candidate relatives. Typically a negative
-#'   value, related to the fact that unconditional likelihoods are calculated
-#'   during the filtering steps. More negative values may decrease
-#'   non-assignment, but will increase computational time.
-#' @param Tassign Minimum log-likelihood ratio required for acceptance of
-#'   proposed relationship, relative to next most likely relationship. Higher
-#'   values result in more conservative assignments.
-#' @param MaxSibshipSize  Maximum number of offspring for a single individual (a
-#'   generous safety margin is advised).
-#' @param DummyPrefix character vector of length 2 with prefixes for dummy dams
-#'   (mothers) and sires (fathers); maximum 20 characters each.
-#' @param Complexity Either "full" (default), "simp" (no explicit consideration
-#'   of inbred relationships), "mono" (monogamous breeding system), or "herm"
-#'   (hermaphrodites)
-#' @param FindMaybeRel  Identify pairs of non-assigned likely relatives after
-#'   pedigree reconstruction. Can be time-consuming in large datasets.
-#' @param CalcLLR  Calculate log-likelihood ratios for all assignments. Can be
-#'   time-consuming in large datasets.
-#'
-#' @return A 1-row dataframe with parameter values
+#' @return  A named list.
 #'
 #' @keywords internal
 
-SeqPrep <- function(GenoM = NULL,
-                    LifeHistData = NULL,
-                    nAgeClasses = 1,
-                    MaxSibIter = 5,
-                    Err = 0.0001,
-                    MaxMismatchV = NULL,
-                    Tfilter = -2.0,
-                    Tassign = 0.5,
-                    MaxSibshipSize = 100,
-                    DummyPrefix = c("F", "M"),
-                    Complexity = "full",
-                    UseAge = "yes",
-                    FindMaybeRel = TRUE,
-                    CalcLLR = TRUE)
-
+SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
+                         dimGeno=NULL, ...)
 {
-  nIndG <- nrow(GenoM)
-  IDs_geno <- rownames(GenoM)
-  #if (any(make.names(IDs_geno) != IDs_geno)) {
-  if (any(grepl(" ", IDs_geno))) {
-    stop("GenoM rownames must not include spaces") #includes syntactically invalid names, see ?make.names")
+
+  # backwards compatability
+  if (exists("Module")) {
+    Specs$Module <- Module
+  } else if (!"Module" %in% names(Specs)) {
+    Module <- cut(Specs$MaxSibIter,
+                  breaks= c(-Inf, -9, -1, 0, Inf),
+                  labels = c("pre", "dup", "par", "ped"))
   }
-  nSnp <- ncol(GenoM)
-
-  if (Err<0 || Err>1 || !is.double(Err)) stop("'Err' must be a number between 0 and 1")
-  if (any(MaxMismatchV<0 | !is.wholenumber(MaxMismatchV)))  stop("'MaxMismatchV' but be positive whole numbers")
-  if (!is.double(Tfilter))  stop("'Tfilter' must be a number (typically negative)")
-  if (!is.double(Tassign) || Tassign<0)  stop("'Tassign' must be a positive number")
-  if (MaxSibshipSize<0 || !is.wholenumber(MaxSibshipSize)) {
-    stop("'MaxSibshipSize' must be a positive whole number")
+  if (!"Herm" %in% names(Specs)) {
+    Specs$Herm <- switch(as.character(Specs$Complexity),
+                         mono = "no",
+                         simp = "no",
+                         full = "no",
+                         herm = "A",
+                         herm2 = "B",
+                         herm_simp = "A",
+                         herm2_simp = "B")
+    Specs$Complexity <- switch(as.character(Specs$Complexity),
+                            mono = "mono",
+                            simp = "simp",
+                            full = "full",
+                            herm = "full",
+                            herm2 = "full",
+                            herm_simp = "simp",
+                            herm2_simp = "simp")
   }
-  if (!Complexity %in% c("full", "simp", "mono", "herm")) stop("'Complexity' must be 'full', 'simp', 'mono', or 'herm'")
-  if (is.logical(UseAge))   UseAge <- ifelse(UseAge, "yes", "no")
-  if (!UseAge %in% c("yes", "no", "extra")) stop("'UseAge' must be 'yes', 'no', or 'extra'")
-  if (!FindMaybeRel %in% c(TRUE, FALSE)) stop("'FindMaybeRel' must be TRUE or FALSE")
-  if (!CalcLLR %in% c(TRUE, FALSE)) stop("'CalcLLR' must be TRUE or FALSE")
-  if (!is.wholenumber(MaxSibIter))  stop("'MaxSibIter' must be a whole number")
+  if (is.null(dimGeno)) {
+    dimGeno <- with(Specs, c(NumberIndivGenotyped, NumberSnps))
+  }  # else take from input (i.e., fresh GenoM)
 
+  L <- with(Specs, namedlist(dimGeno,
+                             Err = GenotypingErrorRate,
+                             Tfilter,
+                             Tassign,
+                             nAgeClasses,
+                             MaxSibshipSize,
+                             Module,
+                             MaxSibIter,
+                             DummyPrefix = c(DummyPrefixFemale,
+                                             DummyPrefixMale),
+                             Complex = Complexity,
+                             Herm,
+                             UseAge,
+                             CalcLLR))
 
-  DP <- sapply(DummyPrefix, function(x) ifelse(nchar(x)==1, paste0(x,"0"), x))
-  if (any(substr(rownames(GenoM),1,nchar(DP[1]))==DP[1]) |
-      any(substr(rownames(GenoM),1,nchar(DP[2]))==DP[2])) {
-    stop("DummyPrefix must not occur in GenoM rownames")
+  L$ErrFlavour <- ifelse("ErrFlavour" %in% names(Specs),  # in $Specs from version 2.1 onwards
+                         Specs$ErrFlavour,
+                         ErrFlavour)
+  if (!is.null(ErrM)) {
+    L$ErrM <- ErrToM(ErrM, Return = "matrix")  # performs checks
+  } else {
+    L$ErrM <- ErrToM(L$Err, flavour = L$ErrFlavour, Return = "matrix")
   }
 
-  if (!is.null(LifeHistData)) {
-    nIndLH <- nrow(LifeHistData)
-    if (nIndLH >1 & any(LifeHistData$BirthYear >= 0 & LifeHistData$ID %in% IDs_geno)) {
-      nAgeClasses <- with(LifeHistData, diff(range(BirthYear[BirthYear >= 0 & ID %in% IDs_geno],
-                                                   na.rm = TRUE))) + 1
-    }
-    if (nAgeClasses > 100) {
-      nAgeClasses <- length(table(LifeHistData$BirthYear[LifeHistData$BirthYear >= 0]))
-      if (nAgeClasses > 100) stop("Cannot handle >100 cohorts!")
-    }
+  if ("MaxMismatchOH" %in% names(Specs)) {  # DUP/OH/ME from version 2.0 onwards
+    L$MaxMismatchV <- with(Specs, c(DUP = MaxMismatchDUP,
+                                    OH = MaxMismatchOH,
+                                    ME = MaxMismatchME))
   }
 
-  Specs <- data.frame(NumberIndivGenotyped = nIndG,
-                      NumberSnps = nSnp,
-                      GenotypingErrorRate = Err,
-                      MaxMismatchDUP = MaxMismatchV["DUP"],
-                      MaxMismatchOH = MaxMismatchV["OH"],
-                      MaxMismatchME = MaxMismatchV["ME"],
-                      Tfilter = Tfilter,
-                      Tassign = Tassign,
-                      nAgeClasses = nAgeClasses,
-                      MaxSibshipSize = MaxSibshipSize,
-                      MaxSibIter = MaxSibIter,
-                      DummyPrefixFemale = DummyPrefix[1],
-                      DummyPrefixMale = DummyPrefix[2],
-                      Complexity = Complexity,
-                      UseAge = UseAge,
-                      FindMaybeRel = FindMaybeRel,
-                      CalcLLR = CalcLLR,
-                      SequoiaVersion = utils::packageVersion("sequoia"),
-                      stringsAsFactors = FALSE)
-  rownames(Specs) <- "Specs"
-  Specs
+  if ("DummyPrefixHerm" %in% names(Specs))
+    L$DummyPrefix <- c(L$DummyPrefix, Specs$DummyPrefixHerm)
+
+  # note: code below is namedlist(), but not sure if/how to pass along names to other function with '...'
+  L2 <- list(...)
+  L2Names <- as.character(as.list( match.call())[-(1:5)])  # 1st is function name
+  if (is.null(names(L2))) {  # all elements unnamed
+    names(L2) <- L2Names
+  } else {  # some elements unnamed
+    names(L2) <- ifelse(names(L2)=="", L2Names, names(L2))
+  }
+
+  return( c(L, L2))
 }
 
+
 #=======================================================================
 #=======================================================================
-#' @title check LifeHistData
+
+#' @title PARAM to Specs
 #'
-#' @description Check that the provided LifeHistData is in the correct format
+#' @description Convert list \code{PARAM} into 1-row dataframe \code{Specs}.
+#'   Only to be called by \code{\link{sequoia}}.
 #'
-#' @param LifeHistData the dataframe with ID - Sex - Birth year, and
-#'   optionally BY.min - BY.max
+#' @param PARAM list with input parameters.
+#' @param TimeStart  time at which \code{\link{sequoia}} run was started.
+#' @param ErrFlavour  character name or function.
 #'
-#' @return a dataframe with LifeHistData formatted for use by the Fortran
-#'    part of the program
+#' @return  The 1-row \code{Specs} dataframe.
 #'
 #' @keywords internal
 
-CheckLH <- function(LifeHistData) {
-  names(LifeHistData)[1:3] <- c("ID", "Sex", "BirthYear")
-	if (ncol(LifeHistData)==3) {
-		LifeHistData$BY.min <- NA
-		LifeHistData$BY.max <- NA
-	} else if (any(colnames(LifeHistData) %in% c("BY.min", "BY.max"))) {
-		if (colnames(LifeHistData)[4] == "BY.min" & colnames(LifeHistData)[5] == "BY.max") {
-			LifeHistData <- LifeHistData[, 1:5]
-		} else {
-		  if (any(colnames(LifeHistData) == "BY.min")) {
-			  BYmin <- LifeHistData$BY.min
-		  } else {
-		    BYmin <- NA
-		  }
-		  if (any(colnames(LifeHistData) == "BY.min")) {
-			  BYmax <- LifeHistData$BY.max
-		  } else {
-		    BYmax <- NA
-		  }
-			LifeHistData <- LifeHistData[, 1:3]
-			LifeHistData$BY.min <- BYmin
-			LifeHistData$BY.max <- BYmax
-		}
-	} else {
-		LifeHistData <- LifeHistData[, 1:5]
-		names(LifeHistData)[4:5] <- c("BY.min", "BY.max")
-	}
+ParamToSpecs <- function(PARAM, TimeStart, ErrFlavour)
+{
 
-  LifeHistData$ID <- as.character(LifeHistData$ID)
-  LifeHistData <- unique(LifeHistData[!is.na(LifeHistData$ID), ])
-
-  for (x in c("Sex", "BirthYear", "BY.min", "BY.max")) {
-    IsInt <- check.integer(LifeHistData[,x])
-    if (any(!IsInt, na.rm=TRUE)) {
-      if (sum(!IsInt, na.rm=TRUE) > sum(!is.na(LifeHistData[,x]))/2) {
-        stop("LifeHistData column ", x, " should be integers (whole numbers)")
-      } else {
-        warning("Converting all values in LifeHistData column ", x, " to integers",
-                immediate. = TRUE)
-      }
-    }
-    LifeHistData[, x] <- ifelse(IsInt, suppressWarnings(as.integer(as.character(LifeHistData[, x]))), NA)
-		if (x=="Sex") {
-			if ((sum(LifeHistData$Sex %in% c(1,2,4)) < nrow(LifeHistData)/10) &
-				(sum(is.na(LifeHistData$Sex)) + sum(LifeHistData$Sex==3, na.rm=TRUE) < nrow(LifeHistData)/2)) {
-			stop("LifeHistData column 2 should contain Sex coded as 1=female, 2=male, 3/NA=unknown, 4=hermaphrodite")
-			}
-			LifeHistData$Sex[is.na(LifeHistData$Sex)] <- 3
-			LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
-		} else {
-			LifeHistData[is.na(LifeHistData[,x]), x] <- -999
-			LifeHistData[LifeHistData[,x] < 0, x] <- -999
-		}
-  }
-  LifeHistData <- unique(LifeHistData)
-  if (any(duplicated(LifeHistData$ID))) {
-    stop("Some IDs occur multiple times in LifeHistData, with different sex and/or birth year")
-  }
-  if (any(grepl(" ", LifeHistData$ID))) {
-    stop("LifeHistData IDs must not include spaces")
-  }
-
-  return( LifeHistData )
+  DF <- with(PARAM,
+             data.frame(NumberIndivGenotyped = dimGeno[1],
+                        NumberSnps = dimGeno[2],
+                        GenotypingErrorRate = ifelse(length(Err)==1,
+                                                     Err,
+                                                     signif(1 - mean(c(diag(ErrM),
+                                                                       ErrM[2,2])), 3)),  # under HWE, MAF=0.5: 0.25-0.5-0.25
+                        MaxMismatchDUP = MaxMismatchV["DUP"],
+                        MaxMismatchOH = MaxMismatchV["OH"],
+                        MaxMismatchME = MaxMismatchV["ME"],
+                        Tfilter = Tfilter,
+                        Tassign = Tassign,
+                        nAgeClasses = nAgeClasses,
+                        MaxSibshipSize = MaxSibshipSize,
+                        Module = as.character(Module),
+                        MaxSibIter = MaxSibIter,
+                        DummyPrefixFemale = DummyPrefix[1],
+                        DummyPrefixMale = DummyPrefix[2],
+                        DummyPrefixHerm = DummyPrefix[3],
+                        Complexity = Complex,
+                        Herm = Herm,
+                        UseAge = UseAge,
+                        FindMaybeRel = FALSE,
+                        CalcLLR = CalcLLR,
+                        ErrFlavour = ifelse(length(Err)==9,
+                                            "customMatrix",
+                                            ifelse(is.function(ErrFlavour),
+                                                   "customFunction",
+                                                   as.character(ErrFlavour))),
+                        SequoiaVersion = as.character(utils::packageVersion("sequoia")),
+                        TimeStart = TimeStart,
+                        TimeEnd = Sys.time(),   # this function is called at the end of sequoia()
+                        stringsAsFactors = FALSE))
+  if (PARAM$Herm == "no")  DF <- DF[, colnames(DF)!="DummyPrefixHerm"]
+  rownames(DF) <- "Specs"
+  return( DF )
 }
+
+
+#=======================================================================
+#=======================================================================
+#' @title PARAM to FortPARAM
+#'
+#' @description Convert list \code{PARAM} into a list with integer-only and
+#'   double-only vectors, to be passed to Fortran.
+#'
+#' @param PARAM list with input parameters.
+#' @param fun  function from which \code{\link{MkFortParams}} is called,
+#'   determines which elements are included in the output list.
+#'
+#' @return  A list with elements
+#'   \item{Ng}{Integer, number of individuals}
+#'   \item{SpecsInt}{8 integers:
+#'     \itemize{
+#'       \item nSnp
+#'       \item MaxMismatchV; DUP - OH - ME
+#'       \item MaxSibshipSize
+#'       \item Complx, 0=mono, 1=simp, 2=full
+#'       \item quiet, -1=verbose, 0=FALSE, 1=TRUE
+#'       \item nAgeCl, nrow(AgePriors)
+#'     }
+#'   }
+#'   \item{SpecsDbl}{2 double precision numbers:
+#'     \itemize{
+#'       \item Tfilter  (< 0)
+#'       \item Tassign  (> 0)
+#'     }
+#'   }
+#'   \item{ErrM}{double, 3x3 matrix passed as length-9 vector}
+#'   \item{SpecsIntMkPed}{\code{fun='main'} only
+#'     \itemize{
+#'       \item MaxSibIter
+#'       \item AgeEffect, 0=no, 1=yes, 2=extra
+#'       \item CalcLLR, 0=FALSE, 1=TRUE
+#'       \item Herm, 0=no, 1= dam/sire distinction, 2=no dam/sire distinction
+#'     }
+#'   }
+#'   \item{SpecsIntAmb}{\code{fun='mayberel'} only
+#'     \itemize{
+#'       \item ParSib  1=par, 2=ped
+#'       \item nAmbMax
+#'     }
+#'   }
+#'
+#' @keywords internal
+
+MkFortParams <- function(PARAM, fun="main")
+{
+  FP <- list()
+  FP$Ng = as.integer(PARAM$dimGeno[1])
+  FP$SpecsInt <- with(PARAM,
+                      c(nSnp = dimGeno[2],      # 1
+                        MaxMismatchV,           # 2 - 4
+                        MaxSibshipSize = ifelse(exists("MaxSibshipSize"),
+                                                MaxSibshipSize,
+                                                100),  # 5
+                        Complx = switch(as.character(Complex),       # 6
+                                        mono = 0,
+                                        simp = 1,
+                                        full = 2),
+                        quiet = ifelse(quiet == "verbose", -1,     # 7 FALSE=0, TRUE=1
+                                       ifelse(quiet == "very", 1,
+                                              as.integer(as.logical(quiet)))),
+                        nAgeCl = nAgeClasses,      # 8
+                        Herm = switch(as.character(Herm),   # 9
+                                      no = 0,
+                                      A = 1,
+                                      B = 2) ))
+  FP$SpecsDbl <- as.double(c(PARAM$Tfilter,
+                             PARAM$Tassign))
+  FP$ErrM <- as.double(PARAM$ErrM)
+
+  if (fun == "main" | fun == "CalcOH") {
+    # ParSib added in SeqParSib()
+    FP$SpecsIntMkPed <- with(PARAM, c(MaxSibIter = ifelse(exists("MaxSibIter"),
+                                             MaxSibIter,
+                                             42),
+                                      AgeEffect = ifelse(exists("UseAge"),
+                                                     switch(UseAge,
+                                                         no = 0,
+                                                         yes = 1,
+                                                         extra = 2),
+                                                     1),
+                                      CalcLLR = as.logical(CalcLLR) ))
+  } else if (fun == "mayberel") {
+    FP$SpecsIntAmb <- with(PARAM, c(ParSib = switch(Module,
+                                                    par = 1,
+                                                    ped = 2),
+                                    nAmbMax = MaxPairs))
+    #  } else if (fun == "CalcOH") {
+    #    # do nothing
+  } else if (fun ==  "CalcPairs") {
+    # do nothing
+  } else {
+    stop("invalid 'fun'")
+  }
+
+  return( FP )
+}
+
+
+#=======================================================================
+#=======================================================================
+#' @title Check if input parameters are valid
+#'
+#' @description Check if input parameter value is of the proper kind and value.
+#'
+#' @param PARAM list with input parameters
+#'
+#' @return  Nothing except errors, warnings, and messages
+#'
+#' @keywords internal
+
+CheckParams <- function(PARAM)
+{
+
+  # checking function ----
+  chk <- function(x, type, valid, n=1, allowNeg = FALSE) {
+    if (!x %in% names(PARAM))  return()
+    if (!type %in% c("value", "int", "dbl"))  stop("type not supported")
+
+    ErrMsg <- switch(type,
+                     value = paste(sQuote(valid), collapse=" or "),
+                     int = paste0(ifelse(n==1, "a", n),
+                                  ifelse(allowNeg, " ", " positive "),
+                                  "whole number", ifelse(n==1, "", "s")),
+                     dbl = paste(ifelse(allowNeg, "", " positive"), "number"))
+    ErrMsg <- paste(sQuote(x), "must be", ErrMsg)
+
+    xx <- PARAM[[x]]
+    if (is.null(xx) || length(xx) != n) {
+      stop(ErrMsg, call.=FALSE)
+    } else if (type == "value" && !xx %in% valid) {
+      stop(ErrMsg, call.=FALSE)
+    } else if (type == "int" && (any(!is.wholenumber(xx)) ||
+                                 (!allowNeg & any(xx < 0, na.rm=TRUE)))) {
+      stop(ErrMsg, call.=FALSE)
+    } else if (type=="dbl" && (any(!is.double(xx)) ||
+                               (!allowNeg & any(xx < 0, na.rm=TRUE)))){
+      stop(ErrMsg, call.=FALSE)
+    }
+  }
+
+  # check if in PARAM list ----
+  chk("quiet", "value", valid = c(TRUE, FALSE, 'verbose', 'very'))
+  chk("CalcLLR", "value", valid = c(TRUE, FALSE))
+  chk("GenoProb", "value", valid = c(TRUE, FALSE))
+  chk("Plot",  "value", valid = c(TRUE, FALSE))
+  chk("dropPar", "value", valid = c(0, 1, 2, 12))
+  chk("Module", "value", valid=c("pre", "dup", "par", "ped"))
+  chk("ParSib", "value", valid=c("dup", "par", "sib"))
+  chk("Complex", "value", valid=c("full", "simp", "mono"))  # 'herm'
+  chk("Herm", "value", valid=c("no", "A", "B"))
+  chk("UseAge", "value", valid=c("yes", "no", "extra"))
+
+  chk("MaxMismatchV", "int", n=3)
+  chk("MaxSibshipSize", "int")
+  chk("MaxSibIter", "int", allowNeg = TRUE)
+  chk("nAgeClasses", "int")
+  chk("MaxPairs", "int")
+
+  chk("Tfilter", "dbl", allowNeg = TRUE)
+  chk("Tassign", "dbl")
+
+
+  # other
+  if ("DummyPrefix" %in% names(PARAM)) {
+    if (!length(PARAM$DummyPrefix) %in% c(2,3) |
+        any(make.names(PARAM$DummyPrefix) != PARAM$DummyPrefix))
+      stop("'DummyPrefix' should be a length-2 character vector with syntactically valid names")
+  }
+  if ("MaxMismatch" %in% names(PARAM)) {
+    if (!is.null(PARAM$MaxMismatch) && !is.na(PARAM$MaxMismatch))
+      warning("NOTE: 'MaxMismatch' is deprecated & ignored;",
+              "now calculated internally by 'CalcMaxMismatch()'",
+              immediate.=TRUE)
+  }
+}
+
+
+#=======================================================================
+#=======================================================================
+#' @title check AgePrior
+#'
+#' @description Check that the provided AgePrior is in the correct format
+#'
+#' @param AgePrior matrix with 'MaxAgeParent' rows and columns M-P-FS-MHS-PHS
+#'
+#' @return AgePrior in corrected format, if necessary
+#'
+#' @keywords internal
+
+CheckAP <- function(AgePrior) {
+  if (is.null(AgePrior)) {
+    stop("Please provide AgePrior")
+  } else if (is.data.frame(AgePrior)) {
+    AgePrior <- as.matrix(AgePrior)
+  } else if (!is.matrix(AgePrior)) {
+    stop("AgePrior must be a matrix")
+  }
+
+  if (any(AgePrior < 0 | AgePrior > 1000) | any(!is.double(AgePrior)))
+    stop("AP must be a numeric matrix with values >0 & <1000")
+
+  if (!all(c("M", "P", "FS", "MS", "PS") %in% colnames(AgePrior)))
+    stop("AgePrior must have columns M, P, FS, MS, PS")
+  AgePrior <- AgePrior[, c("M", "P", "FS", "MS", "PS")]
+
+  if (any(as.numeric(rownames(AgePrior)) < 0))
+    AgePrior <- AgePrior[as.numeric(rownames(AgePrior)) >= 0, ]
+
+  if (!all(apply(AgePrior, 2, function(x) any(x > 0))))
+    stop("AgePriors error: some relationships are impossible for all age differences")
+
+  span <- apply(AgePrior[,c("M","P")], 2, function(A) diff(range(which(A>0))))
+  span["F"] <- diff(range(which(AgePrior[,"M"]>0 & AgePrior[,"P"]>0)))
+  for (r in c("M", "P", "F")) {
+    if(any(any(AgePrior[(span[r]+2):nrow(AgePrior), paste0(r,"S")] > 0)))  # 1st row = agedif 0
+      stop(paste("Sibling column ", paste0(r,"S"), " not consistent with parent column"))
+  }
+
+  return( AgePrior )
+}
+

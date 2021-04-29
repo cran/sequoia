@@ -2,14 +2,14 @@
 % Please edit documentation in R/Utils.R
 \name{MergeFill}
 \alias{MergeFill}
-\title{special merge}
+\title{Special Merge}
 \usage{
 MergeFill(df1, df2, by, overwrite = FALSE, ...)
 }
 \arguments{
-\item{df1}{first dataframe (lowest priority if overwrite=TRUE)}
+\item{df1}{first dataframe (lowest priority if \code{overwrite=TRUE}).}
 
-\item{df2}{second dataframe (highest priority if overwrite=TRUE)}
+\item{df2}{second dataframe (highest priority if \code{overwrite=TRUE}).}
 
 \item{by}{columns used for merging, required.}
 
@@ -21,6 +21,6 @@ except where df2 has NA.}
 }
 \description{
 As regular merge, but combine data from columns with the same
- name
+ name.
 }
 \keyword{internal}

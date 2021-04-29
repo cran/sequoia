@@ -2,7 +2,7 @@
 % Please edit documentation in R/ErrToM.R
 \name{ErrToM}
 \alias{ErrToM}
-\title{Generate error matrix}
+\title{Generate Genotyping Error Matrix}
 \usage{
 ErrToM(Err = NA, flavour = "version2.0", Return = "matrix")
 }
@@ -23,12 +23,13 @@ checked for validity).}
 \item{Return}{output, 'matrix' (always 3x3) or 'function'.}
 }
 \value{
-either a 3x3 matrix, or a function generating a 3x3 matrix.
+Either a 3x3 matrix, or a function generating a 3x3 matrix.
 }
 \description{
 Generate a matrix with the probabilities of observed genotypes
   (columns) conditional on actual genotypes (rows), or return a function to
-  generate such matrices (using a single value Err as input to that function)
+  generate such matrices (using a single value Err as input to that
+ function).
 }
 \details{
 By default (\code{flavour} = "SNPchip"), \code{Err} is interpreted
@@ -43,6 +44,8 @@ structures, which have changed with sequoia versions. The most appropriate
 error structure will depend on the genotyping platform; 'version0.9' and
 'version1.1' were inspired by SNP array genotyping while 'version1.3' and
 'version2.0' are intended to be more general.
+
+Pr(observed genotype (columns) | actual genotype (rows)):
 
 \emph{version2.0:}
 \tabular{lccc}{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/Simulate.R
 \name{MkGenoErrors}
 \alias{MkGenoErrors}
-\title{Simulate genotyping errors}
+\title{Simulate Genotyping Errors}
 \usage{
 MkGenoErrors(
   SGeno,
@@ -15,10 +15,10 @@ MkGenoErrors(
 )
 }
 \arguments{
-\item{SGeno}{Matrix with genotype data in Sequoia's format: 1 row per
+\item{SGeno}{matrix with genotype data in Sequoia's format: 1 row per
 individual, 1 column per SNP, and genotypes coded as 0/1/2.}
 
-\item{CallRate}{Either a single number for the mean call rate (genotyping
+\item{CallRate}{either a single number for the mean call rate (genotyping
 success), OR a vector with the call rate at each SNP, OR a named vector
 with the call rate for each individual. In the third case, ParMis is
 ignored, and individuals in the pedigree (as id or parent) not included in
@@ -39,11 +39,11 @@ per-SNP error rates. A higher value results in a flatter distribution.}
 }
 \value{
 The input genotype matrix, with some genotypes replaced, and some
-  set to missing (-9)
+  set to missing (-9).
 }
 \description{
 Generate errors and missing values in a (simulated) genotype
-  matrix
+  matrix.
 }
 \examples{
 data(Ped_HSg5)

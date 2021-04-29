@@ -1,8 +1,9 @@
-#' @title Generate error matrix
+#' @title Generate Genotyping Error Matrix
 #'
 #' @description Generate a matrix with the probabilities of observed genotypes
 #'   (columns) conditional on actual genotypes (rows), or return a function to
-#'   generate such matrices (using a single value Err as input to that function)
+#'   generate such matrices (using a single value Err as input to that
+#'  function).
 #'
 #' @details By default (\code{flavour} = "SNPchip"), \code{Err} is interpreted
 #'   as a locus-level error rate (rather than allele-level), and equals the
@@ -16,6 +17,8 @@
 #' error structure will depend on the genotyping platform; 'version0.9' and
 #' 'version1.1' were inspired by SNP array genotyping while 'version1.3' and
 #' 'version2.0' are intended to be more general.
+#'
+#' Pr(observed genotype (columns) | actual genotype (rows)):
 #'
 #' \emph{version2.0:}
 #' \tabular{lccc}{
@@ -62,7 +65,7 @@
 #'   checked for validity).
 #' @param Return output, 'matrix' (always 3x3) or 'function'.
 #'
-#' @return either a 3x3 matrix, or a function generating a 3x3 matrix.
+#' @return Either a 3x3 matrix, or a function generating a 3x3 matrix.
 #'
 #' @export
 
@@ -87,28 +90,28 @@ ErrToM <- function(Err = NA,
     if (all(ErrM.B == ErrM))  stop("ErFunc(E) is not a function of error rate E")
     ErFunc <- flavour
 
-  } else if (flavour == "version2.0") {
+  } else if (flavour %in% c("version2.0", "2.0")) {
     ErFunc <- function(E) {
       matrix(c((1-E/2)^2, E*(1-E/2), (E/2)^2,
               E/2, 1-E, E/2,
               (E/2)^2, E*(1-E/2), (1-E/2)^2),
              3,3, byrow=TRUE)
     }
-  } else if (flavour %in% c("version1.3", "SNPchip")) {
+  } else if (flavour %in% c("version1.3", "SNPchip", "1.3")) {
     ErFunc <- function(E) {
       matrix(c(1-E-(E/2)^2, E, (E/2)^2,
                E/2, 1-E, E/2,
                (E/2)^2, E, 1-E-(E/2)^2),
              3,3, byrow=TRUE)
     }
-  } else if (flavour %in% c("version111", "version1.1")) {
+  } else if (flavour %in% c("version111", "version1.1", "1.1")) {
     ErFunc <- function(E) {
       matrix(c(1-E, E/2, E/2,
               E/2, 1-E, E/2,
               E/2, E/2, 1-E),
              3,3, byrow=TRUE)
     }
-  } else if (flavour %in% c("version0.9", "version0.7")) {
+  } else if (flavour %in% c("version0.9", "version0.7", "0.7", "0.9")) {
     ErFunc <- function(E) {
       matrix(c(1-E, E, 0,
               E/2, 1-E, E/2,
@@ -116,8 +119,8 @@ ErrToM <- function(Err = NA,
              3,3, byrow=TRUE)
     }
   } else {
-    stop("Unknown error matrix flavour, choose 'version2.0', 'version1.3', 'version1.1', \n",
-         "or specify matrix(-generating function)")
+    stop("Unknown ErrFlavour, choose 'version2.0', 'version1.3', 'version1.1', \n",
+         "or specify matrix(-generating function) via 'Err'")
   }
 
   if (is.null(ErrM))  ErrM <- ErFunc(Err)
@@ -135,6 +138,8 @@ ErrToM <- function(Err = NA,
   }
 
   if (Return == "matrix") {
+    dimnames(ErrM) <- list(paste0("act-", 0:2), paste0("obs-", 0:2, "|act"))
+
     return( ErrM )
   } else if (Return == "function") {
     if (!is.null(ErFunc)) {
@@ -146,7 +151,6 @@ ErrToM <- function(Err = NA,
     stop("Unknown Return format")
   }
 }
-
 
 #===============================================================================
 #===============================================================================

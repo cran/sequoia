@@ -5,15 +5,20 @@
 \alias{LH_HSg5}
 \title{Example life history file}
 \format{
-A data frame with 1000 rows and 3 variables: ID, Sex (1=female,
-2=male), and BirthYear
+A data frame with 1000 rows and 3 variables:
+\describe{
+\item{ID}{Female IDs start with 'a', males with 'b'; the next 2 numbers give
+the generation number (00 -- 05), the last 3 numbers the individual ID number
+(runs continuously across all generations)}
+\item{Sex}{1 = female, 2 = male}
+\item{BirthYear}{from 2000 (generation 0, founders) to 2005} }
 }
 \usage{
 data(LH_HSg5)
 }
 \description{
-This is the lifehistory file associated with Ped_HSg5, which is
-  Pedigree II in the paper.
+This is the lifehistory file associated with
+  \code{\link{Ped_HSg5}}, which is \strong{Pedigree II} in the paper.
 }
 \references{
 Huisman, J. (2017) Pedigree reconstruction from SNP data:

@@ -1,10 +1,8 @@
 #============================================================================
-#' @title Comparison of all pairwise relationships in 2 pedigrees
+#' @title Compare Pairwise Relationships
 #'
 #' @description Compare, count and identify different types of relative pairs
-#'   between two pedigrees. The matrix returned by \code{\link{DyadCompare}}
-#'   [Deprecated] is a subset of the matrix returned here using default
-#'   settings.
+#'   between two pedigrees, or within one pedigree.
 #'
 #' @details If \code{Pairs2} is as returned by \code{\link{GetMaybeRel}}
 #'   (identified by the additional column names 'LLR' and 'OH'), these
@@ -16,126 +14,145 @@
 #'   they are prioritised in decreasing order of factor levels, or in decreasing
 #'   alphabetical order, and before the default (\code{ped2} derived) levels.
 #'
-#' @param Ped1 (Original/reference) pedigree, dataframe with 3 columns:
-#'   id-dam-sire
-#' @param Ped2 Second (inferred) pedigree
-#' @param Pairs2 dataframe with relationships categories between pairs of
-#'   individuals, instead of or in addition to Ped2, e.g. as returned by
-#'   \code{\link{GetMaybeRel}}. First three columns: ID1-ID2-relationship,
+#'   The matrix returned by \code{\link{DyadCompare}} [Deprecated] is a subset
+#'   of the matrix returned here using default settings.
+#'
+#' @param Ped1 first (e.g. original/reference) pedigree, dataframe with 3
+#'   columns: id-dam-sire.
+#' @param Ped2 optional second (e.g. inferred) pedigree.
+#' @param Pairs2 optional dataframe with relationships categories between pairs
+#'   of individuals, instead of or in addition to \code{Ped2}, e.g. as returned
+#'   by \code{\link{GetMaybeRel}}. First three columns: ID1-ID2-relationship,
 #'   column names and any additional columns are ignored.
-#' @param GenBack  Number of generations back to consider; 1 returns
+#' @param GenBack  number of generations back to consider; 1 returns
 #'   parent-offspring and sibling relationships, 2 also returns grandparental,
 #'   avuncular and first cousins. GenBack >2 is not implemented.
 #' @param patmat  logical, distinguish between paternal versus maternal relative
 #'   pairs?
-#' @param DumPrefix character vector of length 2 with the dummy prefixes in Ped1
-#'   and/or Ped2. IDs starting with these prefixes will not be excluded, but
-#'   individuals with dummy parents are compared. Use \code{\link{GetRelCat}} on
-#'   a single pedigree to find relationships with dummies.
-#' @param Return  Return a matrix with \code{Counts} or a \code{Summary} of the
+#' @param ExcludeDummies  logical, exclude dummy IDs from output? Individuals
+#'   with e.g. the same dummy father will still be counted as paternal halfsibs.
+#'   No attempt is made to match dummies in one pedigree to individuals in the
+#'   other pedigree; for that use \code{\link{PedCompare}}.
+#' @param  DumPrefix  character vector with the prefixes identifying dummy
+#'   individuals. Use 'F0' ('M0') to avoid matching to regular individuals with
+#'   IDs starting with 'F' ('M'), provided \code{Ped2} has fewer than 999 dummy
+#'   females (males).
+#' @param Return  return a matrix with \code{Counts} or a \code{Summary} of the
 #'   number of identical relationships and mismatches per relationship, or
 #'   detailed results as a 2xNxN \code{Array} or as a \code{Dataframe}.
 #'   \code{All} returns a list with all four.
 #'
-#' @return a matrix with counts, a 3D array or a 4-column dataframe, depending
-#'   on \code{Return}, with by default (\code{GenBack=1, patmat=FALSE}) the
-#'   following 7 relationships:
-#'    \item{S}{Self (not in counts)}
-#'    \item{MP}{Parent}
-#'    \item{O}{Offspring (not in counts)}
-#'    \item{FS}{Full sibling}
-#'    \item{HS}{Half sibling}
-#'    \item{U}{Unrelated, or otherwise related}
-#'    \item{X}{Either or both individuals not occurring in both pedigrees}
-#' Where in the array and dataframe, 'MP' indicates that the second (column)
+#' @return Depending on \code{Return}, one of the following, or a list with all:
+#' \item{Counts}{(the default), a matrix with counts, with the classification in
+#'   \code{Ped1} on rows and that in \code{Ped2} in columns. Counts for
+#'   'symmetrical' pairs ("FS", "HS", "MHS", "PHS", "FC1", "DFC1", "U","X") are
+#'   divided by two.}
+#'   \item{Summary}{a matrix with one row per relationship type and four columns
+#'     , named as if \code{Ped1} is the true pedigree:
+#'     \describe{
+#'       \item{n}{total number of pairs with that relationship in \code{Ped1},
+#'         and occurring in \code{Ped2}}
+#'      \item{OK}{Number of pairs with same relationship in \code{Ped2} as in
+#'        \code{Ped1}}
+#'      \item{hi}{Number of pairs with 'higher' relationship in \code{Ped2} as
+#'        in \code{Ped1} (e.g. FS instead of HS; ranking is the order given
+#'        below)}
+#'      \item{lo}{Number of pairs with 'lower' relationship in \code{Ped2} as in
+#'       \code{Ped1}, but not unrelated in \code{Ped2}}
+#'   }}
+#'   \item{Array}{a 2xNxN array (if \code{Ped2} or \code{Pairs2} is specified)
+#'     or a NxN matrix , where N is the total number of individuals occurring in
+#'     \code{Ped1} and/or \code{Ped2}.}
+#'   \item{Dataframe}{a dataframe with \eqn{N^2} rows and four columns:
+#'     \describe{
+#'       \item{id.A}{First individual of the pair}
+#'       \item{id.B}{Second individual of the pair}
+#'       \item{RC1}{the relationship category in \code{Ped1}, as a factor with all
+#'         considered categories as levels, including those with 0 count}
+#'       \item{RC2}{the relationship category in \code{Ped2}}
+#'     }
+#'     Each pair is listed twice, e.g. once as P and once as O, or twice as FS.}
+#'
+#' @section Relationship abbreviations and ranking:
+#' By default (\code{GenBack=1, patmat=FALSE}) the following 7 relationships are
+#' distinguished:
+#' \itemize{
+#'    \item \strong{S}: Self (not included in \code{Counts})
+#'    \item \strong{MP}: Parent
+#'    \item \strong{O}: Offspring (not included in \code{Counts})
+#'    \item \strong{FS}: Full sibling
+#'    \item \strong{HS}: Half sibling
+#'    \item \strong{U}: Unrelated, or otherwise related
+#'    \item \strong{X}: Either or both individuals not occurring in both
+#'      pedigrees
+#' }
+#' In the array and dataframe, 'MP' indicates that the second (column)
 #' individual is the parent of the first (row) individual, and 'O' indicates the
 #' reverse.
 #'
+#' When \code{GenBack=1, patmat=TRUE} the categories are (S)-M-P-(O)-FS-MHS-PHS-
+#' U-X.
+#'
 #' When \code{GenBack=2, patmat=TRUE}, the following relationships are
 #' distinguished:
-#'    \item{S}{Self (not in counts)}
-#'    \item{M}{Mother}
-#'    \item{P}{Father}
-#'    \item{O}{Offspring (not in counts)}
-#'    \item{FS}{Full sibling}
-#'    \item{MHS}{Maternal half-sibling}
-#'    \item{PHS}{Paternal half-sibling}
-#'    \item{MGM}{Maternal grandmother}
-#'    \item{MGF}{Maternal grandfather}
-#'    \item{PGM}{Paternal grandmother}
-#'    \item{PGF}{Paternal grandfather}
-#'    \item{GO}{Grand-offspring (not in counts}
-#'    \item{FA}{Full avuncular; maternal or paternal aunt or uncle}
-#'    \item{HA}{Half avuncular}
-#'    \item{FN}{Full nephew/niece (not in counts}
-#'    \item{HN}{Half nephew/niece (not in counts}
-#'    \item{FC1}{Full first cousin}
-#'    \item{DFC1}{Double full first cousin}
-#'    \item{U}{Unrelated, or otherwise related}
-#'    \item{X}{Either or both individuals not occurring in both pedigrees}
+#' \itemize{
+#'    \item \strong{S}: Self (not included in \code{Counts})
+#'    \item \strong{M}: Mother
+#'    \item \strong{P}: Father
+#'    \item \strong{O}: Offspring (not included in \code{Counts})
+#'    \item \strong{FS}: Full sibling
+#'    \item \strong{MHS}: Maternal half-sibling
+#'    \item \strong{PHS}: Paternal half-sibling
+#'    \item \strong{MGM}: Maternal grandmother
+#'    \item \strong{MGF}: Maternal grandfather
+#'    \item \strong{PGM}: Paternal grandmother
+#'    \item \strong{PGF}: Paternal grandfather
+#'    \item \strong{GO}: Grand-offspring (not included in \code{Counts})
+#'    \item \strong{FA}: Full avuncular; maternal or paternal aunt or uncle
+#'    \item \strong{HA}: Half avuncular
+#'    \item \strong{FN}: Full nephew/niece (not included in \code{Counts})
+#'    \item \strong{HN}: Half nephew/niece (not included in \code{Counts})
+#'    \item \strong{FC1}: Full first cousin
+#'    \item \strong{DFC1}: Double full first cousin
+#'    \item \strong{U}: Unrelated, or otherwise related
+#'    \item \strong{X}: Either or both individuals not occurring in both pedigrees
+#' }
 #' Note that for avuncular and cousin relationships no distinction is made
 #' between paternal versus maternal, as this may differ between the two
-#' individuals and would generate a large number of subclasses. When a pair is
+#' individuals and would generate a large number of sub-classes. When a pair is
 #' related via multiple paths, the first-listed relationship is returned.
 #'
-#' When \code{GenBack=1, patmat=TRUE} the categories are (S)-M-P-(O)-FS-MHS-PHS-
-#' U-X. When \code{GenBack=2, patmat=FALSE}, MGM, MGF, PGM and PGF are combined
+#' When \code{GenBack=2, patmat=FALSE}, MGM, MGF, PGM and PGF are combined
 #' into GP, with the rest of the categories analogous to the above.
 #'
-#' Note that in the dataframe each pair is listed twice, e.g. once as P and once
-#' as O, or twice as FS.
-#'
-#' When \code{Return = "Counts"} (the default), a matrix with counts is
-#' returned, with the classification in Ped1 on rows and that in Ped2 in
-#' columns. Counts for 'symmetrical' pairs ("FS", "HS", "MHS", "PHS", "FC1",
-#' "DFC1", "U","X") are divided by two.
-#'
-#' When \code{Return = 'Summary'}, the counts table is distilled down into a matrix
-#' with four columns, which names assuming \code{Ped1} is the true pedigree:
-#'  \item{n}{total number of pairs with that relationship in Ped1}
-#'  \item{OK}{Number of pairs with same relationship in Ped2 as in Ped1}
-#'  \item{lo}{Number of pairs with 'lower' relationship in Ped2 as in Ped1 (see
-#'  ranking above), but not unrelated in Ped2}
-#'  \item{hi}{Number of pairs with 'higher' relationship in Ped2 as in Ped1}
-#'
-#' When \code{Return = "Array"}, the first dimension is 1=Ped1, 2=Ped2,
-#' the 2nd and 3rd dimension are the two individuals of the pair.
-#'
-#' When \code{Return = "Dataframe"}, the columns are
-#'   \item{id.A}{First individual of the pair}
-#'   \item{id.B}{Second individual of the pair}
-#'   \item{RC1}{the relationship category in Ped1, as a factor with all
-#'     considered categories as levels, including those with 0 count}
-#'   \item{RC2}{the relationship category in Ped2}
-#'
-#'
 #' @seealso \code{\link{PedCompare}} for individual-based comparison;
-#'   \code{\link{GetRelCat}} for pairs of relatives within a single pedigree.
+#'   \code{\link{GetRelM}} for a pairwise relationships matrix of a single
+#'   pedigree; \code{\link{PlotRelPairs}} for visualisation of relationships
+#'   within each pedigree.
 #'
+#'   To estimate P(actual relationship (Ped1) | inferred relationship (Ped2)),
+#'   see examples at \code{\link{EstConf}}.
 #'
 #' @examples
-#' \dontrun{
-#' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-#' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-#'                   MaxSibIter = 0)
-#' ComparePairs(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree, Return="Counts")
-#' # matrix with counts of pairs
-#' RC.A <- ComparePairs(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree, Return="Array")
-#' RC.A[, "a05017", "b05018"] # check specific pairs
+#' \donttest{
+#' data(Ped_griffin, SeqOUT_griffin, package="sequoia")
+#' PairsG <- ComparePairs(Ped_griffin, SeqOUT_griffin[["Pedigree"]],
+#'                        patmat = TRUE, ExcludeDummies = TRUE, Return = "All")
+#' PairsG$Counts
 #'
-#' RC.DF <- ComparePairs(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree,
-#'   Return="Dataframe")
-#' RC.DF[RC.DF$id.A=="a05017" & RC.DF$id.B=="b05018", ] # check specific pairs
-#' table(RC.DF$Ped1, RC.DF$Ped2)
-#' # incl. S,O,GO,FN,HN; duplicated counts for FS,HS,FC1,DFC1,U,X
-#' Mismatches <- RC.DF[RC.DF$Ped1 != RC.DF$Ped2, ]
+#' # pairwise correct assignment rate:
+#' PairsG$Summary[,"OK"] / PairsG$Summary[,"n"]
 #'
-#' Maybe <- GetMaybeRel(SimGeno_example, SeqList=SeqOUT, ParSib="sib")
-#' cp <- ComparePairs(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree,
-#'                    Pairs2=Maybe$MaybeRel, Return="All")
-#' cp$Counts[, colSums(cp$Counts)>0]
-#' cp$Summary[,"OK"] / cp$Summary[,"n"]  # pairwise assignment rate
+#' # check specific pair:
+#' PairsG$Array[, "i190_2010_M", "i168_2009_F"]
+#' # or
+#' RelDF <- PairsG$Dataframe   # for brevity
+#' RelDF[RelDF$id.A=="i190_2010_M" & RelDF$id.B=="i168_2009_F", ]
 #'
+#' # Colony-style lists of full sib dyads & half sib dyads:
+#' FullSibDyads <- with(RelDF, RelDF[Ped1 == "FS" & id.A < id.B, ])
+#' HalfSibDyads <- with(RelDF, RelDF[Ped1 == "HS" & id.A < id.B, ])
+#' # Use 'id.A < id.B' because each pair is listed 2x
 #' }
 #'
 #' @export
@@ -145,44 +162,49 @@ ComparePairs <- function(Ped1 = NULL,
                          Pairs2 = NULL,
                          GenBack = 1,
                          patmat = FALSE,
+                         ExcludeDummies = TRUE,
                          DumPrefix = c("F0", "M0"),
                          Return = "Counts")
 {
   if(is.null(Ped1)) stop("No 'Ped1' provided")
-  if(is.null(Ped2) & is.null(Pairs2)) stop("Must provide 'Ped2' or 'Pairs2'")
   Return <- .simpleCap(Return)  # capitalise 1st letter
-	if (!Return %in% c("Array", "Counts", "Dataframe", "Summary", "All")) {
-	    stop("'Return' must be 'Counts', 'Array', 'Dataframe', 'Summary' or 'All'")
-	}
+  if (!Return %in% c("Array", "Counts", "Dataframe", "Summary", "All"))
+    stop("'Return' must be 'Counts', 'Array', 'Dataframe', 'Summary' or 'All'")
+  if (Return == "Summary" & is.null(Ped2) & is.null(Pairs2))
+    stop("Return='Summary' not availble for a single pedigree")
+  # if no Ped2 & no Pairs2, 'Summary' is identical to 'Counts'.
+
   if (!GenBack %in% 1:2)  stop("'GenBack' must be 1 or 2")
   if (!patmat %in% c(TRUE,FALSE))  stop("'patmat' must be TRUE or FALSE")
 
-  Ped1 <- PedPolish(Ped1[,1:3], ZeroToNA=TRUE)
-  RCM.1 <- t(sapply(1:nrow(Ped1), GetRelCat, Ped1, GenBack=GenBack, patmat=patmat))
+  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK=FALSE, StopIfInvalid=FALSE)
+  if (GenBack==2)  Ped1 <- GPcols(Ped1)
+  RCM.1 <- GetRelM(Ped1, GenBack=GenBack, patmat=patmat, Return="Matrix")
 
-	lvls <- list(GB1 = list(no = c("S", "MP", "O", "FS", "HS", "U", "X"),
-	                              yes = c("S","M", "P", "O", "FS", "MHS", "PHS", "U", "X")),
-	                   GB2 = list(no = c("S","MP", "O", "FS", "HS", "GP", "GO", "FA", "HA", "FC1", "DFC1", "U", "X"),
-	                              yes = c("S","M", "P", "O", "FS", "MHS", "PHS","MGM", "MGF", "PGM", "PGF", "GO",
-	                                      "FA", "FN", "HA", "HN", "DFC1", "FC1","U", "X")))
+  lvls <- list(GB1 = list(no = c("S", "MP", "O", "FS", "HS", "U", "X"),
+                          yes = c("S","M", "P", "O", "FS", "MHS", "PHS", "U", "X")),
+               GB2 = list(no = c("S","MP", "O", "FS", "HS", "GP", "GO", "FA",
+                                 "HA", "FN", "HN", "FC1", "DFC1", "U", "X"),
+                          yes = c("S","M", "P", "O", "FS", "MHS", "PHS","MGM",
+                                  "MGF", "PGM", "PGF", "GO",
+                                  "FA", "FN", "HA", "HN", "DFC1", "FC1","U", "X")))
 
   if (!is.null(Ped2)) {
-    Ped2 <- PedPolish(Ped2[,1:3], ZeroToNA=TRUE)
+    Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, StopIfInvalid=FALSE)[, 1:3]
     if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
-	  RCM.2 <- t(sapply(1:nrow(Ped2), GetRelCat, Ped2, GenBack=GenBack, patmat=patmat))
-#	  rownames(RCM.2) <- colnames(RCM.2)
+    if (GenBack==2)  Ped2 <- GPcols(Ped2)
+    RCM.2 <- GetRelM(Ped2, GenBack=GenBack, patmat=patmat, Return="Matrix")
   }
 
-	#@@@@@@@@@@@@@@@@@@@
-	inflate <- function(M, IDnew) {
-		Mnew <- matrix(NA, length(IDnew), length(IDnew), dimnames=list(IDnew, IDnew))
-		if (is.null(rownames(M)) & nrow(M)==ncol(M))  rownames(M) <- colnames(M)
-		Mnew[rownames(M), colnames(M)] <- M
-		return( Mnew )
-	}
+  RelRank <- c("S", "M", "P", "MP", "O", "PO?",
+               "FS","FS?", "MHS", "PHS", "HS", "HS?",
+               "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
+               "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
+               "DFC1", "FC1", "XX?", "Q?", "U", "X")
 	#@@@@@@@@@@@@@@@@@@@
 
 	if (!is.null(Pairs2)) {
+	  if (!class(Pairs2) %in% c("data.frame", "matrix"))  stop("Pairs2 should be a dataframe or matrix")
 	  MaybeRelNames <- c("PO", "FS", "HS", "GP", "FA", "2nd", "HA", "Q")
 	  if (all(c("ID1", "ID2", "TopRel", "LLR", "OH") %in% names(Pairs2)) &&
 	      all(Pairs2$TopRel %in% MaybeRelNames)) {
@@ -191,46 +213,32 @@ ComparePairs <- function(Ped1 = NULL,
 		if (!"TopRel" %in% names(Pairs2))  names(Pairs2)[1:3] <- c("ID1", "ID2", "TopRel")
 
 		MaybeRelNames <- c(paste0(MaybeRelNames, "?"), "U")
-		RelRank <- c("S", "M", "P", "MP", "PO?", "O",
-		             "FS","FS?", "MHS", "PHS", "HS", "HS?",
-		             "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
-		             "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
-		             "DFC1", "FC1", "XX?", "U", "X")
 
 		if (is.factor(Pairs2$TopRel)) {
 		  lvls.X2 <- levels(Pairs2$TopRel)
 		} else {
   		lvls.X2 <- sort(unique(na.exclude(Pairs2$TopRel)))
 		}
-		if (all(lvls.X2 %in% lvls[[GenBack]][[ifelse(patmat, "yes", "no")]])) {
-			lvls2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
-		} else if (!is.null(Ped2) & all(lvls.X2 %in% MaybeRelNames)) {
+	  if (all(lvls.X2 %in% MaybeRelNames)) {  # !is.null(Ped2) &
 		  lvls.X2 <- MaybeRelNames
-	    lvls2 <- RelRank
-	  } else if (!is.null(Ped2)) {
-	    lvls2 <- unique(c(lvls.X2, lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]))
-	  } else {
-      lvls2 <- lvls.X2
-    }
+	  }
+		lvls.Y2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
 
-		Pairs2$TopRel <- as.character(Pairs2$TopRel)
-		RCM.X2.tmp <- plyr::daply(Pairs2,
-             .variables=c("ID1", "ID2"), .fun=function(df) df$TopRel)  # assuming Pairs2 = Maybe$MaybePar
-		# make into symmetrical matrix to get consistency in above/below diagonal:
-		IDsX2 <- unique(c(as.character(Pairs2$ID1), as.character(Pairs2$ID2)))
-		RCM.X2a <- inflate(RCM.X2.tmp, IDsX2)
-		RCM.X2b <- inflate(t(RCM.X2.tmp), IDsX2)
-		if(any(RCM.X2a != RCM.X2b, na.rm=TRUE)) {
-			stop("One or more pairs occur 2x in 'Pairs2', with different relationship")
+		if (!is.null(Ped2) | all(lvls.X2 %in% lvls.Y2)) {
+		  lvls2 <- unique(c(lvls.X2, lvls.Y2))
+		} else {
+		  lvls2 <- lvls.X2
 		}
-		RCM.X2 <- RCM.X2a
-		RCM.X2[,] <- "U"
-		RCM.X2[!is.na(RCM.X2a)] <- RCM.X2a[!is.na(RCM.X2a)]
-		RCM.X2[!is.na(RCM.X2b)] <- RCM.X2b[!is.na(RCM.X2b)]
+		lvls2 <- c(RelRank[RelRank %in% lvls2], lvls2[!lvls2 %in% RelRank])
+
+
+    RCM.X2 <- GetRelM(Pairs = Pairs2[, c("ID1", "ID2", "TopRel")],
+                      GenBack=GenBack, patmat=patmat)
 
 		if (is.null(Ped2)) {
 			RCM.2 <- RCM.X2
 		} else {
+#      RCM.X2 <- matrix(paste0(RCM.X2, "?"), dim(RCM.X2))  # enable distinction between Ped2 & Pairs2 origin
 			IDs2 <- unique(c(colnames(RCM.2), colnames(RCM.X2)))
 			RCM.2i <- inflate(RCM.2, IDs2)
 			RCM.X2i <- inflate(RCM.X2, IDs2)
@@ -243,31 +251,59 @@ ComparePairs <- function(Ped1 = NULL,
 			                   length(IDs2), length(IDs2), dimnames=list(IDs2, IDs2))
 		}
   } else {
-		lvls2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
+    if (!is.null(Ped2)) {
+		  lvls2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
+    } else {
+      lvls2 <- "X"
+      RCM.2 <- NULL
+    }
 		lvls.X2 <- NULL
 	}
 
 	# align the two matrices into an array
-	IDs <- unique(c(colnames(RCM.1),  colnames(RCM.2)))
-	RCA <- array(dim=c(2, length(IDs), length(IDs)),
-							 dimnames=list(c("Ped1", "Ped2"), IDs, IDs))
-	RCA["Ped1", colnames(RCM.1), colnames(RCM.1)] <- RCM.1
-	RCA["Ped2", colnames(RCM.2), colnames(RCM.2)] <- RCM.2
-	RCA[is.na(RCA)] <- "X"
+  IDs <- unique(c(colnames(RCM.1),  colnames(RCM.2)))
+  RCA <- array(dim=c(2, length(IDs), length(IDs)),
+               dimnames=list(c("Ped1", "Ped2"), IDs, IDs))
+  RCA["Ped1", colnames(RCM.1), colnames(RCM.1)] <- RCM.1
+  RCA["Ped2", colnames(RCM.2), colnames(RCM.2)] <- RCM.2
+  RCA[is.na(RCA)] <- "X"
 
-	# delete dummies (doing this earlier may cause trouble with 2-generations-back GetRelCat)
-	DPnc <- nchar(DumPrefix)
-	Dummies <- substr(IDs,1,DPnc[1])==DumPrefix[1] | substr(IDs,1,DPnc[2])==DumPrefix[2]
-	if (sum(Dummies)>0) {
-	  RCA <- RCA[, !Dummies, !Dummies]
-	  IDs <- IDs[!Dummies]
+	# delete dummies (doing this earlier may cause trouble with 2-generations-back GetRelM)
+	if (ExcludeDummies) {
+	  DPnc <- nchar(DumPrefix)
+    Dummies <- rep(FALSE, length(IDs))
+    for (x in seq_along(DumPrefix)) {
+      Dummies <- ifelse(Dummies, Dummies, substr(IDs,1,DPnc[x]) == DumPrefix[x])
+    }
+	  if (sum(Dummies)>0) {
+	    RCA <- RCA[, !Dummies, !Dummies]
+	    IDs <- IDs[!Dummies]
+	  }
 	}
 
-	#~~~~~~~~~~~
+
+  # Plot ----
+  # if (Plot) {
+    # PlotRelPairs(RCA["Ped1", , ])
+    # if (!is.null(Ped2) | !is.null(Pairs2)) {
+      # if (interactive()) {
+        # inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
+      # }
+      # PlotRelPairs(RCA["Ped2", , ])
+    # }
+  # }
+
+
+  # Array ----
 	if (Return == "Array") {
-		return( RCA )
-
+	  if (!is.null(Ped2) | !is.null(Pairs2)) {
+		  return( RCA )
+	  } else {
+	    return( RCA["Ped1", , , drop=TRUE])
+	  }
 	}
+
+  # Counts ----
 	if (Return %in% c("Counts", "Summary", "All")) {
 	  lvls.tbl <- list(GB1 = list(no = c("MP", "FS", "HS", "U", "X"),
 	                              yes = c("M", "P", "FS", "MHS", "PHS", "U", "X")),
@@ -284,7 +320,9 @@ ComparePairs <- function(Ped1 = NULL,
 	  if (Return == "Counts") return( tbl )
 
 	}
-	if (Return %in% c("dataframe", "All")) {
+
+  # Dataframe ----
+	if (Return %in% c("Dataframe", "All")) {
 	  DF <- data.frame(id.A = rep(IDs, times=length(IDs)),
 	                   id.B = rep(IDs, each=length(IDs)),
 	                   Ped1 = factor(RCA["Ped1",,],
@@ -292,20 +330,25 @@ ComparePairs <- function(Ped1 = NULL,
 	                   Ped2 = factor(RCA["Ped2",,], levels=lvls2))
 	  if (Return == "Dataframe") return( DF )
 	}
-	if (Return %in% c("Summary", "All")) {
-	  tblz <- tbl[rownames(tbl) != "X", colnames(tbl) != "X"]
+
+  # Summary ----
+	if (Return %in% c("Summary", "All") & !is.null(RCM.2)) {
+	  # if no Ped2 & no Pairs2, 'Summary' is identical to 'Counts'.
+	  tblz <- tbl[rownames(tbl) != "X", colnames(tbl) != "X", drop=FALSE]
     rowR <- as.numeric(factor(rownames(tblz), levels=RelRank))
     colR <- as.numeric(factor(colnames(tblz), levels=RelRank))
     hi <- tblz * outer(rowR, colR, function(x,y) x > y)
     eq <- tblz * outer(rowR, colR, function(x,y) x == y)
     tblzz <- tblz
-    tblzz[,"U"] <- 0
+    if ("U" %in% colnames(tblz))  tblzz[,"U"] <- 0   # not if Pairs2
     lo <- tblzz * outer(rowR, colR, function(x,y) x < y)
     ARER <- cbind(n = rowSums(tblz),
                   OK = rowSums(eq),
                   lo = rowSums(lo),
                   hi = rowSums(hi))
     if (Return == "Summary") return( ARER )
+	} else if (Return %in% c("Summary", "All") & is.null(RCM.2)) {
+	  ARER <- NULL
 	}
 
 	if (Return == "All") {
@@ -319,27 +362,28 @@ ComparePairs <- function(Ped1 = NULL,
 
 #============================================================================
 #============================================================================
-#' @title Compare dyads
+#' @title Compare Dyads
 #'
 #' @description Count the number of half and full sibling pairs correctly and
-#'   incorrectly assigned. DEPRECATED - SEE \code{\link{ComparePairs}}
+#'   incorrectly assigned. DEPRECATED - PLEASE USE \code{\link{ComparePairs}}
 #'
-#' @param  Ped1 Original pedigree, dataframe with 3 columns: id-dam-sire
-#' @param  Ped2 Second (inferred) pedigree
+#' @param  Ped1 original pedigree, dataframe with 3 columns: id-dam-sire.
+#' @param  Ped2 second (inferred) pedigree.
 #' @param  na1  the value for missing parents in Ped1.
 #'
 #' @return A 3x3 table with the number of pairs assigned as full siblings (FS),
 #'   half siblings (HS) or unrelated (U, including otherwise related) in the two
 #'   pedigrees, with the classification in Ped1 on rows and that in Ped2 in
-#'   columns
+#'   columns.
 #'
-#' @seealso \code{\link{PedCompare}}
+#' @seealso \code{\link{ComparePairs}} which supersedes this function;
+#'   \code{\link{PedCompare}}
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
 #' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-#'                   MaxSibIter = 0)
+#'                   Module="par", quiet=TRUE, Plot=FALSE)
 #' DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
 #' }
 #'
@@ -349,7 +393,8 @@ DyadCompare <- function(Ped1 = NULL,
                         Ped2 = NULL,
                         na1 = c(NA, "0"))
 {
-  message("This function is deprecated, please use ComparePairs()")
+  warning("This function is deprecated, please use ComparePairs()",
+          immediate.=TRUE)
   if(is.null(Ped1) || nrow(Ped1)<2) stop("No 'Ped1' provided")
   if(is.null(Ped2) || nrow(Ped2)<2) stop("No 'Ped2' provided'")
   names(Ped1)[1:3] <- c("id", "dam.1", "sire.1")
@@ -386,7 +431,7 @@ DyadCompare <- function(Ped1 = NULL,
   RCTI$RC.1 <- factor(RCTI$RC.1, levels=c("FS", "HS", "U"))
   RCTI$RC.2 <- factor(RCTI$RC.2, levels=c("FS", "HS", "U"))
 
-  tbl <- with(RCTI, Table(RC.1, RC.2))/2  # pairs included double
+  tbl <- with(RCTI, table(RC.1, RC.2, useNA="ifany"))/2  # pairs included double
   tbl["U", "U"] <- nrow(Ped2) * (nrow(Ped2)-1)/2 - sum(tbl)
   tbl
   #  sweep(tbl, 1, rowSums(tbl), "/")

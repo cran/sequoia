@@ -1,7 +1,7 @@
 #' @title Example pedigree
 #'
-#' @description This is Pedigree II in the paper, with discrete generations and
-#'   considerable inbreeding
+#' @description This is \strong{Pedigree II} in the paper, with discrete
+#'   generations and considerable inbreeding
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
@@ -19,11 +19,11 @@
 NULL
 
 
-
+#===============================================================================
 #' @title Example life history file
 #'
-#' @description This is the lifehistory file associated with Ped_HSg5, which is
-#'   Pedigree II in the paper.
+#' @description This is the lifehistory file associated with
+#'   \code{\link{Ped_HSg5}}, which is \strong{Pedigree II} in the paper.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
@@ -37,12 +37,18 @@ NULL
 #' @keywords datasets sequoia
 #' @name LH_HSg5
 #' @usage data(LH_HSg5)
-#' @format A data frame with 1000 rows and 3 variables: ID, Sex (1=female,
-#' 2=male), and BirthYear
+#' @format A data frame with 1000 rows and 3 variables:
+#' \describe{
+#' \item{ID}{Female IDs start with 'a', males with 'b'; the next 2 numbers give
+#' the generation number (00 -- 05), the last 3 numbers the individual ID number
+#' (runs continuously across all generations)}
+#' \item{Sex}{1 = female, 2 = male}
+#' \item{BirthYear}{from 2000 (generation 0, founders) to 2005} }
+#'
 NULL
 
 
-
+#===============================================================================
 #' @title Example genotype file
 #'
 #' @description Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
@@ -61,6 +67,8 @@ NULL
 NULL
 
 
+#===============================================================================
+#===============================================================================
 #' @title Inheritance patterns
 #'
 #' @description Inheritance patterns used by SimGeno for non-autosomal SNPs,
@@ -85,16 +93,18 @@ NULL
 NULL
 
 
+#===============================================================================
+#===============================================================================
 #' @title Example pedigree: griffins
 #'
-#' @description Example Pedigree used in the ageprior vignette, with overlapping
+#' @description Example pedigree used in the ageprior vignette, with overlapping
 #'   generations.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @seealso \code{\link{SeqOUT_griffin}} for a sequoia run on simulated genotype
-#'   data based on this pedigree; \code{\link{Ped_HSg5}} for another pedigree,
-#'   \code{\link{sequoia}}
+#' @seealso  \code{\link{LH_griffin}}; \code{\link{SeqOUT_griffin}} for a sequoia
+#'   run on simulated genotype data based on this pedigree;
+#'   \code{\link{Ped_HSg5}} for another pedigree, \code{\link{sequoia}}
 #'
 #' @docType data
 #' @keywords datasets sequoia
@@ -104,6 +114,24 @@ NULL
 NULL
 
 
+#===============================================================================
+#' @title Example lifehistory data: griffins
+#'
+#' @description Example lifehistory data for griffin pedigree
+#'
+#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
+#'
+#' @seealso \code{\link{Ped_griffin}}, \code{\link{SeqOUT_griffin}}
+#'
+#' @docType data
+#' @keywords datasets sequoia
+#' @name LH_griffin
+#' @usage data(LH_griffin)
+#' @format A data frame with 200 rows and 3 variables (ID, Sex, BirthYear)
+NULL
+
+
+#===============================================================================
 #' @title Example sequoia output (griffins)
 #'
 #' @description Example output of a sequoia run including sibship clustering,
@@ -122,12 +150,36 @@ NULL
 #' @examples
 #' \dontrun{
 #' GenoS <- SimGeno(Ped.griffin, nSnp=400, ParMis=0.4)
-#' griffin.sex <- sapply(Ped.griffin$ID,
-#'                     function(x) substr(x, start=nchar(x), stop=nchar(x)))
-#' LH_griffin <- data.frame(ID = Ped_griffin$ID,
+#' griffin.sex <- sapply(as.character(Ped_griffin$id), function(x)
+#'                       substr(x, start=nchar(x), stop=nchar(x)))
+#' LH.griffin <- data.frame(ID = Ped_griffin$id,
 #'                          Sex = ifelse(griffin.sex=="F", 1, 2),
-#'                          BirthYear = Ped_griffin$BY)
-#' SeqOUT_griffin <- sequoia(GenoS, LH_griffin,
-#'                   MaxSibIter = 10,
-#'                   args.AP = list(Smooth = FALSE)) }
+#'                          BirthYear = Ped_griffin$birthyear)
+#' SeqOUT.GX <- sequoia(GenoS, LH.griffin,
+#'                      Module = "ped",
+#'                      args.AP = list(Smooth = FALSE))
+#' }
 NULL
+
+
+#===============================================================================
+#' @title Example field-observed mothers: griffins
+#'
+#' @description Example field pedigree used in vignette for
+#'   \code{\link{PedCompare}} example. Non-genotyped females have IDs 'BlueRed',
+#'   'YellowPink', etc.
+#'
+#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
+#'
+#' @seealso \code{\link{SeqOUT_griffin}} for a sequoia run on simulated genotype
+#'   data, \code{\link{Ped_griffin}} for the 'true' pedigree.
+#'
+#' @docType data
+#' @keywords datasets sequoia
+#' @name FieldMums_griffin
+#' @usage data(FieldMums_griffin)
+#' @format A data frame with 144 rows and 2 variables (id, mum)
+NULL
+
+
+#===============================================================================

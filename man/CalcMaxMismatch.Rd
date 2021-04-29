@@ -2,14 +2,16 @@
 % Please edit documentation in R/CalcMaxMismatch.R
 \name{CalcMaxMismatch}
 \alias{CalcMaxMismatch}
-\title{Maximum number of mismatches}
+\title{Maximum Number of Mismatches}
 \usage{
 CalcMaxMismatch(Err, MAF, ErrFlavour = "version2.0", qntl = 1 - 1e-05)
 }
 \arguments{
-\item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix.
-If a matrix, this should be the probability of observed genotype (columns)
-conditional on actual genotype (rows). Each row must therefore sum to 1.}
+\item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix
+ (averaged value(s) across SNPs), or a vector with the same length as MAF,
+ or a nSnp x 3 x 3 array. If a matrix, this should be the probability of
+ observed genotype (columns) conditional on actual genotype (rows). Each row
+must therefore sum to 1. If an array, each 3x3 slice should abide this rule.}
 
 \item{MAF}{vector with minor allele frequency at each SNP.}
 
@@ -24,13 +26,13 @@ quantile \eqn{Q}, use \eqn{qntl = Q^(1/N)}, where \eqn{N} is the number of
 individuals.}
 }
 \value{
-a vector with three integers:
+A vector with three integers:
  \item{DUP}{Maximum number of differences between 2 samples from the
   same individual}
  \item{OH}{Maximum number of Opposing Homozygous SNPs between a true
    parent-offspring pair}
  \item{ME}{Maximum number of Mendelian Errors among a true parent-parent-
-  offspring trio}
+  offspring trio}.
 }
 \description{
 Calculate the maximum expected number of mismatches for
@@ -49,6 +51,13 @@ The thresholds for maximum number of mismatches calculated here aim
   therefore only the first step of pedigree reconstruction by
   \code{\link{sequoia}}.
 }
+\examples{
+CalcMaxMismatch(Err = 0.05, MAF = runif(n=100, min=0.3, max=0.5))
+\dontrun{
+CalcMaxMismatch(Err = 0.02, MAF = SnpStats(MyGenoMatrix, Plot=FALSE)[,"AF"])
+}
+
+}
 \seealso{
-\code{\link{SnpStats}}
+\code{\link{SnpStats}}.
 }
