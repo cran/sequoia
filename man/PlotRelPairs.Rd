@@ -9,7 +9,7 @@ PlotRelPairs(
   subset.x = NULL,
   subset.y = NULL,
   drop.U = TRUE,
-  pch.symbols = TRUE,
+  pch.symbols = FALSE,
   cex.axis = 0.7,
   mar = c(5, 5, 1, 8)
 )
@@ -79,6 +79,12 @@ Parents are shown above the diagonal (y-axis is parent of x-axis),
 data(Ped_griffin, package="sequoia")
 Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
 PlotRelPairs(Rel.griffin)
+
+\donttest{
+PlotRelPairs(Rel.griffin, pch.symbols = TRUE)
+# plot with unicode symbols not supported on all platforms
+}
+
 # parents & grandparents of 2008 cohort:
 PlotRelPairs(Rel.griffin,
              subset.x = Ped_griffin$id[Ped_griffin$birthyear ==2008])

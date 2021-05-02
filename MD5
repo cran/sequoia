@@ -1,4 +1,4 @@
-0c003c4585c340d72cc60057d7bf7141 *DESCRIPTION
+1d148048dbce29671971daa446108a98 *DESCRIPTION
 d5d631747763ae40a03f8dd07642ebad *NAMESPACE
 3f98c1cc1e4be0180ed5eaaa5c894cee *NEWS.md
 e66c29c91216976635010be70fe002aa *R/CalcBYprobs.R
@@ -25,7 +25,7 @@ be55b8ee16d38b25690a8bba42069c73 *R/PlotAgePrior.R
 1ab0b030da02fc2fa7683ca7b5b68591 *R/PlotPairLL.R
 d69e21da6cba5031cca109c255c62d2f *R/PlotPedComp.R
 4134cd5a6e81db2b6e915c99c52d60a0 *R/Prepare.R
-66e00ba109bf0cbdbdfea31584feca7b *R/RelPlot.R
+7b6efe9c7b8eedd91785d7ae4da3641c *R/RelPlot.R
 aafc81c3a211ee75861d8c4aa98223f2 *R/SNPstats.R
 7c9f92160925012f02fc5037e860ef12 *R/SeqListSummary.R
 ff7a49d29e17caf3c7842127acb4f9cf *R/Sequoia_F90wrappers.R
@@ -54,14 +54,14 @@ f58290a97cd53778ded6ec19bb06f21b *inst/doc/PedComp.Rmd
 7c911b78b30c100c473ce52c6b5e812c *inst/doc/flowchart.pdf
 2c81d920bd89b80f651b81515cc27527 *inst/doc/flowchart.pdf.asis
 f0d2acfa60a62d93fc086bcc425c8827 *inst/doc/quick_start_example1.R
-a8a4defbe6473a14db556e6becb7c863 *inst/doc/quick_start_example1.html
+8e2efd0c5a6ee843320394acc1db235f *inst/doc/quick_start_example1.html
 55b11ce39d89fa21e2c6c8e6f9dae10a *inst/doc/quick_start_example1.rmd
 487e09321cbc5c073d5b9aa5778b995c *inst/doc/vignette-age.R
 88cdf4df3909d949ae8bc29dcc845a69 *inst/doc/vignette-age.Rmd
-a8e0f5c4a11970c9408da08a79465e29 *inst/doc/vignette-age.pdf
+0ff8c5bed83d19fbdf351f3b0964e3eb *inst/doc/vignette-age.pdf
 831a32faaba428260d717503d8393851 *inst/doc/vignette-main.R
 9240920901d81338f1b5e974380b4a61 *inst/doc/vignette-main.Rmd
-d78b2b869243b105654d53b363546331 *inst/doc/vignette-main.pdf
+8d46da876b1fbbfb23c2fd5f3249c03e *inst/doc/vignette-main.pdf
 ecbe7375c3dc2684af41d4edf5f16a63 *inst/extdata/Inherit.csv
 549b1102d45295072bfb550ca9c9a064 *inst/extdata/Inherit.xlsx
 20f03db54b53e5f2b1ee4090459fadd5 *man/CalcBYprobs.Rd
@@ -113,7 +113,7 @@ c98f0004da9d9c76ff86cb532e51abcf *man/Ped_griffin.Rd
 05c323595363aa9c363e8324c161792c *man/PlotAgePrior.Rd
 97046fcfba5e91dce3f86243578af5c9 *man/PlotPairLL.Rd
 6ac1f2e2dbffa71264f395d6af91fb23 *man/PlotPedComp.Rd
-08b30fb916e7ddff9a627d9888dceb60 *man/PlotRelPairs.Rd
+07c2c693066dee8ba4bf369529f9598e *man/PlotRelPairs.Rd
 b98c84a502bdc4d9acdf7037fbab05e6 *man/SeqOUT_griffin.Rd
 95ed2cac1bfe8337c2f62ae269046432 *man/SeqParSib.Rd
 6cfc807c74845fa2526cbf675d9748fc *man/SibMatch.Rd
@@ -134,7 +134,7 @@ adbe060a0323bf53e221a030e4458dae *man/orderLH.Rd
 f333834edca20c28aad76f7d78fdf579 *man/tryCatch.W.E.Rd
 47141a7b200e3ee1e7480f3efdb9cb0a *man/writeColumns.Rd
 0906282e55ca014de0b5c8b9d729b3ee *man/writeSeq.Rd
-e560751032e0e382f0b5069adb225eb1 *src/Sequoia.f90
+cdb98e279454a75fd8390b03ff6d3708 *src/Sequoia.f90
 c98fd6ca1f8fa56572027e412d7980c8 *src/SimGenoErrors.f90
 9ac1dc517645104c2e0504130610881c *src/init.c
 9574a94124441e2e03adbf553c64c542 *src/sequoia-win.def
@@ -166,4 +166,4 @@ fbea1762c54c1b3776260852064c3a0e *vignettes/hexbin.pdf
 0ec317a94471c9679105156bc4d62cb3 *vignettes/sequoia_refs.bib
 88cdf4df3909d949ae8bc29dcc845a69 *vignettes/vignette-age.Rmd
 9240920901d81338f1b5e974380b4a61 *vignettes/vignette-main.Rmd
-93098ac436dd6c60fa83b7fbc79f9368 *vignettes/vignette-main.html
+388f09d3a40fb6009f165307cd123e2a *vignettes/vignette-main.html

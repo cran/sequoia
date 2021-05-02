@@ -441,7 +441,7 @@ double precision, intent(IN) :: SpecsDbl(2), ErrV(9), APRF(5*SpecsInt(8))
 integer, intent(IN) :: GenoFR(Ng*SpecsInt(1)), SexRF(Ng), BYRF(3*Ng), &
   parentsRF(2*Ng), DumParRF(2*Ng)
 integer :: nYearsIn,i,j,l,k,s, BYrange(Ng,2)
-double precision :: AP_IN(MaxMaxAgePO, 5)
+double precision :: AP_IN(MaxMaxAgePO+1, 5)   ! 1st row = age diff of 0
 
 ! set global parameters 
 nInd = Ng
@@ -454,10 +454,12 @@ maxSibSize = SpecsInt(5)
 Complx = SpecsInt(6)
 quiet = SpecsInt(7)
 nYearsIn = SpecsInt(8)
+if (nYearsIN > (MaxMaxAgePO+1))   call ErStop("nYearsIN > MaxMaxAgePO", .TRUE.)
 Hermaphrodites = SpecsInt(9)
 
 TF = SpecsDbl(1)
 TA = SpecsDbl(2)
+
 
 allocate(Genos(nSnp, nInd))
 Genos = -1
@@ -1320,7 +1322,7 @@ integer, intent(IN) :: byrf(3*ng), parentsrf(2*ng)
 double precision, intent(IN) :: aprf(5*nap)
 double precision, intent(INOUT) :: byprobv(nx*nYearsIn)
 integer :: i, j, k, BYrange(Ng,2), BYrankI(Ng), dumParV(2*Ng)
-double precision :: AP_IN(MaxMaxAgePO, 5), BYprobM(nx, nYearsIn), BYLR(nYearsIN)
+double precision :: AP_IN(MaxMaxAgePO+1, 5), BYprobM(nx, nYearsIn), BYLR(nYearsIN)
 
 nInd = Ng
 maxSibSize = 500   ! TODO? make user-setable?
@@ -3912,10 +3914,10 @@ if (Parent(A,3-k)<0 .and. ANY(Maybe(2:4))) then
   call CalcU(Parent(A,3-k),3-k, B,k, LLX(3))
   LLtmp(1) = LLX(1) + (LLX(3) - LLX(2))
   
-  if (Maybe(2) .and. Parent(A,3-k)<0 .and. .not. ANY(GA == B).and. &
-    .not. ANY(AncB(3-k,:)==Parent(A,3-k))) then   ! B PO & GP   
+  if (Maybe(2) .and. Parent(A,3-k)<0 .and. .not. ANY(GA == B)) then    ! B PO & GP ?
+    call GetAncest(B, Sex(B), AncB)
     call ChkValidPar(Parent(A,3-k), 3-k, B, k, ParOK)
-    if (ParOK) then
+    if (ParOK .and. .not. ANY(AncB(3-k,:)==Parent(A,3-k))) then
       Gtmp = getPar(Parent(A,3-k), 3-k)
       call setParTmp(Parent(A,3-k), 3-k, B, k)
       call CalcU(Parent(A,3-k),3-k, B,k, LLX(4))
@@ -15274,7 +15276,7 @@ subroutine PrepAgeData(AP_IN, BYrange)
 use Global
 implicit none
 
-double precision, intent(IN) :: AP_IN(MaxMaxAgePO,5)
+double precision, intent(IN) :: AP_IN(MaxMaxAgePO+1,5)
 integer, intent(INOUT) :: BYrange(nInd, 2)
 integer :: i,j, BYLast, r, x, y, rik, rkj
 double precision :: scl
@@ -15300,7 +15302,7 @@ endif
 
 !===  determine MaxAgePO  ==============   
 maxAgePO = 1  ! maximum PO age difference (needed for dummy parents)
-do y = 2, MaxMaxAgePO
+do y = 2, MaxMaxAgePO+1
   if (ANY(AP_IN(y, 1:2)>TINY(0D0))) then
     maxAgePO = y - 1  ! first y is agediff of 0
   endif
