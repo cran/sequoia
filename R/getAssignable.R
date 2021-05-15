@@ -60,7 +60,8 @@ getAssignCat <- function(Pedigree, SNPd, minSibSize = "1sib1GP") {
   # check input
   if (is.null(SNPd))  stop("Must provide 'SNPd'")
   Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)
-  if (length(intersect(Pedigree$id, SNPd)) == 0)  stop("'Pedigree' and 'SNPd' have no IDs in common")
+  if (length(intersect(Pedigree$id, SNPd)) == 0)
+    stop("'Pedigree' and 'SNPd' have no IDs in common")
 
   #~~~~~~~~~~~~~~
   Dummifiable <- unlist(GetDummifiable(Pedigree, SNPd, minSibSize))

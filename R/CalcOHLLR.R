@@ -192,7 +192,7 @@ CalcOHLLR <- function(Pedigree = NULL,
                          Plot = FALSE, quiet = quiet)
     } else {
       AP <- MakeAgePrior(Pedigree=NULL, LifeHistData,
-                         MaxAgeParent = 100, Plot=FALSE, quiet = TRUE)  # non-informative ageprior
+                         MaxAgeParent = 99, Plot=FALSE, quiet = TRUE)  # non-informative ageprior
     }
   } else if (is.matrix(AgePrior) | is.data.frame(AgePrior)) {
     AP <- CheckAP(AgePrior)

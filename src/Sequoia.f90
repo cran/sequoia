@@ -313,6 +313,7 @@ integer, intent(INOUT) :: parentsrf(2*ng), ohrf(3*ng), sexrf(ng), byrf(3*ng), &
 double precision, intent(INOUT) :: lrrf(3*ng), dumlrrf(3*ng), totll(42), &
   apout(3*maxmaxagepo*5*3)
 integer :: ParSib, MaxSibIter, i, CalcLLR, AgeEffect, Tmax, IndBYmm(3), k, s, x, m
+integer, parameter :: million = 1E6
 integer, allocatable, dimension(:,:,:) :: DumBYmm
 double precision :: AP_TMP(3*MaxMaxAgePO,5,3), LLR_parent(ng,3), LLR_GP(3, ng/2, 2)
 
@@ -388,15 +389,15 @@ if (any(DumClone /= 0)) then   ! renumber hermaphrodite sibshibs
       if (DumClone(x,k) == 0)  cycle
       do i=1, nInd
         if (Parent(i,k) == -x) then
-          if (k==1)  Parent(i,k) = -x - 1E6
-          if (k==2)  Parent(i,k) = -DumClone(x,k) - 1E6  ! use number of female clone
+          if (k==1)  Parent(i,k) = -x - million
+          if (k==2)  Parent(i,k) = -DumClone(x,k) - million  ! use number of female clone
         endif
       enddo
       do m=1,2
         do s=1,nC(m)
           if (GpID(k,s,m) == -x) then
-            if (k==1)  GpID(k,s,m) = -x - 1E6
-            if (k==2)  GpID(k,s,m) = -DumClone(x,k) - 1E6  
+            if (k==1)  GpID(k,s,m) = -x - million
+            if (k==2)  GpID(k,s,m) = -DumClone(x,k) - million  
           endif
         enddo
       enddo
@@ -454,12 +455,13 @@ maxSibSize = SpecsInt(5)
 Complx = SpecsInt(6)
 quiet = SpecsInt(7)
 nYearsIn = SpecsInt(8)
-if (nYearsIN > (MaxMaxAgePO+1))   call ErStop("nYearsIN > MaxMaxAgePO", .TRUE.)
+if (nYearsIN > (MaxMaxAgePO+1)) then
+  call ErStop("Max parent age >99 requires some adjustments to Fortran code", .TRUE.)
+endif
 Hermaphrodites = SpecsInt(9)
 
 TF = SpecsDbl(1)
 TA = SpecsDbl(2)
-
 
 allocate(Genos(nSnp, nInd))
 Genos = -1
@@ -773,7 +775,7 @@ parentsRF = 0
 DumParRF = 0 
 
 call Initiate(Ng, SpecsInt, SpecsDbl, ErrV, GenoFR, &
-  SexRF,  BYRF, APRF, parentsRF, DumParRF) 
+  SexRF, BYRF, APRF, parentsRF, DumParRF) 
   
 MaxMisMatch = SpecsInt(2)
 
@@ -1217,14 +1219,14 @@ integer, intent(IN) :: genofr(ng*specsint(1)), parentsrf(2*ng), dumparrf(2*ng), 
   pairids(2*np), pairsex(2*np), pairagediff(np), pairfocal(np), pairk(np), dropp(2*np)
 integer, intent(INOUT) :: toprf(np),  byrf(3*ng)
 double precision, intent(INOUT) :: llrf(7*np), dlrf(np)
-integer :: x, ij(2), kij(2), a, m, SexRF(ng), curPar(2,2), top(np), Lboth, &
+integer :: x, ij(2), kij(2), a, m, SexRF(ng), curPar(2,2), top(np), &
   Sexy(2), psex(np, 2), pdrop(np, 2)
 double precision :: LLpair(np, 7), LLa(7), dl(np)
 
 SexRF = 3
 
 call Initiate(Ng, SpecsInt, SpecsDbl, ErrV, GenoFR, SexRF,  BYRF, &  
-  APRF, parentsRF, DumParRF)      
+  APRF, parentsRF, DumParRF)        
 
 if(quiet==-1)  call Rprint("Counting opposing homozygous loci between all individuals ... ", &
   (/0/), (/0.0D0/), "NON")
@@ -1484,7 +1486,7 @@ implicit none
 integer, intent(INOUT) :: MaxRounds, AgeEffect   ! IN
 double precision, intent(INOUT) :: TotLL(42)
 double precision :: CurLL(8), RoundTime(2), CurTime(0:8)
-integer :: Round, RX, k, i, PairID(XP*nInd,2), PairType(XP*nInd) 
+integer :: Round, RX, k, PairID(XP*nInd,2), PairType(XP*nInd) 
 character(len=2) :: RoundChars(42)
 
 
@@ -3440,7 +3442,7 @@ if (Complx>0)  LLg(6) = MaxLL(RESHAPE(LLtmpAU(:,1:2), (/2*2/) ))
 do i=1,2   
   do x=1,3
     LLtmpAU(i,x) = addALR(LLtmpAU(i,x), ALRAU(i,x))
-    if (ALRAU(i,x) == impossible)   ALRAU(i,x) = LOG10(zero)
+!    if (ALRAU(i,x) == impossible)   ALRAU(i,x) = LOG10(zero)
   enddo
 enddo
 LL(5) = MaxLL(LLtmpAU(:,3))
@@ -3744,12 +3746,12 @@ Maybe = .FALSE.  ! 1: non-inbred, 2: B PO & GP; 3: B PO & HS,
                  ! 4: Parent(A,3-k) ancestor of B, 5: B selfing
 Maybe(1) = .TRUE.  
 GA = getPar(Parent(A,3-k), 3-k)   
-if (Complx==2 .and. (ANY(GA == B) .or. GA(k) == 0)) then
+if (GA(k)==B .or. (Complx==2 .and. GA(k) == 0)) then
   Maybe(2) = .TRUE.
 endif
 
-if (Complx==2 .and. (Parent(A,3-k)==Parent(B,3-k) .or. Parent(A,3-k)==0 &
-  .or. Parent(B,3-k)==0)) then
+if ((Complx==2 .and. (Parent(A,3-k)==Parent(B,3-k) .or. Parent(A,3-k)==0 &
+  .or. Parent(B,3-k)==0)) .or. (Parent(A,3-k)==Parent(B,3-k) .and. focal==7)) then
     if ((focal==1 .or. focal==7) .and. Parent(A,3-k)==0 .and. Parent(B,3-k)/=0) then
       Maybe(3) = .FALSE.
     else if (Parent(A,3-k)/=0) then
@@ -4198,9 +4200,20 @@ if (any(.not. AncOK)) then
   LL = impossible
   return
 endif
- 
+
 AB = (/ A, B /)
-if (Par < 0 .and. any(Parent(AB,3-k) < 0)) then
+if (Par < 0 .and. (all(Parent(A,:)>=0) .or. all(Parent(B,:)>=0))) then
+  do i=1,2
+    if (Parent(AB(i),k) == Par) then
+      call CalcU(AB(3-i), 3, Par, k, LLtmp(1))
+      call addSib(AB(3-i), -Par, k, LLtmp(2))
+      call CalcU(AB(1),3, AB(2),3, LL)
+      LL = LL + (LLtmp(2) - LLtmp(1))
+      return
+    endif
+  enddo
+
+else if (Par < 0 .and. any(Parent(AB,3-k) < 0)) then
   do i=1,2
     if (Parent(AB(i),3-k) < 0)  PP = Parent(AB(i),3-k)
   enddo
@@ -5504,8 +5517,7 @@ double precision, intent(OUT) :: LL
 integer :: l, x, g, y, z, GG(2), GA(2), PB(2), PA, i, nA, r,u,j,e,Ei,m,&
   AncA(2,mxA), AncG(2, 2,mxA), AA(maxSibSize), catA(maxSibSize), &
   doneB(maxSibSize), BB(maxSibSize), nB, catG(2), GGP, catB(maxSibSize), &
-  nBx(2), BBx(maxSibSize, 2), Bj, Mates(maxSibSize, 2), w, BBf(maxSibSize), &
-  nBf, AB(2*maxSibSize), GGG(2)
+  nBx(2), BBx(maxSibSize, 2), Bj, Mates(maxSibSize, 2), w, AB(2*maxSibSize), GGG(2)
 double precision :: PrL(nSnp), PrG(3,2), PrXYZ(3,3,3), PrPA(3), PrA(3),&
   PrPB(3), PrGA(3), PrAB(3,3,3,2), PrE(3), PrH(3), PrGG(3), &
   PrLX(nSnp, 2), PrEW(3,3), PrW(3), PrXY(3,3)
@@ -5513,15 +5525,15 @@ integer, allocatable, dimension(:) :: UseEE, MateABpar, TypeEE
 double precision, allocatable, dimension(:,:,:) :: PrEE
 logical :: MateLoop(maxSibSize,2), SIMPL, AncOK, DoAZ, PAselfed
 
-AA = 0
-BB = 0  
+AA = 0  
 if (A>0) then  
-  nA = 1
-  AA(1) = A
   PA = Parent(A, kA)
   if (PA<0) then
     nA = ns(-PA,kA)
     AA(1:nA) = SibID(1:nA, -PA, kA)
+  else 
+    nA = 1
+    AA(1) = A
   endif
 else
   nA = nS(-A, kA)
@@ -5533,11 +5545,11 @@ GA = getPar(PA, kA)
 Mates = 0
 nBx = 0
 BBx = 0
-nBf = 0
-BBf = 0
+nB = 0
+BB = 0
 if (B > 0) then
   nB = 1
-  BB(1) = B
+  BB(1) = B  ! for cat checks
   PB = Parent(B,:)
   do m=1,2
     if (kB<3 .and. m/=kB)  cycle
@@ -5546,14 +5558,12 @@ if (B > 0) then
       BBx(1, m) = B
     else 
       nBx(m) = nS(-Parent(B, m), m)
-      BBx(1:nBx(m), m) = SibID(1:nBx(m), -Parent(B, m), m)
+      BBx(1:nBx(m), m) = SibID(1:nBx(m), -Parent(B, m), m)  ! half sibs
     endif
     do j=1,nBx(m)
       Mates(j,m) = Parent(BBx(j, m), 3-m)
     enddo
   enddo
-  nBF = nFS(FSID(maxSibsize+1,B))
-  BBf = FSID(1:maxSibsize, FSID(maxSibsize+1,B))
 else if (B < 0) then
   nB = nS(-B, kB)
   BB(1:nB) = SibID(1:nB, -B, kB)
@@ -5846,17 +5856,16 @@ catG = 0
 catB = 0
 GGP = 0
 do i = 1, nA
-  if (Parent(AA(i),3-kA)==0) cycle
+  if (Parent(AA(i), 3-kA)==0) cycle
   if (hermaphrodites/=0 .and. PA<0) then
-    if (Parent(AA(i), 3-kA) == -DumClone(-PA,kA) .and. DumClone(-PA,kA)/=0) then
+    if (Parent(AA(i), 3-kA) == -DumClone(-PA,kA)) then
       catA(i) = 12
       cycle
     endif
   endif
-  if (kA/=kB .and. GG(3-kA)/=0 .and. &
-    Parent(AA(i), 3-kA) == GG(3-kA)) then  !incl. kB=3
+  if (kA/=kB .and. Parent(AA(i), 3-kA) == GG(3-kA)) then  !incl. kB=3
     catA(i) = 1  
-  else if (kA==kB .and. Parent(AA(i), 3-kA)==GA(3-kA) .and. GA(3-kA)/=0) then
+  else if (kA==kB .and. Parent(AA(i), 3-kA)==GA(3-kA)) then
     catA(i) = 2
     UseEE(i) = 0
   else 
@@ -5865,14 +5874,21 @@ do i = 1, nA
         catA(i) = 7  ! Ai inbred
       endif
     endif
-    do j=1, nB
-      if (AA(i) == BB(j) .or. kA/=kB) cycle
-      if (Parent(AA(i), 3-kA) == Parent(BB(j), 3-kA)) then
-        catA(i) = 3
-      else if (Parent(AA(i), 3-kA) == BB(j)) then
-        catA(i) = -j
-      endif
-    enddo
+    if (kA==kB) then
+      do j=1, MAX(nB, nBx(kB))
+        if (B>0) then
+          Bj = BBx(j,kB)
+        else
+          Bj = BB(j)
+        endif
+        if (AA(i) == Bj) cycle
+        if (Parent(AA(i), 3-kA) == Parent(Bj, 3-kA) .and. Parent(Bj, 3-kA) < 0) then
+          catA(i) = 3
+        else if (Parent(AA(i), 3-kA) == Bj) then
+          catA(i) = -j
+        endif
+      enddo
+    endif
   endif
   do g=1,2
     if (kB/=g .and. kB/=3) cycle
@@ -5900,38 +5916,45 @@ do i = 1, nA
   enddo
 enddo
 if (kB/=3) then   ! TODO: for kB==3
-  do j=1, nB
-    if (Parent(BB(j),3-kB)==0) cycle
+  do j=1, MAX(nB, nBx(1), nBx(2))
+    if (B>0) then
+      Bj = BBx(j,kB)
+    else
+      Bj = BB(j)
+    endif
+    if (Parent(Bj,3-kB)==0) cycle
     if (hermaphrodites/=0 .and. PB(kB) < 0) then
-      if (Parent(BB(j), 3-kB) == -DumClone(-PB(kB),kB) .and. DumClone(-PB(kB),kB)/=0) then
+      if (Parent(Bj, 3-kB) == -DumClone(-PB(kB),kB) .and. DumClone(-PB(kB),kB)/=0) then
         catB(j) = 12
         cycle
       endif
     endif
-    if (Parent(BB(j), 3-kB) == GA(3-kB) .and. GA(3-kB)/=0) then  
+    if (Parent(Bj, 3-kB) == GA(3-kB) .and. GA(3-kB)/=0) then  
       catB(j) = 2
-      UseEE(nA+j) = 0
-    else if (Parent(BB(j),3-kB)<0) then
-      if (GpID(kB, -Parent(BB(j),3-kB),3-kB) == GG(kB) .and. GG(kB)/=0) then
+      if (B<0) UseEE(nA+j) = 0
+      if (B>0) UseEE(nA+1) = 0
+    else if (B<0 .and. Parent(Bj,3-kB)<0) then
+      if (GpID(kB, -Parent(Bj,3-kB),3-kB) == GG(kB) .and. GG(kB)/=0) then
         catB(j) = 7
-      else if (GpID(kA, -Parent(BB(j),3-kB),3-kB) == PA .and. PA/=0) then
+      else if (GpID(kA, -Parent(Bj,3-kB),3-kB) == PA .and. PA/=0) then
         catB(j) = 8
       endif
     endif
     do g=1,2
       GGG = getPar(GG(g), g)
-      if (Parent(BB(j),3-kB) == GGG(3-kB)) then
+      if (Parent(Bj,3-kB) == GGG(3-kB)) then
         catB(j) = 5  
         if(catG(g)==0)  catG(g) = 3
         GGP = GGG(kB)
-        UseEE(nA+j) = 0  ! ??
+        if (B<0)  UseEE(nA+j) = 0  ! ??
+        if (B>0) UseEE(nA+1) = 0
       endif
     enddo
     if (ANY(catA == 8) .and. kB/=3 .and. catB(j)==0) then
       do i=1,nA
         if (PA<0 .and. NFS(AA(i))==0) cycle
         if (Parent(AA(i), 3-kA)>=0) cycle
-        if (GpID(3-kB,-Parent(AA(i), 3-kA),3-kA) == Parent(BB(j),3-kB)) then
+        if (GpID(3-kB,-Parent(AA(i), 3-kA),3-kA) == Parent(Bj,3-kB)) then
           catB(j) = -i
         endif
       enddo
@@ -5958,7 +5981,7 @@ if (B>0) then    ! TODO: B<0   superseded by UseEE -- TODO convert mateloop > Us
     if (kB/=3 .and. m/=kB)  cycle
     do j=1, nBx(m)
       Bj = BBx(j, m)
-      if (nFS(Bj)==0) cycle  !  .and. Bj/=B
+      if (nFS(Bj)==0) cycle    
       if (kB==3 .and. Parent(Bj,1)==GG(1) .and.  Parent(Bj,2)==GG(2))  cycle
       if (Parent(Bj,m)<0 .and. Parent(Bj,3-m)<0) then
         do g=1, nS(-Parent(Bj, 3-m),3-m)
@@ -5979,8 +6002,8 @@ PrL = 0D0
 PrLx = 0D0
 DoneB = 0
 SIMPL = ALL(catA==0) .and. ALL(catG==0) .and. ALL(catB==0) .and. .not. ANY(MateLoop) .and. &
-  (ALL(GG >=0) .or. A>0 .or. all(Parent(AA(1:nA),3-kA) >=0)) .and. .not. PAselfed .and. &
-  .not. (all(PB < 0) .and. kB==3)  
+  ALL(GG >=0) .and. all(Parent(AA(1:nA),3-kA) >=0) .and. .not. PAselfed .and. &
+  .not. (all(PB < 0) .and. kB==3)
 if (SIMPL .and. ANY(UseEE /= 0)) then
   if (ALL(PB >= 0)) then
     SIMPL = .TRUE.
@@ -6153,15 +6176,20 @@ do l=1,nSnp
             enddo
             PrE = PrE/SUM(PrE)
           else if (catA(r) < 0) then
-            if (kB<3) then
-              call ParProb(l, Parent(BB(-catA(r)),3-kB), 3-kB, BB(-catA(r)),0,PrH)
-            else
-              PrH = PrG(:,kA)
+            if (kB==3) then
+              PrH = PrG(:,kA)  
+            else 
+              if (B>0) then
+                Bj = BBx(-catA(r),kA)
+              else
+                Bj = BB(-catA(r))
+              endif
+              call ParProb(l, Parent(Bj,3-kB), 3-kB, Bj,0,PrH)
             endif
             do e=1,3
               PrE(e) = SUM(AKA2P(e,y,:) * PrH)
             enddo
-            PrE = PrE * OcA(Genos(l,BB(-catA(r))), :)
+            PrE = PrE * OcA(Genos(l,Bj), :)
             PrE = PrE/SUM(PrE)
           else if (catA(r)==0 .or. (catA(r)>2 .and. catA(r)<7)) then
             call ParProb(l,Parent(AA(r),3-kA),3-kA,-1,0,PrE)
@@ -6195,6 +6223,7 @@ do l=1,nSnp
                 if (catA(r)==5 .and. Parent(Ei,kA)==GGP .and. GGP/=0) then  ! FS of GG
                   do i=1, nFS(Ei)
                     if (any(GG == FSID(i, Ei))) cycle
+                    if (FSID(i, Ei)==A .or. FSID(i, Ei)==B) cycle 
                     PrH = PrH * OKA2P(Genos(l,FSID(i,Ei)),:,e)
                   enddo
                   if (catG(kA)==2 .and. kB==3) then 
@@ -6211,12 +6240,12 @@ do l=1,nSnp
                 endif
               enddo  ! g
             enddo  ! e
-            if (catA(r)==3 .and. B>0) then   ! TODO: nBx?
-              do j=1,nB
-                if (Parent(BB(j), 3-kA) /= Parent(AA(r), 3-kA)) cycle
-                do i=1, MAX(nFS(BB(j)),1)
-                  if (FSID(i,BB(j))==B) cycle   
-                  PrE = PrE * OKA2P(Genos(l,FSID(i,BB(j))), y, :)
+            if (catA(r)==3 .and. B>0) then  ! Parent(AA(r), 3-kA) == Parent(Bj, 3-kA)
+              do j=1,nBx(kA)
+                if (Parent(BBx(j,kA), 3-kA) /= Parent(AA(r), 3-kA)) cycle
+                do i=1, MAX(nFS(BBx(j,kA)),1)
+                  if (FSID(i,BBx(j,kA))==B) cycle   
+                  PrE = PrE * OKA2P(Genos(l,FSID(i,BBx(j,kA))), y, :)
                 enddo
               enddo
             endif   
@@ -6249,15 +6278,19 @@ do l=1,nSnp
             PrE = PrE * OKA2P(Genos(l,FSID(i,AA(r))), x, :)  ! <- A
           enddo
 
-          if (catA(r)==3 .or. (catA(r)==5 .and. ANY(catB==5)) .or. &
-            (catA(r)==2 .and. ANY(catB==2))) then 
-            do j=1,nB
-              if (Parent(BB(j),3-kA) /= Parent(AA(r),3-kA)) cycle
-              if (ANY(AA == BB(j)))  cycle
-              if (B>0 .and. BB(j)/=B) cycle
-                PrE = PrE * OKA2P(Genos(l,BB(j)), y, :)
+          if ((catA(r)==3 .or. (catA(r)==5 .and. ANY(catB==5)) .or. &
+           (catA(r)==2 .and. ANY(catB==2))) .and. kB<3) then 
+            do j=1, MAX(nB, nBx(kB))
+              if (B>0) then
+                Bj = BBx(j,kB)
+              else
+                Bj = BB(j)
+              endif
+              if (Parent(Bj,3-kA) /= Parent(AA(r),3-kA)) cycle
+              if (ANY(AA == Bj))  cycle
+              PrE = PrE * OKA2P(Genos(l,Bj), y, :)
               DoneB(j) = 1
-            enddo
+            enddo 
           endif
           
           if (catA(r)==1) then 
@@ -6378,14 +6411,14 @@ do l=1,nSnp
           do m=1,2
             if (kB/=3 .and. m/=kB)  cycle
             do j=1, nBx(m)
-              Bj = BBx(j, m)
-              if (nFS(Bj)==0 .and. Bj/=B) cycle 
+              Bj = BBx(j,m)
+              if (nFS(Bj)==0 .and. parent(Bj,m)<0) cycle   
               if (ANY(FSID(:,Bj)==B) .and. DoneB(1)==1)  cycle  
               if (kA/=kB .and. PA<0 .and. Parent(Bj, kA)==PA) cycle
               if (kB==3 .and. Parent(Bj, 3-m)==GG(3-m) .and. GG(3-m)/=0) then  ! FS of B
                 if (Parent(Bj,1)<0 .and. Parent(Bj,2)<0 .and. m==2) cycle
-!                DoneB(j) = 2  ! for output check only
-                do u=1, nFS(Bj)
+ !               DoneB(1) = 2  ! for output check only
+                do u=1, Max(nFS(Bj), 1)
                   if (FSID(u,Bj)==B) cycle  
                   if (ANY(AA(1:nA)==FSID(u,Bj))) cycle
                   if (ALL(UseEE==0)) then
@@ -6445,12 +6478,12 @@ do l=1,nSnp
                 else if (catB(j)==2 .or. catB(j)==12) then
                   PrE = 1D0                         
                 else if (catB(j)==7) then
-                  call ParProb(l, GpID(3-kB,-Parent(BB(j),3-kB),3-kB), 3-kB, 0,0,PrH)
+                  call ParProb(l, GpID(3-kB,-Parent(Bj,3-kB),3-kB), 3-kB, 0,0,PrH)
                   do e=1,3
                     PrE(e) = SUM(AKA2P(e,y,:) * PrH)
                   enddo              
                 else if (catB(j)==8) then
-                  call ParProb(l, GpID(3-kA,-Parent(BB(j),3-kB),3-kB), 3-kA, 0,0,PrH)
+                  call ParProb(l, GpID(3-kA,-Parent(Bj,3-kB),3-kB), 3-kA, 0,0,PrH)
                   do e=1,3
                     PrE(e) = SUM(AKA2P(e,x,:) * PrH)
                   enddo
@@ -6528,7 +6561,7 @@ do l=1,nSnp
                     else if (SUM(PrE)<3.0) then
                       PrAB(x,y,z,2) = PrAB(x,y,z,2) * SUM(PrE)
                     endif
-                    if (Bj==B)  PrEE(:,x,nA+1) = PrE
+                    if (any(FSID(1:nFS(Bj),Bj)==B))  PrEE(:,x,nA+1) = PrE
                   else if (catB(j)==2) then 
                     PrAB(:,y,z,2) = PrAB(:,y,z,2) * PrE(z)
                   else if (catB(j)==12) then 
@@ -7926,7 +7959,6 @@ if (sibfcl == 2) then
 else
   call AddSib(A, SB, k, LLg(3))
 endif
-!if (LLg(focal) - MaxLL(LLg(2:3)) < TF .and. any(LLg(2:3) < 0))  return 
 
 end subroutine GPfilter
 
@@ -8594,7 +8626,7 @@ endif
 if (((LL(focal)<0D0 .and. LL(focal)>=LL(7)) .or. focal==4 .or. LL(6)>0D0) .and. &
   (focal>0 .and. focal<8)) then
   call CalcAgeLR(-SB,k, A,Sex(A), 3,4, .TRUE., ALRz(1))
-  if (ALRz(1)/=impossible .and. ALRz(1)>3*TF) then
+  if (ALRz(1)/=impossible .and. ALRz(1)>5*TF) then
     call AddGGP(A, SB, k, LLz(1))
   endif      
   if (nS(SB,k)>0) then
@@ -8953,7 +8985,6 @@ if (focal/=7 .and. ns(SB,k)<=4 .and. Parent(A,k)==0 .and. &
   endif
 endif
 
-
 do x=1,4
   if (LL(x) > 0) then
     LLg(x) = LL(x)
@@ -9199,8 +9230,7 @@ endif
 
 call CalcAgeLR(-SA,kA, -SB,kB, 0,2, .TRUE., ALR(5))
 if (ALR(5) /= impossible) then 
-  if(complx>0)  call ParentHFS(0, SA, kA, SB, kB,3, LLg(5))  ! SB FA of A's 
-! TODO: PairUA for FS clusters
+  if(complx>0)  call ParentHFS(0, SA, kA, SB, kB,3, LLg(5))  ! SB & SA are FS
   LL(5) = addALR(LLg(5), ALR(5))
 else
   LL(5) = impossible
@@ -10441,10 +10471,9 @@ enddo
 do i = 1, nA
   do j = 1, nB
     if (kA == kB) then
-      if (Parent(AA(i), 3-kA) == Parent(BB(j), 3-kB) .and. &
-        Parent(BB(j), 3-kB)<0) then  
+      if (Parent(AA(i), 3-kA) == Parent(BB(j), 3-kB) .and. Parent(BB(j), 3-kB)<0) then  
         catA(i) = 7
-        catB(j) = 7
+        if (catB(j)==0)  catB(j) = 7
       endif
     endif
   enddo
@@ -10478,15 +10507,15 @@ if (cat==0 .and. ALL(catA==0) .and. ALL(CatB==0) .and. ALL(UseEE==0) .and. &
 endif
 !==================================
 
-DoRsibs = .TRUE. 
-if (.not. (ALL(catA==0) .and. ALL(catB==0) .and. Ai==0 .and. Bj==0 .and. ALL(UseEE==0))) then
-call ChkTooManySibs(AA, nA, kA, DoRsibs(:,1))
-  call ChkTooManySibs(BB, nB, kB, DoRsibs(:,2))
-endif
-
 SIMPL = ALL(catA==0) .and. ALL(catB==0) .and. Ai==0 .and. Bj==0 .and. &
     ALL(UseEE==0) .and. .not. AisBclone .and. .not. any(ParAisClone) .and. &
     .not. any(ParBisClone)
+
+DoRsibs = .TRUE. 
+if (.not. SIMPL) then
+  call ChkTooManySibs(AA, nA, kA, DoRsibs(:,1))
+  call ChkTooManySibs(BB, nB, kB, DoRsibs(:,2))
+endif
 
 PrL = 0D0
 do l=1, nSnp
@@ -10644,11 +10673,10 @@ do l=1, nSnp
         
         if (catB(j)==7 .and. Ai/=0) then 
           do i=1,nA
-            if (Parent(AA(i), kB) == B .or. nFS(AA(i)) == 0) cycle
-            do f=1, nFS(AA(i))
-              if (FSID(f, AA(i))==Ai) cycle
-              PrE = PrE * OKA2P(Genos(l,FSID(f,AA(i))), x, :)
-            enddo
+            if (Parent(AA(i), 3-kB) /= Parent(BB(j), 3-kB)) cycle
+            if (Parent(AA(i), kB) == B) cycle
+            if (AA(i)==Ai)  cycle
+            PrE = PrE * OKA2P(Genos(l,AA(i)), x, :)
           enddo
         endif
         
@@ -10678,12 +10706,10 @@ do l=1, nSnp
         if (catB(j)==7) then 
           do i=1,nA
             if (Parent(AA(i), 3-kB) /= Parent(BB(j), 3-kB)) cycle
-            if (Parent(AA(i), kB) == B .or. nFS(AA(i)) == 0) cycle
-            do f=1, nFS(AA(i))
-              if (Ai/=0 .and. FSID(f, AA(i))/=Ai) cycle
-              PrE = PrE * OKA2P(Genos(l,FSID(f,AA(i))), x, :)
-              DoneA(i) = 1
-            enddo
+            if (Parent(AA(i), kB) == B) cycle
+            if (Ai/=0 .and. AA(i)/=Ai)  cycle
+            PrE = PrE * OKA2P(Genos(l,AA(i)), x, :)
+            DoneA(i) = 1
           enddo
         endif
         
@@ -11307,7 +11333,7 @@ integer, intent(IN) :: SA, SB, k
 double precision, intent(OUT) :: LL
 integer :: l,x,y, r,v, Bj, Ai, i, G(2), m, Ei, e,f, j, catG, catB(ns(SB,k)), &
   catA(ns(SA,k)), nAB(2), AB(2,maxSibsize), catGG(2), z, GGP(2), ParPar(2)
-double precision :: PrL(nSnp, 2), PrG(3,2), PrXY(3,3,3,2), PrE(3), PrH(3)
+double precision :: PrL(nSnp, 2), PrG(3,2), PrXYZ(3,3,3,2), PrX(3,2), PrE(3), PrH(3)
 logical :: AncOK(2), ParIsClone(2,maxSibsize)
 
 LL = missing
@@ -11344,7 +11370,7 @@ catG = 0
 catGG = 0
 GGP = 0
 if (ANY(G/=0)) then
-  do j=2,1,-1
+  do j=1,2
     do i=1,nAB(j)
       if (nFS(AB(j,i))==0) cycle
       if (Parent(AB(j,i), 3-k)==0) cycle
@@ -11374,7 +11400,7 @@ do r = 1, nS(SB, k)
   do v=1,nS(SA,k)
     Ai = SibID(v, SA, k)   
     if (nFS(Ai)==0) cycle
-    if (Parent(Ai,3-k) == Parent(Bj,3-k)) then
+    if (Parent(Ai,3-k) == Parent(Bj,3-k) .and. (Parent(Bj,3-k) < 0 .or. catG==Ai)) then  
       catA(v) = r
       catB(r) = 1 
     endif
@@ -11417,14 +11443,16 @@ do l=1,nSnp
   do x=1,3
     do y=1,3
       do z=1,3
-        PrXY(x,y,z,:) = AKA2P(x, y, z) * PrG(y,3-k) * PrG(z,k)
+        PrXYZ(x,y,z,:) = AKA2P(x, y, z) * PrG(y,3-k) * PrG(z,k)
       enddo     
     enddo
+    PrX(x,1) = SUM(PrXYZ(x,:,:,1))
+    PrX(x,2) = PrX(x,1)
   enddo
   
-  do z=1,3  !  =y if catGG(3-k)/=0
-    do y=1,3
-      if ((y>1 .or. z>1) .and. ALL(catGG==0)) cycle
+  do z=1,3   ! GP k
+    do y=1,3  ! GP 3-k
+      if ((y>1 .or. z>1) .and. ALL(catGG==0) .and. catG==0) cycle
   do x=1,3
     do j=1,2
       do r=1, nAB(j)
@@ -11466,6 +11494,7 @@ do l=1,nSnp
 
         if (Parent(Ai,3-k) < 0) then 
           do e=1,3
+            if (catG==Ai .and. y/=e)  cycle                               
             do f=1, nS(-Parent(Ai,3-k), 3-k)
               Ei = SibID(f, -Parent(Ai,3-k), 3-k)
               if (nFS(Ei) == 0) cycle
@@ -11482,19 +11511,13 @@ do l=1,nSnp
 
         if (.not. ALL(PrE==1D0)) then
           if (catG==Ai) then
-            if (ANY(catGG/=0)) then
-              PrXY(x,y,z,1) = PrXY(x,y,z,1) * PrE(y)
-            else
-              do e=1,3
-                PrXY(x,e,:,1) = PrXY(x,e,:,1) * PrE(e)
-              enddo
-            endif
+            PrXYZ(x,y,z,1) = PrXYZ(x,y,z,1) * PrE(y)
+          else if (ANY(catGG/=0) .or. catG/=0) then
+            PrXYZ(x,y,z,1) = PrXYZ(x,y,z,1) * SUM(PrE)
           else if (ParIsClone(j,r)) then
-            PrXY(x,:,:,1) = PrXY(x,:,:,1) * PrE(x)
-          else if (ANY(catGG/=0)) then
-            PrXY(x,y,z,1) = PrXY(x,y,z,1) * SUM(PrE)
+            PrX(x,1) = PrX(x,1) * PrE(x)
           else 
-            PrXY(x,:,:,1) = PrXY(x,:,:,1) * SUM(PrE)
+            PrX(x,1) = PrX(x,1) * SUM(PrE)
           endif
         endif
         
@@ -11509,20 +11532,14 @@ do l=1,nSnp
 
         if (.not. ALL(PrE==1D0)) then
           if (catG==Ai) then
-            if (ANY(catGG/=0)) then
-              PrXY(x,y,z,2) = PrXY(x,y,z,2) * PrE(y)
-            else
-              do e=1,3
-                PrXY(x,e,:,2) = PrXY(x,e,:,2) * PrE(e)
-              enddo
-            endif
+            PrXYZ(x,y,z,2) = PrXYZ(x,y,z,2) * PrE(y)
+          else if (ANY(catGG/=0) .or. catG/=0) then
+            PrXYZ(x,y,z,2) = PrXYZ(x,y,z,2) * SUM(PrE)
           else if (ParIsClone(j,r)) then
-            PrXY(x,:,:,2) = PrXY(x,:,:,2) * PrE(x)
-          else if (ANY(catGG/=0)) then
-            PrXY(x,y,z,2) = PrXY(x,y,z,2) * SUM(PrE)
+            PrX(x,2) = PrX(x,2) * PrE(x)
           else 
-            PrXY(x,:,:,2) = PrXY(x,:,:,2) * SUM(PrE)
-          endif  
+            PrX(x,2) = PrX(x,2) * SUM(PrE)
+          endif 
         endif
       enddo  ! r
     enddo  ! j
@@ -11530,7 +11547,11 @@ do l=1,nSnp
   enddo  ! y (catGG>0 only)
   enddo  ! z (catGG>0 only)
   do m=1,2
-    PrL(l,m) = LOG10(SUM(PrXY(:,:,:,m)))! - LOG10(SUM(PrXY(:,:,:,1)))
+    if (ANY(catGG/=0) .or. CatG/=0) then
+      PrL(l,m) = LOG10(SUM(PrXYZ(:,:,:,m)))
+    else
+      PrL(l,m) = LOG10(SUM(PrX(:,m)))
+    endif
   enddo
 enddo
 LL = SUM(PrL(:,2)) - SUM(PrL(:,1))
@@ -11718,7 +11739,6 @@ do f=1, nS(SB,kB)
   if (GB(f,kB) == -SB)  Inbr(f) = 1 
   if (Par(f) == GpID(3-kB, SB, kB) .and. Par(f)/=0) then   ! DoQuick = -1
     Inbr(f) = 2
-!    if (InbrX == -3)  InbrX = 0
   endif
 enddo
 
@@ -12580,7 +12600,7 @@ implicit none
 integer, intent(IN) :: A, SA, kA, SB, kB, hf
 double precision, intent(OUT) :: LL
 integer :: m, G(2), l, x, y, u,v, AncA(2,mxA), AncB(2,mxA), i, j,z, r,&
- Ei, GA, GB,e, DoneA(MaxSibSize), Ai, Bj, nA, AA(maxSibSize),&
+ Ei, GA, GB,e, DoneA(MaxSibSize), Bj, nA, AA(maxSibSize),&
  catA(maxSibSize), catB(nS(SB,kB)+1), catG, GGP(2), PA, DoQuickA, DoQuickB
 double precision :: PrG(3,2), PrL(nSnp), PrXV(3,3,3,3,3,2), PrPA(3, 2),&
  LLm(2),PrGA(3), PrGB(3), PrE(3), PrH(3), PrGG(3), ALR
@@ -12716,7 +12736,7 @@ do i=1, nA
     if (Parent(AA(i), kB) == AncB(kB, 2) .and. AncB(kB, 2)<0) then
       catA(i) = 1
     endif
-  else if (kA == kB .and. Parent(AA(i), 3-kA)/=0) then  
+  else if (kA == kB .and. Parent(AA(i), 3-kA) < 0) then  
     do j=1, nS(SB, kB)
       if (Parent(AA(i), 3-kA) == Parent(SibID(j,SB,kB), 3-kB)) then
         catA(i) = 2
@@ -12914,15 +12934,11 @@ do l=1,nSnp
      
           PrE =  PrE * FSLik(y,:,l,Bj) 
 
-          if (any(catA == 2)) then  ! kA==kB, share parent 3-kB
+          if (any(catA == 2) .and. Parent(Bj,3-kB)/=0) then  ! kA==kB, share parent 3-kB
             do v = 1, nA
-              Ai = AA(v)
-              if (SA/=0 .and. nFS(Ai) == 0) cycle
-              if (Parent(Ai, 3-kA)/=Parent(Bj,3-kB)) cycle
-              do i=1, MAX(nFS(Ai), 1)  
-                if (A/=0 .and. FSID(i, Ai)/=A) cycle
-                PrE =  PrE * OKA2P(Genos(l,FSID(i,Ai)), x, :)
-              enddo
+              if (A/=0 .and. AA(v)/=A) cycle
+              if (Parent(AA(v), 3-kA)/=Parent(Bj,3-kB)) cycle
+              PrE =  PrE * OKA2P(Genos(l,AA(v)), x, :)
               doneA(v) = 1
             enddo
           endif
@@ -13917,6 +13933,10 @@ do y=1,n
   if (all(abs(Lind_IN - Lind) < 0.1))   exit
 enddo
 
+do i=1, nInd
+  call CalcFSLik(i)
+enddo
+
 do x=1, MAXVAL(nC)
   do k=1,2
     if (x > nC(k))  cycle
@@ -14023,7 +14043,6 @@ do l=1,nSnp
   LindX(:,l, i) = PrX
   LindG(:, l, i) = PrX / SUM(PrX)  ! used in parprob
 enddo
-
 Lind(i) = SUM(PrL)
 
 if (Lind(i)> 0D0 .or. Lind(i)/=Lind(i) .or. Lind(i) < -HUGE(1D0) .or. &  
@@ -14103,6 +14122,10 @@ AncR = 0
 ParIsClone = .FALSE.                    
 do r=1,nS(s,k)
   Ri = Sibs(r)  
+  if (nFS(Ri) > ns(s,k)) then
+    call Rprint("nFS > nS! ", (/k, s, SibID(1:5, s, k)/), (/0D0/), "INT")
+    call ErStop("something wrong with sibship cluster", .TRUE.)
+  endif
   if (Parent(Ri, 3-k)==0) cycle
   if (Parent(Ri, 3-k)==GpID(3-k,s,k) .and. nFS(Ri)/=0) then  
     cat = Ri
@@ -14419,9 +14442,9 @@ else if (i < 0) then  ! dummy parent
           PrP(:,j) = DumP(:,l, -Parent(AB(j),3-k), 3-k)
         endif
       enddo
-   
+      
+      AllIN = .FALSE.
       if (B==-1) then               
-        AllIN = .FALSE.
         parA = Parent(A, 3-k)
         if (ns(-i,k) <= 1) then
           AllIN = .TRUE.
@@ -15072,7 +15095,7 @@ do x=1,10
       if (ANY(Mates == GpID(3-k, -Mates(i),3-k)) .and. GpID(3-k, -Mates(i),3-k) < 0) then
         call CalcCLL(-GpID(3-k, -Mates(i),3-k), 3-k)   ! Used by UseEE
       endif
-!      if (ns(-Mates(i),3-k) <= 20 .or. nFS(SibID(i,-A,k)) >= ns(-Mates(i),3-k)/5) then
+!      if (ns(-Mates(i),3-k) <= 50 .or. nFS(SibID(i,-A,k)) >= ns(-Mates(i),3-k)/5) then
         XPR_x = XPr(3,:,:,-Mates(i), 3-k)
         call CalcCLL(-Mates(i), 3-k)
         if (any(abs(XPR_x - XPr(3,:,:,-Mates(i), 3-k)) > 0.01))  OK = .FALSE.
@@ -15089,7 +15112,7 @@ do i=1, nOff
   if (nOff==0)  exit                  
   if (Off(i) > 0) then
     if (nFS(Off(i)) > 0 .and. Mates(i) < 0) then
-!      if (ns(-Mates(i),3-k) <= 20 .or. nFS(Off(i)) >= ns(-Mates(i),3-k)/5) then
+!      if (ns(-Mates(i),3-k) <= 50 .or. nFS(Off(i)) >= ns(-Mates(i),3-k)/5) then
         if (ns(-Mates(i), 3-k) > 0) then
           do j=1, ns(-Mates(i), 3-k)
             call CalcLind(SibID(j, -Mates(i), 3-k))

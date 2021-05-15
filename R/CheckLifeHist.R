@@ -37,7 +37,8 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
     }
   }
   if (all(is.na(LifeHistData)))
-    stop("invalid value for LifeHistData, provide NULL or dataframe")
+    stop("invalid value for LifeHistData, provide NULL or dataframe",
+         call.=FALSE)
 
   # check if LH ID's match genotype data
   names(LifeHistData)[1:3] <- c("ID", "Sex", "BirthYear")
@@ -45,9 +46,10 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
   if (!all(is.na(gID))) {
     gID <- as.character(gID)
     if (length(intersect(LifeHistData$ID, gID))==0)
-      stop("None of the genotyped individuals included in lifehistory data")
+      stop("None of the genotyped individuals included in lifehistory data",
+           call.=FALSE)
   } else {
-    if (sorted)  stop("if sorted=TRUE, gID cannot be NA")
+    if (sorted)  stop("if sorted=TRUE, gID cannot be NA", call.=FALSE)
   }
 
 
@@ -77,22 +79,23 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
     LifeHistData <- LifeHistData[, 1:5]
     names(LifeHistData)[4:5] <- c("BY.min", "BY.max")
   } else {
-    stop("Confused by columns in LifeHistData")
+    stop("Confused by columns in LifeHistData", call.=FALSE)
   }
   if (any(LifeHistData$BY.max < LifeHistData$BY.min, na.rm=TRUE)) {
-    stop("'BY.max' must be greater than or equal to 'BY.min', or NA")
+    stop("'BY.max' must be greater than or equal to 'BY.min', or NA", call.=FALSE)
   }
 
 
   # check if column entries are valid ----
   if (any(grepl(" ", LifeHistData$ID))) {
-    stop("LifeHistData IDs must not include spaces")
+    stop("LifeHistData IDs must not include spaces", call.=FALSE)
   }
   for (x in c("Sex", "BirthYear", "BY.min", "BY.max")) {
     IsInt <- check.integer(LifeHistData[,x])
     if (any(!IsInt, na.rm=TRUE)) {
 #      if (sum(!IsInt, na.rm=TRUE) > sum(!is.na(LifeHistData[,x]))/2) {
-        stop("LifeHistData column ", x, " should be integers (whole numbers)")
+        stop("LifeHistData column ", x, " should be integers (whole numbers)",
+             call.=FALSE)
 #      } else {
 #        warning("Converting all values in LifeHistData column ", x, " to integers",
 #                immediate. = TRUE)
@@ -102,7 +105,8 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
     if (x=="Sex") {
       if ((sum(LifeHistData$Sex %in% c(1,2,4)) < nrow(LifeHistData)/10) &
           (sum(is.na(LifeHistData$Sex)) + sum(LifeHistData$Sex==3, na.rm=TRUE) < nrow(LifeHistData)/2)) {
-        stop("LifeHistData column 2 should contain Sex coded as 1=female, 2=male, 3/NA=unknown, 4=hermaphrodite")
+        stop("LifeHistData column 2 should contain Sex coded as 1=female, 2=male, 3/NA=unknown, 4=hermaphrodite",
+             call.=FALSE)
       }
       LifeHistData$Sex[is.na(LifeHistData$Sex)] <- 3
       LifeHistData$Sex[!LifeHistData$Sex %in% 1:4] <- 3
@@ -142,7 +146,7 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
   # (could be adjusted)
   MaxAgeDif <- with(LifeHistData, suppressWarnings(
     diff(range(BirthYear[BirthYear >= 0 & (ID %in% gID | is.na(gID))], na.rm = TRUE))))
-  if (MaxAgeDif > 100) stop("Cannot handle >100 cohorts!")
+  if (MaxAgeDif > 100) stop("Cannot handle >100 cohorts!", call.=FALSE)
 
 
   # return results ----

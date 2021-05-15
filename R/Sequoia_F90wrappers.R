@@ -201,14 +201,14 @@ SeqParSib <- function(ParSib,
 
   if (grepl("par", ParSib)) {
     OUT <- list(PedigreePar = Pedigree,
-                TotLikPar = TMP$totll[s(sum(TMP$totll!=0))],
+                TotLikPar = TMP$totll[seq_len(sum(TMP$totll!=0))],
                 AgePriorExtra = APM,
                 LifeHistPar = LhOUT)
 
   } else if (grepl("sib", ParSib)) {
     OUT <- list(Pedigree = Pedigree,
                 DummyIDs = DummyIDs,
-                TotLikSib = TMP$totll[s(sum(TMP$totll!=0))],
+                TotLikSib = TMP$totll[seq_len(sum(TMP$totll!=0))],
                 AgePriorExtra = APM,
                 LifeHistSib = LhOUT)
   }

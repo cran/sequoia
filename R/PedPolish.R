@@ -63,13 +63,16 @@ PedPolish <- function(Pedigree,
     if (NullOK) {
       return()
     } else {
-      stop("Must provide ", PedName)
+      stop("Must provide ", PedName, call. = FALSE)
     }
   }
   if (NAToZero)  ZeroToNA <- FALSE
   #   if (ZeroToNA & NAToZero)  stop("ZeroToNA and NAToZero can't both be TRUE")
-  if (!class(Pedigree) %in% c("data.frame", "matrix"))  stop(PedName, " should be a dataframe or matrix")
-  if (ncol(Pedigree) < 3)  stop(PedName, " should be a dataframe with at least 3 columns (id - dam - sire)")
+  if (!class(Pedigree) %in% c("data.frame", "matrix"))
+    stop(PedName, " should be a dataframe or matrix", call. = FALSE)
+  if (ncol(Pedigree) < 3)
+    stop(PedName, " should be a dataframe with at least 3 columns (id - dam - sire)",
+         call. = FALSE)
   Ped <- as.data.frame(unique(Pedigree))
 
   DamNames <- c("dam", "mother", "mot", "mom", "mum", "mat")
@@ -78,9 +81,10 @@ PedPolish <- function(Pedigree,
   IdCol <- unlist(sapply(IdNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
   DamCol <- unlist(sapply(DamNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
   SireCol <- unlist(sapply(SireNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
-  if (length(DamCol)==0 | length(SireCol)==0 |
+  if ((length(DamCol)==0 | length(SireCol)==0) ||
       (length(IdCol)==0 & (DamCol[[1]]==1 | SireCol[[1]]==1))) {
-    stop("Pedigree column names not recognized. Must be id - dam - sire")
+    stop("Pedigree column names not recognized. Must be id - dam - sire",
+         call. = FALSE)
   } else {
     Ped <- Ped[, c(IdCol[[1]], DamCol[[1]], SireCol[[1]],
                    setdiff(seq_len(ncol(Ped)), c(IdCol, DamCol, SireCol)))]
@@ -89,9 +93,9 @@ PedPolish <- function(Pedigree,
   if (!is.null(gID)) {
     n.shared.ids <- length(intersect(Ped[,1], as.character(gID)))
     if (n.shared.ids==0) {
-      stop("GenoM and ", PedName, " do not share any common individuals")
+      stop("GenoM and ", PedName, " do not share any common individuals", call. = FALSE)
     } else if (n.shared.ids < length(gID)/10 && n.shared.ids < nrow(Ped)) {
-      warning("GenoM and ", PedName, " share few common individuals")
+      warning("GenoM and ", PedName, " share few common individuals", call. = FALSE)
     }
   }
 

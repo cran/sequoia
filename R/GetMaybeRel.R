@@ -260,7 +260,7 @@ GetMaybeRel <- function(GenoM = NULL,
                            stringsAsFactors=FALSE)
     names(MaybeRel) <- c("ID1", "ID2", "Relx", "TopRel", "LLR_Rx_U", "LLR")
     MaybeRel <- MaybeRel[,-which(names(MaybeRel) %in% c("Relx", "LLR_Rx_U"))]  # drop; confusing.
-    MaybeRel$OH <-  TMP$ambigoh[s(Na)]
+    MaybeRel$OH <-  TMP$ambigoh[seq_len(Na)]
 
     if (nrow(MaybeRel)>0) {
       LH$BirthYear[LH$BirthYear<0] <- NA

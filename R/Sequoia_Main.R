@@ -462,6 +462,7 @@ sequoia <- function(GenoM = NULL,
 
   # @@ 2 @@ Duplicate check ----
   if (Module != "pre") {
+    if(!quietR)  message("\n~~~ Duplicate check ~~~")
     DupList <- c(DuplicateCheck(GenoM, FortPARAM, quiet=quietR),
                  DupList)  # from CheckLH()
     utils::flush.console()

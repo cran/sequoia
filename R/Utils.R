@@ -147,11 +147,6 @@ namedlist <- function(...) {
 }
 
 
-#=====================================================================
-# for subsetting vector V[1:n] : unexpected behaviour when n=0 ----
-s <- function(n)  if(n>0) 1:n else 0
-
-
 #======================================================================
 # simpleCap ----
 .simpleCap <- function(x) {
@@ -187,7 +182,7 @@ tryPlot <- function(FUN, ...,
 # transform vector to matrix ----
 VtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
   if(Ng_odd) {
-    V <- V[1:((length(V)/nc-1)*nc)] 
+    V <- V[1:((length(V)/nc-1)*nc)]
   }
   M <- matrix(V, length(V)/nc, nc)
   if(!is.null(nr)) M <- M[1:nr, , drop=FALSE]
@@ -214,6 +209,9 @@ XtoM <- function(V, nr=NULL, nc=2, Ng_odd=FALSE) {
 ##'   'value' may be an error caught.
 ##' @author Martin Maechler;
 ##' Copyright (C) 2010-2012  The R Core Team
+##'
+#' @keywords internal
+
 tryCatch.W.E <- function(expr)
 {
   W <- NULL
