@@ -1,3 +1,6 @@
+# sequoia 2.3.5
+- fixes bug: OH count always zero when there is no co-parent
+
 # sequoia 2.3.4
 - fixes bug in `CalcPairLL()` HS likelihood when conditioning on pedigree was incorrect. No/minimal effect on pedigree reconstruction.
 - fixes bug in `DuplicateCheck()` (always automatically called by `sequoia()`) that on very rare occasions caused R to crash

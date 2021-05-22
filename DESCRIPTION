@@ -1,8 +1,8 @@
 Package: sequoia
 Type: Package
 Title: Pedigree Inference from SNPs
-Version: 2.3.4
-Date: 2021-05-15
+Version: 2.3.5
+Date: 2021-05-22
 Authors@R: person("Jisca", "Huisman", email = "jisca.huisman@gmail.com",
     role = c("aut", "cre"))
 Author: Jisca Huisman [aut, cre]
@@ -18,6 +18,6 @@ RoxygenNote: 7.1.1
 Suggests: xlsx, knitr, rmarkdown, bookdown, kinship2, lattice, R.rsp
 VignetteBuilder: knitr, R.rsp
 NeedsCompilation: yes
-Packaged: 2021-05-15 06:24:42 UTC; jisca
+Packaged: 2021-05-22 14:48:55 UTC; jisca
 Repository: CRAN
-Date/Publication: 2021-05-15 07:10:02 UTC
+Date/Publication: 2021-05-22 15:10:02 UTC

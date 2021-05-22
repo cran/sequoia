@@ -1660,11 +1660,8 @@ integer :: l
 
 OH = 0
 do l=1,nSnp
-  if ((Genos(l,A)==1).and.(Genos(l,B)==3)) then
-    OH = OH+1
-    if (OH > maxOppHom) exit
-  endif                       
-  if ((Genos(l,A)==3).and.(Genos(l,B)==1)) then
+  if ((Genos(l,A)==0 .and.Genos(l,B)==2) .or. &
+   (Genos(l,A)==2 .and. Genos(l,B)==0)) then
     OH = OH+1
     if (OH > maxOppHom) exit
   endif                       
