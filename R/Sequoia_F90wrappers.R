@@ -198,17 +198,20 @@ SeqParSib <- function(ParSib,
   }
 
   rownames(Pedigree) <- 1:nrow(Pedigree)
+  
+  TotLik <- TMP$totll[seq_len(sum(TMP$totll!=0))]
+  names(TotLik) <- seq_along(TotLik) -1
 
   if (grepl("par", ParSib)) {
     OUT <- list(PedigreePar = Pedigree,
-                TotLikPar = TMP$totll[seq_len(sum(TMP$totll!=0))],
+                TotLikPar = TotLik,
                 AgePriorExtra = APM,
                 LifeHistPar = LhOUT)
 
   } else if (grepl("sib", ParSib)) {
     OUT <- list(Pedigree = Pedigree,
                 DummyIDs = DummyIDs,
-                TotLikSib = TMP$totll[seq_len(sum(TMP$totll!=0))],
+                TotLikSib = TotLik,
                 AgePriorExtra = APM,
                 LifeHistSib = LhOUT)
   }

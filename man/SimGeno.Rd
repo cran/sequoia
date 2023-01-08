@@ -63,7 +63,8 @@ currently supported by the pedigree reconstruction with
 \code{\link{sequoia}} !}
 
 \item{InheritFile}{file name of file with inheritance patterns, with
-extension csv, txt, xls or xlsx (the latter two require library xlsx).}
+extension csv, txt, xls or xlsx (the latter two require library
+\pkg{openxlsx}).}
 
 \item{quiet}{suppress messages.}
 }
@@ -144,7 +145,6 @@ Please ensure the pedigree is a valid pedigree, for example by first
 }
 
 \examples{
-data(Ped_HSg5)
 GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = c(0.2, 0.7))
 
 \dontrun{

@@ -121,39 +121,44 @@
 #'   likely relative pairs not in the pedigree.
 #'
 #' @examples
-#' # likelihoods underlying parent LLR in pedigree:
-#' data(LH_HSg5, SimGeno_example)
-#' Seq.HSg5 <- sequoia(SimGeno_example, LH_HSg5, Module="par")
-#' tail(Seq.HSg5$PedigreePar)
-#' # take bottom 3 individuals:
-#' Pairs <- data.frame(ID1 = c("a01190", "b01191", "a01192"),
-#'                     ID2 = rep(c("a00012", "b00007"), each=3),
-#'                     AgeDif = 1, focal = "PO")
-#' # LLRdam & LLRsire:
-#' CalcPairLL(Pairs, SimGeno_example)
-#' # LLRpair is min. of dam & sire LLR, conditional on co-parent:
-#' CalcPairLL(cbind(Pairs, dropPar1=rep(c("dam", "sire"), each=3)),
-#'            SimGeno_example, SeqList = Seq.HSg5)
+#' ## likelihoods underlying parent LLR in pedigree:
+#' # Example: dams for bottom 3 individuals
+#' tail(SeqOUT_griffin$PedigreePar, n=3)
+#' # set up dataframe with these pairs. LLRdam & LLRsire ignore any co-parent
+#' Pairs_d <- data.frame(ID1 = SeqOUT_griffin$PedigreePar$id[140:142],
+#'                       ID2 = SeqOUT_griffin$PedigreePar$dam[140:142],
+#'                       focal = "PO",
+#'                       dropPar1 = 'both')
 #'
-#' \donttest{
-#' # likelihoods underlying LLR in getMaybeRel output:
-#' data(Ped_griffin, SeqOUT_griffin, package="sequoia")
-#' Geno.griffin <- SimGeno(Ped_griffin, nSnp=200, SnpError = 0.01, ParMis=0.4)
-#' MR <- GetMaybeRel(GenoM = Geno.griffin,
-#'                   LifeHistData = SeqOUT_griffin$LifeHist,
-#'                   Module = "par", Err = 0.001)
-#' FivePairs <- MR$MaybePar[1:5, c("ID1", "ID2", "Sex1", "Sex2")]
-#' FivePairs$AgeDif <- NA   # pretend unknown age differences
+#' # Calculate LL's, conditional on the rest of the pedigree + age differences
+#' CalcPairLL(Pairs_d, GenoM = Geno_griffin, Err = 1e-04,
+#'            LifeHistData = LH_griffin, Pedigree = SeqOUT_griffin$PedigreePar)
+#'
+#' # LLR changes when ignoring age and/or pedigree, as different relationships
+#' # become (im)possible
+#' CalcPairLL(Pairs_d, GenoM = Geno_griffin, Err = 1e-04)
+#'
+#' # LLRpair is calculated conditional on co-parent, and min. of dam & sire LLR
+#' Pairs_d$dropPar1 <- 'dam'
+#' Pairs_s <- data.frame(ID1 = SeqOUT_griffin$PedigreePar$id[141:142],
+#'                       ID2 = SeqOUT_griffin$PedigreePar$sire[141:142],
+#'                       focal = "PO",
+#'                       dropPar1 = 'sire')
+#' CalcPairLL(rbind(Pairs_d, Pairs_s), GenoM = Geno_griffin, Err = 1e-04,
+#'            LifeHistData = LH_griffin, Pedigree = SeqOUT_griffin$PedigreePar)
+#'
+#'
+#' ## likelihoods underlying LLR in getMaybeRel output:
+#' MaybeRel_griffin$MaybePar[1:5, ]
+#' FivePairs <- MaybeRel_griffin$MaybePar[1:5, c("ID1", "ID2", "Sex1", "Sex2")]
 #' PairLL <- CalcPairLL(Pairs = rbind( cbind(FivePairs, focal = "PO"),
 #'                                     cbind(FivePairs, focal = "HS"),
 #'                                     cbind(FivePairs, focal = "GP")),
-#'                      GenoM = Geno.griffin,
-#'                      Err = 0.005, Plot=FALSE)
-#' PairLL[c(1, 6, 11), ]
+#'                      GenoM = Geno_griffin, Plot=FALSE)
+#' PairLL[PairLL$ID1=="i121_2007_M", ]
 #' # LL(FS)==222 : HSHA, HSGP, FAHA more likely than FS
 #' # LL(GP) higher when focal=HS: GP via 'other' parent also considered
 #' # LL(FA) higher when focal=PO: FAHA, or FS of 'other' parent
-#' }
 #'
 #' @useDynLib sequoia, .registration = TRUE
 #
@@ -241,7 +246,8 @@ CalcPairLL <- function(Pairs = NULL,
   # Specs / param ----
   if ("Specs" %in% names(SeqList)) {
     if(!quiet)  message("settings in SeqList$Specs will overrule input parameters")
-    PARAM <- SpecsToParam(SeqList$Specs, SeqList$ErrM, ErrFlavour,
+    PARAM <- SpecsToParam(SeqList$Specs,
+                          ErrM=SeqList$ErrM, ErrFlavour=ErrFlavour,
                           dimGeno = dim(GenoM), quiet, Plot)  # overrule values in SeqList
     PARAM$nAgeClasses <- nrow(AP)
   } else {
@@ -261,10 +267,10 @@ CalcPairLL <- function(Pairs = NULL,
     PARAM$ErrM <- ErrToM(Err, flavour = ErrFlavour, Return = "matrix")
   }
 
-
   # MaxMismatch ----
   # vector with max. mismatches for duplicates, PO pairs, PPO trios
-  if (!"MaxMismatchV" %in% names(PARAM)) {  # DUP/OH/ME from version 2.0 onwards
+  if (!"MaxMismatchV" %in% names(PARAM) |   # DUP/OH/ME from version 2.0 onwards
+      !"Specs" %in% names(SeqList)) {
     sts <- SnpStats(GenoM, Plot=FALSE)
     PARAM$MaxMismatchV <- setNames(CalcMaxMismatch(Err=PARAM$ErrM,
                                                    MAF=sts[,"AF"],

@@ -1,5 +1,37 @@
+
+# sequoia 2.4
+
+### New features & major changes
+- R markdown file to create (or serve as a first draft of) a summary report of input and output, called via `sequoia_report()`
+- `PedCompare()` parameter `minSibSize` (minimum sibship size for which the non-genotyped parent is considered 'dummyfiable') changed default value from `2sib` (2 genotyped siblings) to `1sib1GP`. This reflects the increased success of reconstructing grandoffspring-grandparent pairs in newest version, which make the output of `PedCompare(,minSibSize='2sib')` confusing. This also affects `EstConf()`. 
+- `GetRelM()` now allows input of Pedigree AND Pairs. This a.o. allows `PlotRelPairs()` with both inferred pedigree plus `GetMaybeRel()` output.  
+
+
+
+### Minor changes
+- switch from library xlsx to openxlsx in `writeSeq()` (easier to install)
+- adds purl=FALSE to vignette chunks & include `SeqOUT_HSg5` for quicker vignette compilation
+- include additional griffin example data: `Geno_griffin`, `Conf_griffin` (output from `EstConf()`) and `MaybeRel_griffin` (output from `GetMaybeRel()`), as well as the script used to create these (`mk_griffin_data.R`)
+- many examples are rewritten, for clarification & to speed up package check
+- the plotting function of `SummarySeq()` was internal and is now exported (`PlotSeqSum()`)
+- output from `sequoia()` now includes `args.AP`. 
+- in `SummarySeq()`, if `Pedigree` is provided rather than `SeqList` and `SNPd=NULL`, all individuals are categorised as `Observed` (was: `Genotyped`).
+- `PedPolish()` now has arguments to specify whether to drop extra columns (besides id-dam-sire) and whether to keep rows with non-unique or NA ids. 
+- `SnpStats()` now includes HWE tests
+
+
+### Bug fixes
+- fixes several memory issues identified by CRAN
+- fixes various bugs in `SimGeno()` for non-autosomal inheritance; this option is still experimental and non-autosomal SNPs are not supported by the pedigree reconstruction.
+- fixes `cannot allocate vector of size ...` issue in `GetRelM()` with very large pedigrees, which affected `MakeAgePrior()` and thereby `sequoia()`. 
+- `EstConf()` `$ConfProb` used the wrong denominator, namely the number of parents in the reference pedigree rather than in the inferred pedigree. 
+- fixes bug resulting in LL(FA)=777 ('impossible') for pairs with all 4 parents unknown. Likely only affected `CalcPairLL()`, as LL(HS)=LL(GP)=LL(FA) for these pairs. Origin time unknown. 
+- fixes bug in `GenoConvert()` when `Informat='single'`. 
+
+
 # sequoia 2.3.5
-- fixes bug: OH count always zero when there is no co-parent
+- fixes bug: OH count was always zero when there was no co-parent
+
 
 # sequoia 2.3.4
 - fixes bug in `CalcPairLL()` HS likelihood when conditioning on pedigree was incorrect. No/minimal effect on pedigree reconstruction.
@@ -9,8 +41,10 @@
 # sequoia 2.3.3
 fixes minor bugs identified by CRAN valgrind and gcc-ASAN
 
+
 # sequoia 2.3.2
 minor edits to vignette to comply with CRAN precheck
+
 
 # sequoia 2.3.1
 
@@ -20,11 +54,8 @@ have prefix 'H'; closer links between the two 'clonal' sibship parts during pedi
 - Assignment of sibship grandparents moved to before check & assignment of additional parents; this proved to increase correct assignments without increasing incorrect assignments. 
 - new function `CalcBYprobs()` to estimate the probability that individual i is born in year y. 
 
-
-
 ### Minor changes
 - various edits to Fortran code improving general performance. 
-
 
 ### Bug fixes
 - fixed inconsistent rounding in `EstConf()` output
@@ -50,7 +81,6 @@ have prefix 'H'; closer links between the two 'clonal' sibship parts during pedi
 - improved performance when a large proportion of birth years are missing
 - new function `CalcRped()` to calculate pedigree relatedness. Uses package `kinship2`. 
 
-
 ### Bug fixes
 Various smaller bugs have been fixed, some affecting assignment rate
 
@@ -59,8 +89,9 @@ Various smaller bugs have been fixed, some affecting assignment rate
 # sequoia 2.1.0 
 
 ### New features & major changes
-- new function `CalcPairLL()`, returns likelihoods for each of the 7 considered relationships (PO, FS, HS, GP, FA, HA, U) for each specified pair of individuals
+- parameter 'maxSibIter' (-9/-1/0/>0) deprecated and replaced by 'Module' (pre/dup/par/ped). 
 - `sequoia()`: Option `FindMaybeRel` has been deprecated; call `GetMaybeRel()` directly instead.
+- new function `CalcPairLL()`, returns likelihoods for each of the 7 considered relationships (PO, FS, HS, GP, FA, HA, U) for each specified pair of individuals
 - new function `RelPlot()` for Colony-like visualisation of pairwise relationships (automatically called by `ComparePairs()`) 
 
 

@@ -76,11 +76,10 @@ Parents are shown above the diagonal (y-axis is parent of x-axis),
   Note that half-avuncular and (double) full cousin pairs are ignored.
 }
 \examples{
-data(Ped_griffin, package="sequoia")
 Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
 PlotRelPairs(Rel.griffin)
 
-\donttest{
+\dontrun{
 PlotRelPairs(Rel.griffin, pch.symbols = TRUE)
 # plot with unicode symbols not supported on all platforms
 }

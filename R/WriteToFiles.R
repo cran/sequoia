@@ -2,7 +2,7 @@
 #'
 #' @description The various list elements returned by \code{sequoia} are each
 #'   written to text files in the specified folder, or to separate sheets in a
-#'   single excel file (requires library \pkg{xlsx}).
+#'   single excel file (requires library \pkg{openxlsx}).
 #'
 #' @details The text files can be used as input for the stand-alone Fortran
 #'   version of sequoia, e.g. when the genotype data is too large for R. See
@@ -33,9 +33,15 @@
 #' \dontrun{
 #' writeSeq(SeqList, OutFormat="xls", file="MyFile.xlsx")
 #'
-#' # add additional sheets to the excel file:
-#' library(xlsx)
-#' write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
+#' # add additional sheet to the excel file:
+#' library(openxlsx)
+#' wb <- loadWorkbook("MyFile.xlsx")
+#' addWorksheet(wb, sheetName = "ExtraData")
+#' writeData(wb, sheet = "ExtraData", MyData, rowNames=FALSE)
+#' saveWorkbook(wb, "MyFile.xlsx", overwrite=TRUE, returnValue=TRUE)
+#'
+#' # or: (package requires java & is trickier to install)
+#' xlsx::write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
 #'       col.names=TRUE, row.names=FALSE, append=TRUE, showNA=FALSE)
 #' }
 #'
@@ -50,8 +56,10 @@ writeSeq <- function(SeqList,
                      file = "Sequoia-OUT.xlsx",
                      ForVersion = 2,
                      quiet = FALSE) {
+
   if (!OutFormat %in% c("xls", "xlsx", "txt"))  stop("Invalid OutFormat")
   if (!is.list(SeqList))  stop("SeqList should be a list")
+
 
   if (!is.null(MaybeRel)) {
     for (maybe in c("MaybeRel", "MaybeParent", "MaybeTrio")) {
@@ -80,7 +88,7 @@ writeSeq <- function(SeqList,
       " from number of rows in GenoM (", SeqList$Specs$NumberIndivGenotyped, "/", nrow(GenoM),
       ").\n Press Y to continue and fix manually in `SequoiaSpecs.txt' "))
       if (!substr(ANS, 1, 1) %in% c("Y", "y")) {
-        stop()
+        stop(call.=FALSE)
       }
     }
     if(ncol(GenoM)!= SeqList$Specs$NumberSnps) {
@@ -91,13 +99,14 @@ writeSeq <- function(SeqList,
 
   # write excel file ----
   if (OutFormat == "xlsx") OutFormat <- "xls"
+  if (grepl('xls', file) & !grepl('Sequoia-OUT', file))  OutFormat <- "xls"
   if (OutFormat == "xls") {
-    if (!requireNamespace("xlsx", quietly = TRUE)) {
+    if (!requireNamespace("openxlsx", quietly = TRUE)) {
       if (interactive() & !quiet) {
-        ANS <- readline(prompt = paste("library 'xlsx' not found. Install Y/N? "))
-        if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
+        ANS <- readline(prompt = paste("library 'openxlsx' not found. Install Y/N? "))
+        if (!substr(ANS, 1, 1) %in% c("Y", "y")) stop(call.=FALSE)
       }
-      utils::install.packages("xlsx")
+      utils::install.packages("openxlsx")
     }
     write.seq.xls(SeqList, file=file, PedComp=PedComp, quiet=quiet)
 
@@ -115,7 +124,7 @@ writeSeq <- function(SeqList,
                                    "' will overwrite existing file(s). Continue Y/N? "))
     if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) {
       setwd(curdir)
-      stop()
+      stop(call.=FALSE)
     }
   }
 
@@ -125,9 +134,11 @@ writeSeq <- function(SeqList,
                     "nIndLH" = nrow(SeqList[["LifeHist"]]),
                     SeqList$Specs)
   SpecsOUT$Complexity <- c("mono"=0, "simp"=1, "full"=2)[SpecsOUT$Complexity]
-  SpecsOUT$Herm <- c("no"=0, "A"=1, "B"=2)[SpecsOUT$Herm]                           
+  SpecsOUT$Herm <- c("no"=0, "A"=1, "B"=2)[SpecsOUT$Herm]
   SpecsOUT$UseAge <- c("extra"=2, "yes"=1, "no"=0)[SpecsOUT$UseAge]
-  SpecsOUT$FindMaybeRel <- as.numeric(SpecsOUT$FindMaybeRel)
+  if ('FindMaybeRel' %in% names(SpecsOUT)) {   # dropped from version 2.4
+    SpecsOUT$FindMaybeRel <- as.numeric(SpecsOUT$FindMaybeRel)
+  }
   SpecsOUT$CalcLLR <- as.numeric(SpecsOUT$CalcLLR)
   for (x in c("SequoiaVersion", "TimeStart", "TimeEnd")) {
     if (!x %in% names(SpecsOUT))  next   # if SeqList from version 1.x
@@ -247,33 +258,32 @@ write.parents <- function(ParentDF, LifeHistData, GenoM, file="Parents.txt") {
 
 write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
 
-  if (!requireNamespace("xlsx", quietly = TRUE)) {
-      stop("library 'xlsx' not found")
-   }
+  if (!requireNamespace("openxlsx", quietly = TRUE)) {
+    stop("library 'openxlsx' not found")
+  }
 
   # check if file exists
   if (file.exists(file) & interactive() & !quiet) {
     ANS <- readline(prompt = paste("Writing data to '", file,
                                    "' will overwrite existing file. Continue Y/N? "))
-    if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
+    if (!substr(ANS, 1, 1) %in% c("Y", "y")) stop(call.=FALSE)
   }
 
-  if ("Pedigree" %in% names(SeqList))
-    xlsx::write.xlsx(SeqList[["Pedigree"]], file = file, sheetName="Pedigree",
-             col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
-  if ("PedigreePar" %in% names(SeqList))
-    xlsx::write.xlsx(SeqList$PedigreePar, file = file, sheetName="Parents",
-             col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
-  if (!any(c("Pedigree", "PedigreePar") %in% names(SeqList)))
-    xlsx::write.xlsx("None", file = file, sheetName="Parents",
-             col.names=TRUE, row.names=FALSE, append=FALSE, showNA=FALSE)
+  out_list <- list()   # do in wb straight away (?)
+  if ("Pedigree" %in% names(SeqList)) {
+    out_list[['Pedigree']] <- SeqList[["Pedigree"]]
+  }
+  if ('PedigreePar' %in% names(SeqList)) {
+    out_list[['Parents']] <- SeqList[['PedigreePar']]
+  }
+  if (!any(c("Pedigree", "PedigreePar") %in% names(SeqList))) {
+    out_list[['Parents']] <- 'None'
+  }
+  out_list[['Run parameters']] <- t(SeqList$Specs)
 
-  xlsx::write.xlsx(t(SeqList$Specs), file = file, sheetName="Run parameters",
-             col.names=FALSE, row.names=TRUE, append=TRUE, showNA=FALSE)
-
-  Names <- c("AgePriors", "LifeHist", "DupGenotype", "DupLifeHistID",
-             "DummyIDs", "MaybeParent", "MaybeRel", "MaybeTrio",
-             "TotLikParents", "TotLikSib")
+  Names <- c("LifeHist", "DupGenotype", "DupLifeHistID",
+             "AgePriors", "DummyIDs", "TotLikPar", "TotLikSib",
+             "MaybeRel", "MaybeParent", "MaybeTrio")
   for (x in Names) {
     if (!x %in% names(SeqList))  next
     if (is.null(dim(SeqList[[x]])))  next
@@ -283,24 +293,40 @@ write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
         SeqList$DummyIDs <- merge(PedComp$DummyMatch, SeqList$DummyIDs)
       }
     }
-    xlsx::write.xlsx(SeqList[[x]], file = file, sheetName = x,
-                     col.names=TRUE, row.names=ifelse(x=="AgePriors", TRUE, FALSE),
-                     append=TRUE, showNA=FALSE)
+    out_list[[x]] <- SeqList[[x]]
+
   }
 
   if (!is.null(PedComp)) {  # pedcompare output
     Counts.out <- cbind(Parent = rep(c("dam", "sire"), each=7),
                         Cat = rep(dimnames(PedComp$Counts)[[1]], 2))
     Counts.out <- cbind(Counts.out, rbind(PedComp$Counts[,,"dam"],
-                                      PedComp$Counts[,,"sire"]))
+                                          PedComp$Counts[,,"sire"]))
     rownames(Counts.out) <- 1:nrow(Counts.out)  # not used, but otherwise warning
 
-    xlsx::write.xlsx(Counts.out, file = file, sheetName = "PedCompare-Counts",
-                     col.names=TRUE, row.names=FALSE, append=TRUE, showNA=FALSE)
-    xlsx::write.xlsx(PedComp$MergedPed, file=file, sheetName="PedCompare-MergedPed",
-                     col.names=FALSE, row.names=FALSE, append=TRUE, showNA=FALSE)
+    out_list[['PedCompare-Counts']] <- Counts.out
+    out_list[['PedCompare-MergedPed']] <- PedComp$MergedPed
   }
-  if(!quiet) message(paste("Output written to", file))
+
+  ShowRowName <- rep(FALSE, length(out_list))
+  names(ShowRowName) <- names(out_list)
+  ShowRowName[c('Run parameters', 'AgePriors')] <- TRUE
+
+  # openxlsx::write.xlsx does not give error if xlsx exists & is open
+  # --> turn into workbook & use saveWorkbook instead
+  wb <- openxlsx::buildWorkbook(out_list,
+                                colNames = TRUE, na.string = '',
+                                rowNames = ShowRowName,
+                                headerStyle = openxlsx::createStyle(textDecoration = 'bold'))
+  WriteSuccess <- openxlsx::saveWorkbook(wb, file,
+                               overwrite=TRUE, # overwrite warning generated by writeSeq()
+                               returnValue=TRUE)
+
+  if (isTRUE(WriteSuccess)) {
+    if(!quiet) message(paste("Output written to", file))
+  } else {
+    stop(WriteSuccess$message, call.=FALSE)
+  }
 }
 
 

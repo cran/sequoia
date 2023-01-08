@@ -3,7 +3,7 @@
 \docType{data}
 \name{Ped_HSg5}
 \alias{Ped_HSg5}
-\title{Example pedigree}
+\title{Example pedigree: 'HSg5'}
 \format{
 A data frame with 1000 rows and 3 variables (id, dam, sire)
 }
@@ -11,8 +11,10 @@ A data frame with 1000 rows and 3 variables (id, dam, sire)
 data(Ped_HSg5)
 }
 \description{
-This is \strong{Pedigree II} in the paper, with discrete
-  generations and considerable inbreeding
+A pedigree with five non-overlapping generations and considerable
+inbreeding. Each female mated with two random males and each male with three
+random females, producing four full-sib offspring per mating. This is
+\strong{Pedigree II} in the paper.
 }
 \references{
 Huisman, J. (2017) Pedigree reconstruction from SNP data:

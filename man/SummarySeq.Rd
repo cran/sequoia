@@ -15,22 +15,23 @@ SummarySeq(
 }
 \arguments{
 \item{SeqList}{the list returned by \code{\link{sequoia}}. Only elements
-'Pedigree' or 'PedigreePar' and 'AgePriors' are used.}
+'Pedigree' or 'PedigreePar' and 'AgePriors' are used. All ids in
+'PedigreePar', and only those, are presumed genotyped.}
 
-\item{Pedigree}{dataframe, pedigree with the first three columns being id - dam -
-sire. Column names are ignored, as are additional columns.}
+\item{Pedigree}{dataframe, pedigree with the first three columns being id -
+dam - sire. Column names are ignored, as are additional columns, except for
+columns OHdam, OHsire, MEpair, LLRdam, LLRsire, LLRpair (plotting only).}
 
 \item{DumPrefix}{character vector of length 2 with prefixes for dummy dams
 (mothers) and sires (fathers). Will be read from \code{SeqList}'s 'Specs'
 if provided. Used to distinguish between dummies and non-dummies. Length 3
 in case of hermaphrodites.}
 
-\item{SNPd}{character vector with ids of SNP genotyped individuals. Only when
-\code{Pedigree} is provided instead of \code{SeqList}, then used to distinguish
+\item{SNPd}{character vector with ids of SNP genotyped individuals. Only used
+when \code{Pedigree} is provided instead of \code{SeqList}, to distinguish
 between genetically assigned parents and 'observed' parents (e.g. observed
-in the field, or assigned previously using microsatellites). If
-\code{SeqList}'s 'PedigreePar' is provided, all ids in that dataframe will
-be presumed genotyped.}
+in the field, or assigned previously using microsatellites). If \code{NULL}
+(the default), all parents are presumed observed.}
 
 \item{Plot}{show barplots and histograms of the results, as well as of the
 parental LLRs, Mendelian errors, and agepriors, if present.}
@@ -49,34 +50,43 @@ A list with the following elements:
   column to SNP-genotyped individuals only. Maternal siblings sharing a dummy
   parent are counted in the 2nd column if both sibs are genotyped, but not if
   one of the sibs is a dummy individual.}
-  \item{ParentCount}{a 2x3x2x4 array with the number of assigned parents,
-  split by D1: genotyped vs dummy individuals; D2: female, male and
-  unknown-sex individuals; D3: dams vs sires; D4: genotyped, dummy, observed
-  vs no parent}
-  \item{GPCount}{a 2x4x4 array with the number of assigned grandparents,
-  split by D1: genotyped vs dummy individuals; D2 Maternal grandmother (MGM),
-  maternal grandfather (MGF), paternal grandmother (PGM), paternal
-  grandfather (PGF); D3: genotyped, dummy, observed vs no grandparent}
-  \item{SibSize}{a list with as first element a table of maternal sibship
-  sizes, and as second element a table of paternal sibship sizes. Each table
-  is a matrix with a number of rows equal to the  maximum sibship size, and 3
-  columns, splitting by the type of parent: genotyped, dummy, or observed.}
+  \item{ParentCount}{an array with the number of assigned parents,
+  split by:
+  \itemize{
+    \item offspringCat: Genotyped, Dummy, or Observed* (*: only when
+    \code{Pedigree} is provided rather than \code{SeqList}, for ids which
+    are not listed in \code{SNPd} and do not conform to \code{DumPrefix} +
+    number (i.e. (almost) al individuals when \code{SNPd = NULL}, the
+    default).
+    \item offspringSex: Female, Male, Unknown, or Herm* (*: hermaphrodite,
+    only if any individuals occur as both dam and sire). Based only on
+    whether an individual occurs as Dam or Sire.
+    \item parentSex: Dam or Sire
+    \item parentCat: Genotyped, Dummy, Observed*, or None (*: as for
+    offspringCat)
+  }}
+  \item{GPCount}{an array with the number of assigned grandparents,
+  split by:
+  \itemize{
+    \item offspringCat: Genotyped, Dummy, Observed*, or All
+    \item grandparent kind: maternal grandmothers (MGM),
+  maternal grandfathers (MGF), paternal grandmothers (PGM), paternal
+  grandfathers (PGF)
+    \item grandparentCat: Genotyped, Dummy, Observed*, or None
+    }}
+  \item{SibSize}{a list with elements 'mat' (maternal half + full siblings),
+  'pat' (paternal half + full siblings), and 'full' (full siblings). Each
+  is a matrix with a number of rows equal to the maximum sibship size, and 3
+  columns, splitting by the type of parent: Genotyped, Dummy, or Observed.}
 }
 \description{
 Number of assigned parents and grandparents and sibship sizes,
   split by genotyped, dummy, and 'observed'.
 }
 \examples{
-\donttest{
-data(SimGeno_example, LH_HSg5, package="sequoia")
-SeqOUT <- sequoia(GenoM = SimGeno_example,
-                   LifeHistData = LH_HSg5, Module="ped")
-Ped_example <- SeqOUT[["Pedigree"]]
-Ped_example$dam[1:20] <- paste0("Mum", 1:20)  # some fake field mums
-PedSum1 <- SummarySeq(SeqOUT, Pedigree=Ped_example, Panels="G.parents")
-summary(PedSum1)
-PedSum1$PedSummary
-}
+SummarySeq(Ped_griffin)
+sumry_grif <- SummarySeq(SeqOUT_griffin, Panels=c("G.parents", "OH"))
+sumry_grif$PedSummary
 
 }
 \seealso{

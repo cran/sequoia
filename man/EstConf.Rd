@@ -55,10 +55,11 @@ A list, with elements:
     pedigree based on the simulated data}
   \item{SimSNPd}{a list with for each iteration the IDs of the individuals
     simulated to have been genotyped}
-  \item{PedComp.fwd}{\code{Counts} from the 'forward' \code{PedCompare},
-    from which \code{PedErrors} is calculated}
-  \item{RunParams}{a list with the call to \code{EstConf}, as well as
-  the default parameter values for \code{SimGeno}, and \code{sequoia}.}
+  \item{PedComp.fwd}{array with \code{Counts} from the 'forward'
+    \code{PedCompare}, from which \code{PedErrors} is calculated}
+  \item{RunParams}{a list with the call to \code{EstConf} as a semi-nested
+  list (args.sim, args.seq, nSim, nCores), as well as the default parameter
+  values for \code{SimGeno} and \code{sequoia}.}
   \item{RunTime}{\code{sequoia} runtime per simulation in seconds, as
     measured by \code{\link{system.time}()['elapsed']}.}
 
@@ -136,61 +137,52 @@ The confidence probability is taken as the number of correct
 }
 
 \examples{
-\donttest{
-data(Ped_HSg5, LH_HSg5, package="sequoia")
+# estimate proportion of parents that are genotyped (= 1 - ParMis)
+sumry_grif <- SummarySeq(SeqOUT_griffin, Plot=FALSE)
+tmp <- apply(sumry_grif$ParentCount['Genotyped',,,],
+             MARGIN = c('parentSex', 'parentCat'), FUN = sum)
+sweep(tmp, MARGIN='parentCat', STATS = rowSums(tmp), FUN = '/')
 
-## Example A: parentage assignment only
-conf.A <- EstConf(Pedigree = Ped_HSg5, LifeHistData = LH_HSg5,
-   args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
-   args.seq = list(Module="par", Err=1e-3, Tassign=0.5), nSim = 3)
+# Example for parentage assignment only
+conf_grif <- EstConf(Pedigree = SeqOUT_griffin$Pedigree,
+               LifeHistData = SeqOUT_griffin$LifeHist,
+               args.sim = list(nSnp = 100, SnpError = 5e-3, CallRate=0.8,
+                               ParMis=c(0.54, 0.44)),
+               args.seq = list(Err=5e-3, Module="par"),
+               nSim = 2, nCores=1)
 
-# parent-pair confidence, per category:
-conf.A$ConfProb
+# parent-pair confidence, per category (Genotyped/Dummy/None)
+conf_grif$ConfProb
 
-# calculate (correct) assignment rates (ignores co-parent)
-1 - apply(conf.A$PedErrors, c(1,3), sum, na.rm=TRUE)
+# Proportion of true parents that was correctly assigned
+1 - apply(conf_grif$PedErrors, MARGIN=c('cat','parent'), FUN=sum, na.rm=TRUE)
 
-## Example B: with sibship clustering, based on sequoia inferred pedigree
-RealGenotypes <- SimGeno(Ped = Ped_HSg5, nSnp = 100,
-                         ParMis=c(0.19,0.53), SnpError = 6e-3)
-SeqOUT <- sequoia(GenoM = RealGenotypes,
-                  LifeHistData = LH_HSg5,
-                  Err=5e-3, Module="ped",
-                  quiet=TRUE, Plot=FALSE)
-
-conf.B <- EstConf(Pedigree = SeqOUT$Pedigree,
-              LifeHistData = LH_HSg5,
-               args.sim = list(nSnp = 100, SnpError = 5e-3,
-                               ParMis=c(0.2, 0.5)),
-              args.seq = list(Err=5e-3, Module="ped"),
-              nSim = 2, nCores=2)
-conf.B$ConfProb
-
-Ped.withConf <- getAssignCat(Pedigree = SeqOUT$Pedigree,
-                             SNPd = rownames(RealGenotypes))
-Ped.withConf <- merge(Ped.withConf, conf.B$ConfProb, all.x=TRUE, sort=FALSE)
-Ped.withConf <- Ped.withConf[, c("id","dam","sire", "dam.conf", "sire.conf",
-                                 "id.cat", "dam.cat", "sire.cat")]
+# add columns with confidence probabilities to pedigree
+# first add columns with category (G/D/X)
+Ped.withConf <- getAssignCat(Pedigree = SeqOUT_griffin$Pedigree,
+                             SNPd = SeqOUT_griffin$PedigreePar$id)
+Ped.withConf <- merge(Ped.withConf, conf_grif$ConfProb, all.x=TRUE,
+                      sort=FALSE)  # (note: merge() messes up column order)
 head(Ped.withConf[Ped.withConf$dam.cat=="G", ])
-head(Ped.withConf[Ped.withConf$dam.cat=="D", ])
 
 
 ## P(actual FS | inferred as FS) etc.
 PairL <- list()
-for (i in 1:length(conf.A$Pedigree.inferred)) {  # nSim
+for (i in 1:length(conf_grif$Pedigree.inferred)) {  # nSim
   cat(i, "\t")
-  PairL[[i]] <- ComparePairs(conf.A$Pedigree.reference,
-                             conf.A$Pedigree.inferred[[i]],
+  PairL[[i]] <- ComparePairs(conf_grif$Pedigree.reference,
+                             conf_grif$Pedigree.inferred[[i]],
                              GenBack=1, patmat=TRUE, ExcludeDummies = TRUE,
                              Return="Counts")
 }
 # P(actual relationship (Ped1) | inferred relationship (Ped2))
-PairA <- plyr::laply(PairL, function(M) sweep(M, 2, colSums(M), "/"))
+PairA <- plyr::laply(PairL, function(M)
+                     sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
 PairRel.prop <- apply(PairA, 2:3, mean, na.rm=TRUE)  # mean across simulations
-round(PairRel.prop, 2)
-#' # or: P(inferred relationship | actual relationship)
-PairA2 <- plyr::laply(PairL, function(M) sweep(M, 1, rowSums(M), "/"))
-}
+round(PairRel.prop, 3)
+# or: P(inferred relationship | actual relationship)
+PairA2 <- plyr::laply(PairL, function(M)
+                      sweep(M, MARGIN='Ped1', STATS=rowSums(M), FUN="/"))
 
 }
 \seealso{

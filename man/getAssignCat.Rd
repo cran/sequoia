@@ -49,7 +49,6 @@ It is assumed that all individuals in \code{SNPd} have been
   assigned, and ageprior inconclusive).
 }
 \examples{
-data(Ped_HSg5, SimGeno_example, package="sequoia")
 PedA <- getAssignCat(Ped_HSg5, rownames(SimGeno_example))
 tail(PedA)
 table(PedA$dam.cat, PedA$sire.cat, useNA="ifany")

@@ -1,7 +1,7 @@
 ---
 title: "PedCompare Example (Griffin Pedigree)"
 author: "Jisca Huisman ( jisca.huisman @ gmail.com )"
-date: "19 Oct 2020"
+date: "12 Dec 2022"
 output:
   bookdown::html_document2:
     base_format: rmarkdown::html_vignette
@@ -67,7 +67,7 @@ The side-by-side pedigrees are given in the list element `$MergedPed` of the out
 PCG$MergedPed[c(127:133), c("id", "dam.1", "dam.2", "dam.class")]
 ```
 
-This part-pedigree for example shows that individuals i165_2009_F and i166_2009_F have the non-genotyped female 'PinkBlue' as field observed mother (`dam.1` = dam in Pedigree1). The pair are also genetically assigned as maternal siblings, with 'F0006' as dummy ID for the mother (`dam.2`). And, while the ID of the mother differs between the two pedigrees, it is nonetheless considered a `Match` (`dam.class`, short for classification). 
+This part-pedigree for example shows that individuals i165_2009_F and i166_2009_F have the non-genotyped female 'PinkBlue' as field observed mother (`dam.1` = dam in Pedigree1). The pair are also genetically assigned as maternal siblings, with 'F0002' as dummy ID for the mother (`dam.2`). And, while the ID of the mother differs between the two pedigrees, it is nonetheless considered a `Match` (`dam.class`, short for classification). 
 
 
 #### id columns
@@ -76,12 +76,12 @@ A point of clarification on the `id` columns:
 * column `id` are the ids common to both pedigrees, plus those only occurring in Pedigree2 (typically the dummy IDs F0001, F0002 etc.)  
 * column `id.r` are the 'consensus' ids, plus those only occurring in Pedigree1  
 
-For example, 'PinkBlue' does not have a mother in Pedigree1 (first row in `MergedPed` below: `id.r=PinkBlue`, `dam.1=NA`). Pedigree2 tells us that 'F0006' has genetic mother 'F0007', which is not hugely informative of itself (`MergedPed`: `id=F0006`, `dam.2=F0007`). But `PedCompare()` then tells us that this means that 'PinkBlue' (`id.r`) has 'YellowPink' as mother (`dam.r`), which has a lot more meaning (to someone working in the field). 
+For example, 'PinkBlue' does not have a mother in Pedigree1 (first row in `MergedPed` below: `id.r=PinkBlue`, `dam.1=NA`). Pedigree2 tells us that 'F0002' has genetic mother 'F0007', which is not hugely informative of itself (`MergedPed`: `id=F0002`, `dam.2=F0007`). But `PedCompare()` then tells us that this means that 'PinkBlue' (`id.r`) has 'YellowPink' as mother (`dam.r`), which has a lot more meaning (to someone working in the field). 
 
 
 ```{r id-idr-sep}
 # subset some individuals:
-these <- c("i177_2009_M", "i179_2009_M", "i165_2009_F", "i166_2009_F", "F0006",
+these <- c("i177_2009_M", "i179_2009_M", "i165_2009_F", "i166_2009_F", "F0002",
            "F0007", "YellowPink", "PinkBlue")
 knitr::kable(list(Ped1 = FieldMums_griffin[FieldMums_griffin$id %in% these, ], 
                   Ped2 = SeqOUT_griffin$Pedigree[SeqOUT_griffin$Pedigree$id %in% these, 1:3]),
@@ -102,9 +102,9 @@ The output list element `$DummyMatch` summarises the matches:
 head(PCG$DummyMatch[, -c(3:5)], n=6)
 ```
 
-For the match between 'F0006' in Pedigree2 and 'PinkBlue' in Pedigree1 (bottom row), there are 3 matching offspring, and no offspring by 'PinkBlue' that are genetically assigned to a different sibship cluster or mother (`off.Mismatch`) or have no genetic mother assigned (`off.P1only`), nor are there any members of the genetic sibship F0006 with no mother in Pedigree1 (`off.P2only`). Thus, a perfect one-to-one match. 
+For the match between 'F0002' in Pedigree2 and 'PinkBlue' in Pedigree1 (bottom row), there are 3 matching offspring, and no offspring by 'PinkBlue' that are genetically assigned to a different sibship cluster or mother (`off.Mismatch`) or have no genetic mother assigned (`off.P1only`), nor are there any members of the genetic sibship F0002 with no mother in Pedigree1 (`off.P2only`). Thus, a perfect one-to-one match. 
 
-For genetic sibship 'F0003', however, the situation is more complicated, and this will be worked through in detail below. 
+For genetic sibship 'F0001', however, the situation is more complicated, and this will be worked through in detail below. 
 
 'nomatch' in the `id.1` column indicates either that none of the individuals in this genetic sibship had a field-observed mother, or that the field-observed mother is matched to a different genetic sibship, with which there was a larger overlap. 
 
@@ -168,13 +168,13 @@ Dummy individuals in Pedigree2 are never matched to genotyped individuals in Ped
 ```{r MisMatch2}
 # why is this flagged as a mismatch?
 PedM[which(PedM$dam.1 == "OrangeGreen"), ]
-# all of OrangeGreen's offspring are in sibship F0003
+# all of OrangeGreen's offspring are in sibship F0001
 
-PedM[which(PedM$dam.2 == "F0003"), c("id", "dam.1", "dam.2")]
-# but sibship F0003 is split across two field mothers
+PedM[which(PedM$dam.2 == "F0001"), c("id", "dam.1", "dam.2")]
+# but sibship F0001 is split across two field mothers
 ```
 
-So, the genetic sibship with 'F0003' as dummy mother includes individuals with two different field-observed mothers, 'OrangeGreen' and 'BlueRed'. OrangeGreen's offspring hatched in 2007, and BlueRed's in 2008 and 2009. Perhaps this female was not regularly monitored, was not recognised at the start of the 2008 breeding season, and got a new ID? 
+So, the genetic sibship with 'F0001' as dummy mother includes individuals with two different field-observed mothers, 'OrangeGreen' and 'BlueRed'. OrangeGreen's offspring hatched in 2007, and BlueRed's in 2008 and 2009. Perhaps this female was not regularly monitored, was not recognised at the start of the 2008 breeding season, and got a new ID? 
 
 As for the previous case, field records that could disprove this theory are census records of BlueRed in or before 2007, or of OrangeGreen in or after 2008 (or if they were seen together!). Records backing up this theory are notes like 'this could be...' or 'looks similar to ...' when BlueRed was first described. This cautionary approach to use a new ID is advisable, as it is often much easier to combine the records of two IDs later on, than to try to tease apart records under a single ID into their respective IDs. 
 
@@ -188,9 +188,9 @@ An alternative explanation is again a pedigree inference error, namely that `seq
 ```{r MisMatch3}
 # as before
 PedM[which(PedM$dam.1 == "YellowBlue"), ]
-# something odd going on involving sibships F0001 & F0002
+# something odd going on involving sibships F0003 & F0005
 
-PedM[which(PedM$dam.2 %in% c("F0001", "F0002")), ]
+PedM[which(PedM$dam.2 %in% c("F0003", "F0005")), ]
 ```
 
 so:  
@@ -279,16 +279,54 @@ When the field data indicate that a newly assigned parent is highly implausible,
 
 
 ### Griffins
-As example, let's take the assignment of 'YellowPink' (aka F0007) as mother of 'PinkBlue' (aka F0006):
+As example, let's take the assignment of 'YellowPink' (aka F0007) as mother of 'PinkBlue' (aka F0002):
 
 ```{r }
 SeqOUT_griffin$DummyIDs[c(6,7), c("id", "dam", "BY.est", "NumOff", "O1", "O2", "O3", "O4")]
 ```
 
 
-<!--- other example: 140,146,8  --> 
 
-
-Dummy - dummy pedigree links as these have a higher error rate than genotyped - genotyped pedigree links, especially when the sibships are small, as all genetic information is 'second hand'. They are therefore worth checking if independent data is available.
+Dummy - dummy pedigree links as these tend to have a higher error rate than genotyped - genotyped pedigree links (see also `EstConf()`), especially when the sibships are small, as all genetic information is 'second hand'. They are therefore worth checking if independent data is available.
 
 The question here is whether it is plausible that YellowPink had a non-genotyped daughter in 2008 that survived to breeding age. She had one genotyped offspring in 2008 ('i141_2008_M'), so the nest was monitored that year. Field and lab records will indicate whether there were any additional hatchlings that were not sampled, or not successfully genotyped (+ tag loss of PinkBlue). If YellowPink had only one female, non-genotyped, potentially-surviving offspring that year, then that hatchling's data can be combined with PinkBlue's breeding records. If she definitely had no offspring that are unaccounted for, the pedigree is most likely incorrect and the parent-offspring link would best be removed. 
+
+
+## Warning re dummy numbering
+The dummy number corresponding to each non-genotyped individual is not consistent between runs. 
+It simply reflects the order in which sibships were found, which may change when individuals are added or removed from the genotype data, or even when the order of individuals or the presumed genotyping error rate is changed [^2]. 
+Therefore, a script like this is NOT robust:
+
+[^2]: Note that the dummy numbering in this griffin example has also changed between version 2.3.5 and 2.4
+
+```{r eval=FALSE, purl=FALSE}
+PedX <- SeqOUT_griffin$Pedigree
+# NOT LIKE THIS:
+PedX$id[ PedX$id == 'F0001'] <- 'OrangeGreen'
+PedX$dam[ PedX$dam == 'F0001'] <- 'OrangeGreen'
+PedX$id[ PedX$id == 'F0002'] <- 'PinkBlue'
+PedX$dam[ PedX$dam == 'F0002'] <- 'PinkBlue'
+```
+
+Instead, match by an individual within the sibship (the dummy's offspring), which should be consistent between runs:
+
+```{r }
+PedX <- SeqOUT_griffin$Pedigree
+# INSTEAD, SOMETHING LIKE THIS:
+Name_match <- matrix(c(PedX$dam[PedX$id=='i123_2007_F'], 'OrangeGreen',  
+                       PedX$dam[PedX$id=='i165_2009_F'], 'PinkBlue',  
+                       PedX$dam[PedX$id=='i121_2007_M'], 'GreenYellow'),
+                     ncol = 2, byrow=TRUE)
+Name_match
+
+for (i in 1:nrow(Name_match)) {
+  PedX$id[ PedX$id == Name_match[i,1] ] <- Name_match[i,2] 
+  PedX$dam[ PedX$dam == Name_match[i,1] ] <- Name_match[i,2] 
+}
+  
+```
+The offspring IDs can for example be found in `SeqOUT_griffin$DummyIDs`. 
+
+```{r }
+head(SeqOUT_griffin$DummyIDs[, c('id','dam','sire','NumOff','O1','O2','O3')])
+```

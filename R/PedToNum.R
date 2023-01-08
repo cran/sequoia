@@ -125,43 +125,6 @@ PedToNum <- function(Pedigree = NULL,
 
 #=============================================================================
 #=============================================================================
-#' @title get individual category: genotyped, dummy, observed
-#'
-#' @details In contrast to \code{\link{GetDummifiable}}, this function only
-#'   identifies individuals who currently have a dummy code.
-#'
-#' @param id  character vector with ids, may include NA (as in parent columns in
-#'   pedigree)
-#' @param gID  character vector with ids of genotyped individuals
-#' @param DumPrefix  prefix that defines dummy individuals
-#'
-#' @return a factor with length equal to id, and levels Genotyped, Dummy,
-#'   Observed, None
-#'
-#' @keywords internal
-
-getGDO <- function(id, gID = NULL, DumPrefix = c("F0", "M0"))
-{
-  GDO <- ifelse(is.na(id),  "None",
-                ifelse(id %in% gID,  "Genotyped",
-                       NA))
-  if (!is.null(DumPrefix)) {
-    for (p in seq_along(DumPrefix)) {
-      GDO[substr(id,1,nchar(DumPrefix[p])) == DumPrefix[p]] <- "Dummy"
-    }
-  }
-  if (!is.null(gID)) {
-    GDO[is.na(GDO)] <- "Observed"
-  } else {
-    GDO[is.na(GDO)] <- "Genotyped"   # assume genotyped
-  }
-  GDO <- factor(GDO, levels=c("Genotyped", "Dummy", "Observed", "None"), ordered=TRUE)
-}
-
-
-
-#=============================================================================
-#=============================================================================
 #' @title Fold IDs of Sibship Grandparents
 #'
 #' @description Fold IDs of sibship grandparents into a 2 x nInd/2 x 2 array, as

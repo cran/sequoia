@@ -21,10 +21,10 @@ columns: id-dam-sire.}
 
 \item{Ped2}{optional second (e.g. inferred) pedigree.}
 
-\item{Pairs2}{optional dataframe with relationships categories between pairs
-of individuals, instead of or in addition to \code{Ped2}, e.g. as returned
-by \code{\link{GetMaybeRel}}. First three columns: ID1-ID2-relationship,
-column names and any additional columns are ignored.}
+\item{Pairs2}{optional dataframe with as first three columns: ID1-ID2-
+relationship, e.g. as returned by \code{\link{GetMaybeRel}}. Column names
+and any additional columns are ignored. May be provided in addition to, or
+instead of \code{Ped2}.}
 
 \item{GenBack}{number of generations back to consider; 1 returns
 parent-offspring and sibling relationships, 2 also returns grandparental,
@@ -146,15 +146,15 @@ distinguished:
 Note that for avuncular and cousin relationships no distinction is made
 between paternal versus maternal, as this may differ between the two
 individuals and would generate a large number of sub-classes. When a pair is
-related via multiple paths, the first-listed relationship is returned.
+related via multiple paths, the first-listed relationship is returned. To get
+all the different paths between a pair, use \code{\link{GetRelM}} with
+\code{Return='Array'}.
 
 When \code{GenBack=2, patmat=FALSE}, MGM, MGF, PGM and PGF are combined
 into GP, with the rest of the categories analogous to the above.
 }
 
 \examples{
-\donttest{
-data(Ped_griffin, SeqOUT_griffin, package="sequoia")
 PairsG <- ComparePairs(Ped_griffin, SeqOUT_griffin[["Pedigree"]],
                        patmat = TRUE, ExcludeDummies = TRUE, Return = "All")
 PairsG$Counts
@@ -172,7 +172,6 @@ RelDF[RelDF$id.A=="i190_2010_M" & RelDF$id.B=="i168_2009_F", ]
 FullSibDyads <- with(RelDF, RelDF[Ped1 == "FS" & id.A < id.B, ])
 HalfSibDyads <- with(RelDF, RelDF[Ped1 == "HS" & id.A < id.B, ])
 # Use 'id.A < id.B' because each pair is listed 2x
-}
 
 }
 \seealso{

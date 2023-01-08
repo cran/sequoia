@@ -18,6 +18,10 @@
 #'   Makes the pedigree compatible with R packages and software that requires
 #'   individuals to have either 2 or 0 parents, such as
 #'   \code{\link[kinship2]{kinship}}.
+#' @param KeepAllColumns Keep all columns in \code{Pedigree} (TRUE, default), or
+#'   only id - dam - sire (FALSE).
+#' @param KeepAllRows Keep all rows in \code{Pedigree} (TRUE), or drop rows
+#'   where id = \code{NA} (FALSE, default). Duplicated rows are always removed.
 #' @param NullOK  logical, is it OK for Ped to be NULL? Then NULL will be
 #'   returned.
 #' @param LoopCheck  logical, check for invalid pedigree loops by calling
@@ -25,12 +29,14 @@
 #' @param StopIfInvalid if a pedigree loop is detected, stop with an error
 #'   (TRUE, default).
 #'
-#' @details Recognized column names are any that contain:
+#' @details Recognized column names are an exact or partial match with (case is
+#' ignored):
 #'  \describe{
+#'   \item{id}{"id", "iid", "off"}
 #'   \item{dam}{"dam", "mother", "mot", "mom", "mum", "mat"}
 #'   \item{sire}{"sire", "father", "fat", "dad", "pat"}}
 #' \code{sequoia} requires the column order id - dam - sire; columns 2 and 3 are
-#' swapped if necessary.
+#' swapped by this function if necessary.
 #'
 #' @examples
 #' \dontrun{
@@ -54,6 +60,8 @@ PedPolish <- function(Pedigree,
                       NAToZero=FALSE,
                       DropNonSNPd = TRUE,
                       FillParents = FALSE,
+                      KeepAllColumns = TRUE,
+                      KeepAllRows = FALSE,
                       NullOK = FALSE,
                       LoopCheck = TRUE,
                       StopIfInvalid = TRUE)
@@ -73,21 +81,34 @@ PedPolish <- function(Pedigree,
   if (ncol(Pedigree) < 3)
     stop(PedName, " should be a dataframe with at least 3 columns (id - dam - sire)",
          call. = FALSE)
-  Ped <- as.data.frame(unique(Pedigree))
+  Ped <- unique(as.data.frame(Pedigree))
 
-  DamNames <- c("dam", "mother", "mot", "mom", "mum", "mat")
-  SireNames <-  c("sire", "father", "fat", "dad", "pat")
-  IdNames <- c("id", "iid", "off")
-  IdCol <- unlist(sapply(IdNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
-  DamCol <- unlist(sapply(DamNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
-  SireCol <- unlist(sapply(SireNames, function(x) grep(x, names(Ped), ignore.case=TRUE)))
-  if ((length(DamCol)==0 | length(SireCol)==0) ||
-      (length(IdCol)==0 & (DamCol[[1]]==1 | SireCol[[1]]==1))) {
-    stop("Pedigree column names not recognized. Must be id - dam - sire",
-         call. = FALSE)
+  ValidNames <- list(Id = c("id", "iid", "off"),
+                     Dam = c("dam", "mother", "mot", "mom", "mum", "mat"),
+                     Sire = c("sire", "father", "fat", "dad", "pat"))
+  ColNums <- list(Id = 0, Dam = 0, Sire = 0)
+
+  for (p in c('Id', 'Dam', 'Sire')) {
+    ColNums[[p]] <- which(tolower(names(Ped)) %in% ValidNames[[p]])  # exact match, ignore case
+    if (length(ColNums[[p]]) == 0) {  # try partial match
+      ColNums[[p]] <- unlist(sapply(ValidNames[[p]], function(x) grep(x, names(Ped), ignore.case=TRUE)))
+    }
+  }
+  if (any(unlist(ColNums)) == 0) {
+    stop("Pedigree column names not recognized. See ?PedPolish for valid names", call. = FALSE)
+  }
+  for (p in c('Id', 'Dam', 'Sire')) {
+    if (length(ColNums[[p]]) > 1) {
+      warning('Found >1 possible ', p, ' column, using ', names(Ped)[ ColNums[[p]][1] ])
+      ColNums[[p]] <- ColNums[[p]][1]
+    }
+  }
+  ColNums <- unlist(ColNums)
+
+  if (KeepAllColumns) {
+    Ped <- Ped[, c(ColNums, setdiff(seq_len(ncol(Ped)), ColNums))]
   } else {
-    Ped <- Ped[, c(IdCol[[1]], DamCol[[1]], SireCol[[1]],
-                   setdiff(seq_len(ncol(Ped)), c(IdCol, DamCol, SireCol)))]
+    Ped <- Ped[, ColNums]
   }
 
   if (!is.null(gID)) {
@@ -108,7 +129,7 @@ PedPolish <- function(Pedigree,
     Ped[,x] <- as.character(Ped[,x])
     if (NAToZero) Ped[is.na(Ped[,x]), x] <- 0
   }
-  Ped <- unique(Ped[!is.na(Ped[,1]), ])
+  if (!KeepAllRows)  Ped <- unique(Ped[!is.na(Ped[,1]), ])
   UID <- stats::na.exclude(unique(c(unlist(Ped[,1:3]),
                                     gID)))
   if (NAToZero) UID <- UID[UID != 0]

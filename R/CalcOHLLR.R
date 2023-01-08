@@ -104,7 +104,6 @@
 #'   for pedigree reconstruction.
 #'
 #' @examples
-#' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
 #' # count Mendelian errors in an existing pedigree
 #' Ped.OH <- CalcOHLLR(Pedigree = Ped_HSg5, GenoM = SimGeno_example,
 #'                     CalcLLR = FALSE)
@@ -118,7 +117,7 @@
 #'                     CalcLLR = TRUE, LifeHistData=LH_HSg5, AgePrior=TRUE)
 #' SummarySeq(Ped.LLR, Panels="LLR")
 #'
-#' \donttest{
+#' \dontrun{
 #' # likelihood ratios change with presumed genotyping error rate:
 #' Ped.LLR.B <- CalcOHLLR(Pedigree = Ped_HSg5, GenoM = SimGeno_example,
 #'                     CalcLLR = TRUE, LifeHistData=LH_HSg5, AgePrior=TRUE,
@@ -126,14 +125,11 @@
 #' SummarySeq(Ped.LLR.B, Panels="LLR")
 #'
 #' # run sequoia with CalcLLR=FALSE, and add OH + LLR later:
-#' data(Ped_griffin, LH_griffin, package="sequoia")
-#' Genotypes <- SimGeno(Ped_griffin, nSnp=400)
-#' SeqOUT <- sequoia(Genotypes, LH_griffin, CalcLLR=FALSE,quiet=TRUE,Plot=FALSE)
+#' SeqOUT <- sequoia(Geno_griffin, LH_griffin, CalcLLR=FALSE,quiet=TRUE,Plot=FALSE)
 #' PedA <- CalcOHLLR(Pedigree = SeqOUT[["Pedigree"]][, 1:3], GenoM = Genotypes,
 #'   LifeHistData = LH_griffin, AgePrior = TRUE, Complex = "full")
 #' SummarySeq(PedA, Panels=c("LLR", "OH"))
 #' }
-#'
 #'
 #' @useDynLib sequoia, .registration = TRUE
 #

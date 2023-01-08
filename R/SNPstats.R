@@ -30,7 +30,7 @@
 #' (rerun of) pedigree reconstruction.
 #'
 #' @param GenoM  genotype matrix, in sequoia's format: 1 column per SNP, 1 row
-#'   per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
+#'   per individual, genotypes coded as 0/1/2/-9, and row names giving individual
 #'   IDs.
 #' @param Pedigree  dataframe with 3 columns: ID - parent1 - parent2.
 #'   Additional columns and non-genotyped individuals are ignored. Used to
@@ -46,8 +46,9 @@
 #' \item{AF}{Allele frequency of the 'second allele' (the one for which the
 #'   homozygote is coded 2)}
 #' \item{Mis}{Proportion of missing calls}
+#' \item{HWE.p}{p-value from chi-square test for Hardy-Weinberg equilibrium}
 #' When a Pedigree is provided, there are 7 additional columns:
-#' \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
+#' \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs successfully
 #'   genotyped for the SNP}
 #' \item{OHdam, OHsire}{Count of number of opposing homozygous cases}
 #' \item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
@@ -60,14 +61,13 @@
 #'   & ME per individual.
 #'
 #' @examples
-#' \donttest{
-#' data(Ped_HSg5)
-#' Genotypes <- SimGeno(Ped_HSg5, nSnp=400, CallRate = runif(400, 0.2, 0.8),
-#'   SnpError = 0.05)
+#' Genotypes <- SimGeno(Ped_HSg5, nSnp=100, CallRate = runif(100, 0.5, 0.8),
+#'                      SnpError = 0.05)
+#' SnpStats(Genotypes)   # only plots; data is returned invisibly
 #' SNPstats <- SnpStats(Genotypes, Pedigree=Ped_HSg5)
-#' }
 #'
 #' @importFrom graphics plot points legend
+#' @importFrom stats chisq.test
 #'
 #' @export
 
@@ -76,8 +76,19 @@ SnpStats <- function(GenoM,
                      ErrFlavour = "version2.0",
                      Plot = TRUE)
 {
+  # missingness
   Mis <- apply(GenoM, 2, function(x) sum(x==-9))/nrow(GenoM)
+  # allele frequency
   AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
+  # Hardy-weinberg equilibrium
+  counts.o <- apply(GenoM, 2, function(x) table(factor(x, levels=c(0,1,2))))  # observed genotype counts
+  freq.e <- rbind('0' = (1-AF)^2,
+                  '1' = 2*AF*(1-AF),
+                  '2' = AF^2)
+  HWE.p <- sapply(1:ncol(GenoM),
+                  function(i) suppressWarnings(chisq.test(x = counts.o[,i],
+                                                          p = freq.e[,i])$p.value))
+  OUT <- cbind(AF, Mis, HWE.p)
 
   if (is.logical(Pedigree)) {
     Plot <- Pedigree
@@ -90,55 +101,16 @@ SnpStats <- function(GenoM,
       Par[!Par[,i] %in% rownames(GenoM), i] <- NA
     }
     Par <- Par[!is.na(Par[,1]), ]
+    if (nrow(Par)==0)  stop('GenoM and Pedigree have no IDs in common')
+    Par <- Par[!(is.na(Par[,2]) & is.na(Par[,3])), ]
+    if (nrow(Par)==0)  stop('Cannot estimate genotyping error, because pedigree ',
+                            'does not have any genotyped parent-offspring pairs')
     ER <- EstErr(GenoM, Par, ErrFlavour)
-    OUT <- cbind(AF, Mis, ER)
-
-  } else {
-    OUT <- cbind(AF, Mis)
+    OUT <- cbind(OUT, ER)
   }
 
   if (Plot) {
-    oldpar <- par(no.readonly = TRUE)
-    oldpar <- oldpar[!names(oldpar) %in% c("pin", "fig")]
-    if (is.null(Pedigree)) {
-      par(mfrow=c(1,3), mai=c(.9,.8,.2,.1))
-    } else {
-      par(mfrow=c(2,3), mai=c(.9,.8,.2,.1))
-    }
-    OK <- tryPlot(hist,
-                  OUT[,"AF"], breaks=ncol(GenoM)/5, col="grey", main="",
-                  xlab="Frequency '1' allele", cex.lab=1.3, ylab="",
-#                  ErrMsg = "SnpStats: Plotting area too small",
-                  oldpar = oldpar)
-    if (OK) {  # if first fits, rest fits, and v.v.
-      hist(OUT[,"Mis"], breaks=ncol(GenoM)/5, col="grey", main="",
-           xlab="Missingness", cex.lab=1.3, ylab="")
-      MAF <- ifelse(OUT[,"AF"] <= 0.5, OUT[,"AF"], 1-OUT[,"AF"])
-      if (!is.null(Pedigree)) {
-        hist(OUT[,"Err.hat"], breaks=ncol(GenoM)/5, col="grey",
-             main="", xlab="Error rate", cex.lab=1.3, ylab="")
-      }
-      plot(MAF, OUT[,"Mis"], pch=16, cex=1.2, xlim=c(0,0.5),
-           xlab="Minor Allele Frequency", ylab="Missingness", cex.lab=1.3)
-      if (!is.null(Pedigree)) {
-        q95.e <- OUT[,"Err.hat"] > stats::quantile(OUT[,"Err.hat"], prob=0.95)
-        points(MAF[q95.e], OUT[q95.e, "Mis"], pch=16, col="red")
-        legend("topleft", "5% highest error", pch=16, col="red", inset=.01)
-
-        plot(MAF, OUT[,"Err.hat"], pch=16, cex=1.2, xlim=c(0,0.5),
-           xlab="Minor Allele Frequency", ylab="Error rate", cex.lab=1.3)
-        q95.m <- OUT[,"Mis"] > stats::quantile(OUT[,"Mis"], prob=0.95)
-        points(MAF[q95.m], OUT[q95.m, "Err.hat"], pch=16, col="red")
-        legend("topleft", "5% highest missingness", pch=16, col="red", inset=.01)
-
-        plot(OUT[,"Mis"], OUT[,"Err.hat"], pch=16, cex=1.2,
-           xlab="Missingness", ylab="Error rate", cex.lab=1.3)
-        q95.maf <- MAF < stats::quantile(MAF, prob=0.05)
-        points(OUT[q95.maf,"Mis"], OUT[q95.maf,"Err.hat"], pch=16, col="grey")
-        legend("topright", "5% lowest MAF", pch=16, col="grey", inset=.01)
-      }
-      par(oldpar)  # restore old par settings
-    }
+    PlotSnpStats( OUT, Pedigree )
   }
 
   rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT),
@@ -176,37 +148,37 @@ SnpStats <- function(GenoM,
 #' @keywords internal
 
 EstErr <- function(GenoM, Par, ErrFlavour = "version2.0") {
-	GenoMx <- GenoM
+  GenoMx <- GenoM
   GenoMx[GenoMx==-9] <- 3
   GenoMx <- rbind(GenoMx, "NA" = 3)
   GenoMx <- GenoMx +1
   Par$RowI <- sapply(Par$id, function(x, y) which(y == x), y = rownames(GenoMx))
   Par$RowD <- with(Par, sapply(dam, function(x, y) ifelse(is.na(x), nrow(GenoMx),
-                                               which(y == x)), y = rownames(GenoMx)))
+                                                          which(y == x)), y = rownames(GenoMx)))
   Par$RowS <- with(Par, sapply(sire, function(x, y) ifelse(is.na(x), nrow(GenoMx),
-                                            which(y == x)), y = rownames(GenoMx)))
+                                                           which(y == x)), y = rownames(GenoMx)))
 
-	Obs.OO.all <- array(dim=c(nrow(Par), 3, ncol(GenoMx)))  # 4 = NA
+  Obs.OO.all <- array(dim=c(nrow(Par), 3, ncol(GenoMx)))  # 4 = NA
   for (i in 1:nrow(Par)) {
     Obs.OO.all[i,,] <- rbind(GenoMx[Par$RowI[i], ],
                              GenoMx[Par$RowD[i], ],
                              GenoMx[Par$RowS[i], ])
   }
   OO.trio <- plyr::aaply(Obs.OO.all, 3, function(M) table(factor(M[,1], levels=1:4),
-                                                    factor(M[,2], levels=1:4),
-                                                    factor(M[,3], levels=1:4)))
+                                                          factor(M[,2], levels=1:4),
+                                                          factor(M[,3], levels=1:4)))
 
-	AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
+  AF <- apply(GenoM, 2, function(x) sum(x[x!=-9])/(2*sum(x!=-9)))
 
-	ErrF <- ErrToM(flavour = ErrFlavour, Return = "function")
+  ErrF <- ErrToM(flavour = ErrFlavour, Return = "function")
 
-	E.hat <- numeric(ncol(GenoM))  # based on trio where possible
-	for (l in 1:ncol(GenoM)) {
-		E.hat[l] <- stats::optimise(CalcChi2, interval=c(0,1), q=AF[l],
-		                     A.obs=OO.trio[l,,,], ErrF=ErrF)$minimum
-	}
+  E.hat <- numeric(ncol(GenoM))  # based on trio where possible
+  for (l in 1:ncol(GenoM)) {
+    E.hat[l] <- stats::optimise(CalcChi2, interval=c(0,1), q=AF[l],
+                                A.obs=OO.trio[l,,,], ErrF=ErrF)$minimum
+  }
 
-	# mendelian errors
+  # mendelian errors
   MER <- array(0, dim=c(4,4,4))  # offspr - mother - father
   MER[1:3,,1] <- matrix(c(0,1,2, 0,0,1, 1,0,1, 0,0,1), 3,4)  # 0/1/2/NA
   MER[1:3,,2] <- matrix(c(0,0,1, 0,0,0, 1,0,0, 0,0,0), 3,4)
@@ -222,7 +194,7 @@ EstErr <- function(GenoM, Par, ErrFlavour = "version2.0") {
                   n.pair = apply(OO.trio, 1, function(A) sum(A[1:3, 1:3, 1:3])),
                   MEpair = sapply(1:ncol(GenoM), function(l) sum(MER * OO.trio[l,,,])))
 
-	return( data.frame(Err.hat = E.hat, Counts) )
+  return( data.frame(Err.hat = E.hat, Counts) )
 }
 
 
@@ -265,13 +237,12 @@ CalcChi2 <- function(E, q, A.obs, ErrF) {
   mis <- c(dam = sum(A.obs[,4,], na.rm=T),
            sire = sum(A.obs[,,4], na.rm=T)) / sum(A.obs, na.rm=T)
 
-  # TODO?: calc q from M.obs & adjust iteratively for E
   AHWE <- c((1-q)^2, 2*q*(1-q), q^2)
 
   # offspring - parent pair
   AKAP <- matrix(c(1-q, (1-q)/2, 0,
-                       q,   1/2,     1-q,
-                       0,   q/2,     q), nrow=3, byrow=TRUE)
+                   q,   1/2,     1-q,
+                   0,   q/2,     q), nrow=3, byrow=TRUE)
   P.AA <- sweep(AKAP, 2, AHWE, "*")  # joined prob actual genotypes
 
   ErrM <- ErrF(E)
@@ -302,4 +273,79 @@ CalcChi2 <- function(E, q, A.obs, ErrF) {
 
   Chi2 <- sum((A.obs - A.exp)^2 / A.exp, na.rm=TRUE)
   return( Chi2 )
+}
+
+
+
+#==============================================================================
+#' @title plot SnpStats results
+#'
+#' @description scatter plots and histograms of allele frequency, missingness,
+#'   and estimated genotyping error, across SNPs
+#'
+#' @param OUT  output from \code{SnpStats}
+#' @param Pedigree
+#'
+#' @return plots
+#'
+#' @keywords internal
+
+
+PlotSnpStats <- function(OUT,
+                         Pedigree = NULL)
+{
+
+  oldpar <- par(no.readonly = TRUE)
+  oldpar <- oldpar[!names(oldpar) %in% c("pin", "fig")]
+  if (is.null(Pedigree)) {
+    par(mfrow=c(3,3), mai=c(.9,.8,.2,.1), xpd=NA)
+  } else {
+    par(mfcol=c(4,4), mai=c(.7,.6,.2,.1), xpd=NA)
+  }
+  graphics::plot.new()
+
+  OUT <- cbind(OUT,
+               'MAF' = ifelse(OUT[,"AF"] <= 0.5, OUT[,"AF"], 1-OUT[,"AF"]),
+               'HWE' = -log10(OUT[,"HWE.p"]))
+
+  # top 5% worst SNPs by each metric (coloured red in scatter plots)
+  q95 <- list('MAF' = OUT[,'MAF'] < stats::quantile(OUT[,'MAF'], prob=0.05),
+              'Mis' = OUT[,"Mis"] > stats::quantile(OUT[,"Mis"], prob=0.95),
+              'HWE' = OUT[,"HWE"] > stats::quantile(OUT[,"HWE"], prob=0.95))
+  vars <- c('Minor allele frequency' = 'MAF',
+            'Missingness' = 'Mis',
+            'HWE test: -log10(p)' = 'HWE')
+  if (!is.null(Pedigree)) {
+    q95[['Err.hat']] = OUT[,"Err.hat"] > stats::quantile(OUT[,"Err.hat"], prob=0.95)
+    vars <- c(vars, 'Genotyping error' = 'Err.hat')
+  }
+
+  for (i in seq_along(vars)) {
+    for (j in seq_along(vars)) {
+
+      par(mfg = c(i,j))  # where to put next plot
+
+      if (i == j) {  # diagonal: histogram
+        tryPlot(hist,
+                OUT[,vars[i]], breaks=nrow(OUT)/5, col="grey", main="",
+                xlab=names(vars[i]), cex.lab=1.3, ylab="",
+                # ErrMsg = "SnpStats: Plotting area too small",
+                oldpar = oldpar)
+
+      } else if (i > j) {  # below diagonal: scatter plot
+        plot(OUT[,vars[j]], OUT[,vars[i]], pch=16, cex=1.2,
+             xlab=names(vars[j]), ylab=names(vars[i]), cex.lab=1.3)
+        h <- max(setdiff(seq_along(vars), c(i,j)))   # Err.hat if available, 'the other one' otherwise
+        points(OUT[q95[[h]], vars[j]], OUT[q95[[h]], vars[i]], pch=16, col="red")
+        legend(par('usr')[1], par('usr')[4], yjust=0, # above
+               legend = paste("5% worst", vars[h]), pch=16, col="red", text.col='red', box.col='red')
+
+      } else {
+        # above diagonal: empty, do nothing
+      }
+    }
+  }
+
+  par(oldpar)  # restore old par settings
+
 }

@@ -42,19 +42,17 @@
 #'   individual and parent.
 #'
 #' @examples
-#' \donttest{
-#' data(Ped_HSg5)
 #' GenoM <- SimGeno(Ped_HSg5, nSnp=400, CallRate = runif(400, 0.2, 0.8))
-#' # quick alternative:
-#' GenoM.checked <- CheckGeno(GenoM)
+#' # the quick way:
+#' GenoM.checked <- CheckGeno(GenoM, Return="GenoM")
 #'
-#' # user supervised alternative:
+#' # the user supervised way:
 #' Excl <- CheckGeno(GenoM, Return = "excl")
 #' GenoM.orig <- GenoM   # make a 'backup' copy
 #' if ("ExcludedSnps" %in% names(Excl))
 #'   GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
-#' if ("ExcludedInd" %in% names(Excl))
-#'   GenoM <- GenoM[!rownames(GenoM) %in% Excl[["ExcludedInd"]], ]
+#' if ("ExcludedSnps-mono" %in% names(Excl))
+#'   GenoM <- GenoM[, -Excl[["ExcludedSnps-mono"]]]
 #' if ("ExcludedIndiv" %in% names(Excl))
 #'   GenoM <- GenoM[!rownames(GenoM) %in% Excl[["ExcludedIndiv"]], ]
 #'
@@ -69,7 +67,6 @@
 #'                        FUN = function(x) sum(x!=-9)) / ncol(GenoM)
 #' hist(IndivCallRate, breaks=50, col="grey")
 #' GoodSamples <- rownames(GenoM)[ IndivCallRate > 0.8]
-#' }
 #'
 #' @export
 
@@ -109,7 +106,7 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
 
   # Exclude low quality SNPs ----
   Excl <- list()
-  sstats <- SnpStats(GenoM, Plot)
+  sstats <- SnpStats(GenoM, Plot = Plot)
   SNPs.TooMuchMissing <- sstats[,"Mis"] >= 0.9*nrow(GenoM)
   if (any(SNPs.TooMuchMissing)) {
     warn("There are ", sum(SNPs.TooMuchMissing)," SNPs scored for <10% of individuals, these will be excluded")

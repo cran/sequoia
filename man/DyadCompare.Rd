@@ -2,7 +2,7 @@
 % Please edit documentation in R/ComparePairs.R
 \name{DyadCompare}
 \alias{DyadCompare}
-\title{Compare Dyads}
+\title{Compare Dyads (DEPRECATED)}
 \usage{
 DyadCompare(Ped1 = NULL, Ped2 = NULL, na1 = c(NA, "0"))
 }
@@ -24,13 +24,9 @@ Count the number of half and full sibling pairs correctly and
   incorrectly assigned. DEPRECATED - PLEASE USE \code{\link{ComparePairs}}
 }
 \examples{
-\donttest{
-data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-                  Module="par", quiet=TRUE, Plot=FALSE)
-DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
+\dontrun{
+DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT_HSg5$Pedigree)
 }
-
 }
 \seealso{
 \code{\link{ComparePairs}} which supersedes this function;

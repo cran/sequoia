@@ -15,6 +15,12 @@ Example field pedigree used in vignette for
   \code{\link{PedCompare}} example. Non-genotyped females have IDs 'BlueRed',
   'YellowPink', etc.
 }
+\examples{
+\dontrun{
+PC_griffin <- PedCompare(Ped1 = cbind(FieldMums_griffin, sire=NA),
+                         Ped2 = SeqOUT_griffin$Pedigree)
+}
+}
 \seealso{
 \code{\link{SeqOUT_griffin}} for a sequoia run on simulated genotype
   data, \code{\link{Ped_griffin}} for the 'true' pedigree.

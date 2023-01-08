@@ -182,7 +182,7 @@ Estimate probability ratios \eqn{P(R|A) / P(R)} for age
  If the age distribution of assigned parents does not capture the maximum
  possible age of parents, it is advised to specify \code{MaxAgeParent} for
  one or both sexes. Not doing so may hinder subsequent assignment of both
- dummy parents and grandparents.
+ dummy parents and grandparents. Not compatible with \code{Smooth}.
 
  @section grandparents & avuncular
  The agepriors for grand-parental and avuncular pairs is calculated from
@@ -192,7 +192,6 @@ Estimate probability ratios \eqn{P(R|A) / P(R)} for age
 
 \examples{
 # without pedigree or lifehistdata:
-MakeAgePrior()
 MakeAgePrior(MaxAgeParent = c(2,3))
 MakeAgePrior(Discrete=TRUE)
 
@@ -201,7 +200,6 @@ MakeAgePrior(LifeHistData = data.frame(ID = letters[1:5], Sex=3,
   BirthYear=1984))
 
 # overlapping generations:
-data(Ped_griffin, SeqOUT_griffin, package="sequoia")
 # without pedigree: MaxAgeParent = max age difference between any pair +1
 MakeAgePrior(LifeHistData = SeqOUT_griffin$LifeHist)
 # with pedigree:
@@ -213,6 +211,11 @@ MakeAgePrior(Pedigree=Ped_griffin,
              LifeHistData=SeqOUT_griffin$LifeHist,
              Smooth=TRUE, Flatten=TRUE)
 
+# Call from sequoia() via args.AP:
+Seq_HSg5 <- sequoia(SimGeno_example, LH_HSg5, Module="par",
+                args.AP=list(Discrete = TRUE),  # non-overlapping generations
+                CalcLLR = FALSE,   # skip time-consuming calculation of LLR's
+                Plot = FALSE)      # no summary plots when finished
 
 }
 \seealso{

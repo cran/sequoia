@@ -46,7 +46,7 @@ versions 1.x}
 \description{
 The various list elements returned by \code{sequoia} are each
   written to text files in the specified folder, or to separate sheets in a
-  single excel file (requires library \pkg{xlsx}).
+  single excel file (requires library \pkg{openxlsx}).
 }
 \details{
 The text files can be used as input for the stand-alone Fortran
@@ -57,9 +57,15 @@ The text files can be used as input for the stand-alone Fortran
 \dontrun{
 writeSeq(SeqList, OutFormat="xls", file="MyFile.xlsx")
 
-# add additional sheets to the excel file:
-library(xlsx)
-write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
+# add additional sheet to the excel file:
+library(openxlsx)
+wb <- loadWorkbook("MyFile.xlsx")
+addWorksheet(wb, sheetName = "ExtraData")
+writeData(wb, sheet = "ExtraData", MyData, rowNames=FALSE)
+saveWorkbook(wb, "MyFile.xlsx", overwrite=TRUE, returnValue=TRUE)
+
+# or: (package requires java & is trickier to install)
+xlsx::write.xlsx(MyData, file = "MyFile.xlsx", sheetName="ExtraData",
       col.names=TRUE, row.names=FALSE, append=TRUE, showNA=FALSE)
 }
 

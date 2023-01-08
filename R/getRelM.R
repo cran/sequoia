@@ -4,16 +4,26 @@
 #'   from a pedigree or dataframe with pairs.
 #'
 #' @param Pedigree  dataframe with columns id - dam - sire.
-#' @param Pairs  dataframe with columns ID1 - ID2 - Rel.
+#' @param Pairs  dataframe with columns ID1 - ID2 - Rel, e.g. as returned by
+#'   \code{\link{GetMaybeRel}}. Combining \code{Pedigree} and \code{Pairs} works
+#'   best if the relationships are coded as listed below.
 #' @param GenBack  number of generations back to consider; 1 returns
 #'   parent-offspring and sibling relationships, 2 also returns grand-parental,
 #'   avuncular and first cousins.
 #' @param patmat  logical, distinguish between paternal versus maternal relative
 #'   pairs? For avuncular pairs, the distinction is never made.
-#' @param Return  'Matrix' or 'Array'. The former returns an N x N matrix with
-#'   the closest relationship between each pair, the latter an N x N x R array
-#'   with for each of the R considered relationships whether it exists between
-#'   the pair (1) or not (0). See Details below.
+#' @param Return  'Matrix', 'Array', or 'List'. 'Matrix' returns an N x N matrix
+#'   with the closest relationship between each pair. 'Array' returns an N x N x
+#'   R array with for each of the R considered relationships whether it exists
+#'   between the pair (1) or not (0). See Details below. 'List' returns a list
+#'   with for each of the R considered relationships a 2-column matrix with the
+#'   IDs of the pairs having such a relationship. The size of the list (in Mb)
+#'   is much smaller than for the matrix or array, and this is therefore the
+#'   only format suitable for pedigrees with many thousands of individuals. If
+#'   \code{Pairs} is specified, the only possible return type is 'Matrix'.
+#' @param Pairs_suffix  symbol added to the relationship abbreviations derived
+#'   from \code{Pairs}, when both \code{Pedigree} and \code{Pairs} are
+#'   provided. Can be an empty string.
 #'
 #' @return  If \code{Return='Matrix'}, an N x N square matrix, with N equal to
 #'   the number of rows in \code{Pedigree} (after running
@@ -22,8 +32,8 @@
 #'   with R, the number of different relationships, determined by \code{GenBack}
 #'   and \code{patmat}.
 #'
-#'  The following abbreviations are used within the returned \code{Matrix}, or as
-#'  names of the 3rd dimension in the \code{Array}:
+#'  The following abbreviations are used within the returned \code{Matrix}, or
+#'  as names of the 3rd dimension in the \code{Array} or of the \code{List}:
 #'    \item{S}{Self}
 #'    \item{M}{Mother}
 #'    \item{P}{Father}
@@ -40,12 +50,12 @@
 #'    \item{PGF}{Paternal grandfather}
 #'    \item{GP}{Grandparent (\code{patmat=FALSE})}
 #'    \item{GO}{Grand-offspring}
-#'    \item{FA}{Full avuncular; maternal or paternal aunt or uncle}
-#'    \item{HA}{Half avuncular}
+#'    \item{FA}{Full avuncular; maternal or paternal aunt or uncle.}
 #'    \item{FN}{Full nephew/niece}
+#'    \item{HA}{Half avuncular}
 #'    \item{HN}{Half nephew/niece}
-#'    \item{FC1}{Full first cousin}
 #'    \item{DFC1}{Double full first cousin}
+#'    \item{FC1}{Full first cousin}
 #'    \item{U}{Unrelated (or otherwise related)}
 #'
 #' @details  Double relationships are ignored when \code{Return='Matrix'}, but
@@ -56,7 +66,8 @@
 #'
 #'   Note that full siblings are the exception to this rule: in the \code{Array}
 #'   they will be indicated as 'FS' only, and not as 'MHS' or 'PHS'. Similarly,
-#'   full avuncular pairs are not indicated as 'HA'.
+#'   full avuncular pairs are not indicated as 'HA'. Double half-avuncular
+#'   relationships are indicated as both FA and HA.
 #'
 #'   When \code{Pairs} is provided, \code{GenBack} and \code{patmat} are
 #'   ignored, and no check is performed if the abbreviations are compatible with
@@ -66,9 +77,8 @@
 #'   between two pedigrees; \code{\link{PlotRelPairs}}.
 #'
 #' @examples
-#' data(Ped_griffin)
 #' Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
-#' table(c(Rel.griffin))
+#' table(as.vector(Rel.griffin))
 #' # turning matrix into vector first makes table() much faster
 #' PlotRelPairs(Rel.griffin)
 #'
@@ -78,41 +88,42 @@ GetRelM <- function(Pedigree = NULL,
                     Pairs = NULL,
                     GenBack = 1,
                     patmat = FALSE,
-                    Return = "Matrix")
+                    Return = "Matrix",
+                    Pairs_suffix = '?')
 {
-  if (!is.null(Pedigree) & !is.null(Pairs))
-    stop("Please provide Pedigree or Pairs, not both")
-  if (is.null(Pedigree) & is.null(Pairs))
-    stop("Please provide Pedigree or Pairs")
+  if (is.null(Pedigree) & is.null(Pairs))  stop("Please provide Pedigree or Pairs")
+  if (!(Return %in% c("Matrix", "Array", "List")))  stop("Return must be 'Matrix', 'Array', or 'List'")
+  if (!is.null(Pairs)) {
+    if (Return != "Matrix")  stop("When providing Pairs, Return must be 'Matrix'")
+    if (!class(Pairs) %in% c("data.frame", "matrix"))  stop("Pairs should be a dataframe or matrix")
+  }
+
+  # function inflate square matrix to larger square matrix with more IDs
+  inflate <- function(M, IDnew, na=NA) {
+    Mnew <- matrix(na, length(IDnew), length(IDnew), dimnames=list(IDnew, IDnew))
+    if (is.null(rownames(M)) & nrow(M)==ncol(M))  rownames(M) <- colnames(M)
+    Mnew[rownames(M), colnames(M)] <- M
+    Mnew
+  }
 
   if (!is.null(Pedigree)) {
-    if (!(Return %in% c("Matrix", "Array")))   stop("Return must be 'Matrix' or 'Array'")
     Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=FALSE)
-    if (GenBack==2) {
-    nGPcols <- length(intersect(c("MGM","MGF","PGM","PGF"), names(Pedigree)))
-    if (nGPcols > 0 & nGPcols < 4) {
-      stop("Pedigree must either have none of the columns 'MGM', 'MGF', 'PGM', 'PGF', or all 4")
-    } else if (nGPcols == 0) {
-      Pedigree <- GPcols(Pedigree)
-    }
-  }
-    RelA <- GetRelA(Pedigree, GenBack = GenBack, patmat = patmat)
+    RelA <- GetRelA(Pedigree, GenBack = GenBack, patmat = patmat, List = (Return == 'List'))
 
     if (Return == "Matrix" ) {
       rel.i <- which(RelA == 1, arr.ind=TRUE)
       rel.i <- rel.i[!duplicated(rel.i[,1:2]), ]  # 'highest' relationship only per pair
       RelNames <- dimnames(RelA)[[3]]
-      RelM <- matrix("U", dim(RelA)[1], dim(RelA)[2], dimnames = list(Pedigree$id, Pedigree$id))
-      RelM[rel.i[,1:2]] <- RelNames[rel.i[,3]]
-      return( RelM )
+      RelM.ped <- matrix("U", dim(RelA)[1], dim(RelA)[2],
+                         dimnames = list(Pedigree$id, Pedigree$id))
+      RelM.ped[rel.i[,1:2]] <- RelNames[rel.i[,3]]
+      if (is.null(Pairs))  return( RelM.ped )
     } else {
       return( RelA )
     }
+  }
 
-  } else if (!is.null(Pairs)) {
-    if (Return != "Matrix")   stop("When providing Pairs, Return must be 'Matrix'")
-    if (!class(Pairs) %in% c("data.frame", "matrix"))
-      stop("Pairs should be a dataframe or matrix")
+  if (!is.null(Pairs)) {
     Pairs <- as.data.frame(Pairs)
     names(Pairs)[1:3] <- c("ID1", "ID2", "Rel")
     for (x in 1:3)  Pairs[,x] <- as.character(Pairs[,x])
@@ -125,17 +136,40 @@ GetRelM <- function(Pedigree = NULL,
     if(any(RelM.a != RelM.b, na.rm=TRUE)) {
       stop("One or more pairs occur 2x in 'Pairs', with different relationship")
     }
-    RelM <- RelM.a
-    RelM[,] <- "U"
-    diag(RelM) <- "S"
-    RelM[!is.na(RelM.a)] <- RelM.a[!is.na(RelM.a)]
-    RelM[!is.na(RelM.b)] <- RelM.b[!is.na(RelM.b)]
-    return( RelM )
+    RelM.pairs <- RelM.a
+    RelM.pairs[,] <- "U"
+    diag(RelM.pairs) <- "S"
+    RelM.pairs[!is.na(RelM.a)] <- RelM.a[!is.na(RelM.a)]
+    RelM.pairs[!is.na(RelM.b)] <- RelM.b[!is.na(RelM.b)]
+    if (is.null(Pedigree))  return( RelM.pairs )
   }
 
+  # if arriving here, !is.null(Pedigree) & !is.null(Pairs)
+  # assuming that Pairs comes from GetMaybeRel() --> add '?' to distinguish sources
+  RelM.pairs <- apply(RelM.pairs, 1, function(x) ifelse(x %in% c('U', 'S'), x, paste0(x, '?')))
+
+  # align IDs
+  IDs <- unique(c(colnames(RelM.ped), colnames(RelM.pairs)))
+  RelM.ped.i <- inflate(RelM.ped, IDs, na='X')
+  RelM.pairs.i <- inflate(RelM.pairs, IDs, na='X')
+
+  # priority of relationships (close -> distant)
+  # RelRank <- c("S", "M", "P", "MP", "O", "PO?",
+               # "FS","FS?", "MHS", "PHS", "HS", "HS?",
+               # "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
+               # "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
+               # "DFC1", "FC1", "XX?", "Q?", "U", "X")
+  used_rels <- unique(c(RelM.ped.i, RelM.pairs.i))
+  rel_lvls <- c(intersect(RelRank, used_rels), setdiff(used_rels, RelRank))
+
+  RelM.ped.i <- factor(RelM.ped.i, levels = rel_lvls)
+  RelM.pairs.i <- factor(RelM.pairs.i, levels = rel_lvls)
+  RelM <- matrix(factor(pmin(as.numeric(RelM.ped.i), as.numeric(RelM.pairs.i)),
+                        levels = seq_along(rel_lvls), labels=rel_lvls),
+                 nrow=length(IDs), dimnames=list(IDs, IDs))
+
+  return( RelM )
 }
-
-
 
 
 
@@ -153,6 +187,7 @@ GetRelM <- function(Pedigree = NULL,
 #'   avuncular and first cousins.
 #' @param patmat  logical, distinguish between paternal versus maternal relative
 #'   pairs? For avuncular pairs, the distinction is never made.
+#' @param List logical, return a list instead of the default array
 #'
 #' @return a 3D array indicating if the pair has the specified relationship (1)
 #' or not (0). The various relationship considered are in the 3rd dimension:
@@ -166,131 +201,75 @@ GetRelM <- function(Pedigree = NULL,
 #'
 #' @keywords internal
 
-GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE)
+GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
 {
   if (is.null(Ped))  stop("Please provide Pedigree")
-  nInd <- nrow(Ped)
 
-  if (GenBack == 1) {
-    Anc <- c("dam", "sire")
-  } else if (GenBack == 2) {
-    Anc <- c("dam", "sire", "MGM","MGF","PGM","PGF")
-  }
-  PedX <- matrix(NA, nInd, length(Anc), dimnames=list(Ped$id, Anc))
-  for (p in Anc) {
-    PedX[,p] <- sapply(Ped[,p], function(x) ifelse(is.na(x), NA,
-                                                        which(Ped[,"id"]==x)))
-  }
+  PedN <- PedToNum(Ped, gID = Ped[, 1], DoDummies = "no")
+  nInd <- nrow(PedN$PedPar)
+  nRel <- ifelse(GenBack == 1, 8, 19)
 
   Rels <- c("S", "M", "P", "O", "FS", "MHS", "PHS", "XHS")  # XHS: 'cross'-half-sibs
+  RelsB <- c("S", "MP", "O", "FS", "HS")  # patmat = FALSE
   if (GenBack == 2) {
     Rels <- c(Rels, "MGM", "MGF", "PGM", "PGF", "GO",
-    "FA", "FN", "HA", "HN", "DFC1", "FC1")
+              "FA", "FN", "HA", "HN", "DFC1", "FC1")
+    RelsB <- c(RelsB, "GP", "GO",
+               "FA", "FN", "HA", "HN", "DFC1", "FC1")
   }
 
-  RelA <- array(0, dim = c(nInd, nInd, length(Rels)),
-                dimnames=list(Ped$id, Ped$id, Rels))
+  TMP <- .Fortran("getrel",
+                  nind = nInd,
+                  pedrf = as.integer(PedN$PedPar),
+                  nrel = as.integer(nRel),
+                  relv = integer(nInd * nInd * nRel) )
 
-  # self
-  RelA[,,"S"][cbind(seq_len(nInd), seq_len(nInd))] <- 1
+  if (List) {  # e.g. when very large pedigree --> relA object.size too large
 
-  # parent-offspring
-  RelA[,,"M"][cbind(seq_len(nInd), PedX[,"dam"])] <- 1
-  RelA[,,"P"][cbind(seq_len(nInd), PedX[,"sire"])] <- 1
-  RelA[,,"O"][cbind(c(PedX[,"dam"], PedX[,"sire"]), rep(seq_len(nInd),2))] <- 1
-
-  # grandparent-grandoffspring
-  if (GenBack == 2) {
-    for (a in c("MGM","MGF","PGM","PGF")) {
-      RelA[,,a][cbind(seq_len(nInd), PedX[,a])] <- 1
-      RelA[,,"GO"][cbind(PedX[,a], seq_len(nInd))] <- 1
+    IDs <- Ped[,1]
+    RelL <- list()
+    for (r in seq_along(Rels)) {
+      tmpM <- matrix(TMP$relv[((r-1)*nInd*nInd +1) : (r*nInd*nInd)], nInd, nInd)
+      tmpW <- which(tmpM == 1, arr.ind=TRUE, useNames = FALSE)
+      RelL[[Rels[r]]] <- cbind(ID1 = IDs[ tmpW[,1] ],
+                               ID2 = IDs[ tmpW[,2] ])
     }
-  }
+    rm(TMP, tmpM, tmpW)
 
-  # siblings
-  RelA[,,"FS"][(outer(PedX[,"dam"], PedX[,"dam"], "==") &
-                  outer(PedX[,"sire"], PedX[,"sire"], "==")) |
-                 (outer(PedX[,"dam"], PedX[,"sire"], "==") &
-                    outer(PedX[,"sire"], PedX[,"dam"], "=="))] <- 1
-  RelA[,,"MHS"][outer(PedX[,"dam"], PedX[,"dam"], "==")] <- 1
-  RelA[,,"PHS"][outer(PedX[,"sire"], PedX[,"sire"], "==")] <- 1
-  RelA[,,"XHS"][outer(PedX[,"dam"], PedX[,"sire"], "==") |
-                  outer(PedX[,"sire"], PedX[,"dam"], "==")] <- 1   # hermaphrodites
-
-  if (GenBack == 2) {
-    # avuncular
-    RelA[,,"FA"][(outer(PedX[,"MGM"], PedX[,"dam"], "==") &
-                  outer(PedX[,"MGF"], PedX[,"sire"], "==")) |
-                 (outer(PedX[,"PGM"], PedX[,"dam"], "==") &
-                    outer(PedX[,"PGF"], PedX[,"sire"], "==")) |
-                 (outer(PedX[,"MGM"], PedX[,"sire"], "==") &     # hermaphrodites
-                    outer(PedX[,"MGF"], PedX[,"dam"], "==")) |
-                 (outer(PedX[,"PGM"], PedX[,"sire"], "==") &    # hermaphrodites
-                    outer(PedX[,"PGF"], PedX[,"dam"], "=="))] <- 1
-    RelA[,,"FN"] <- t(RelA[,,"FA"])
-    RelA[,,"HA"][outer(PedX[,"MGM"], PedX[,"dam"], "==") |
-                   outer(PedX[,"MGF"], PedX[,"sire"], "==") |
-                   outer(PedX[,"PGM"], PedX[,"dam"], "==") |
-                   outer(PedX[,"PGF"], PedX[,"sire"], "==") |
-                   outer(PedX[,"MGM"], PedX[,"sire"], "==") |     # hermaphrodites
-                   outer(PedX[,"MGF"], PedX[,"dam"], "==") |
-                   outer(PedX[,"PGM"], PedX[,"sire"], "==") |
-                   outer(PedX[,"PGF"], PedX[,"dam"], "==")] <- 1
-    RelA[,,"HN"] <- t(RelA[,,"HA"])
-
-    # (double) full 1st cousins
-    RelA[,,"DFC1"][(outer(PedX[,"MGM"], PedX[,"MGM"], "==") &
-                      outer(PedX[,"MGF"], PedX[,"MGF"], "==") &
-                      outer(PedX[,"PGM"], PedX[,"PGM"], "==") &
-                      outer(PedX[,"PGF"], PedX[,"PGF"], "==")) |
-                     (outer(PedX[,"MGM"], PedX[,"PGM"], "==") &
-                        outer(PedX[,"MGF"], PedX[,"PGF"], "==") &
-                        outer(PedX[,"PGM"], PedX[,"MGM"], "==") &
-                        outer(PedX[,"PGF"], PedX[,"MGF"], "=="))] <- 1
-    RelA[,,"FC1"][(outer(PedX[,"MGM"], PedX[,"MGM"], "==") &
-                     outer(PedX[,"MGF"], PedX[,"MGF"], "==")) |
-                    (outer(PedX[,"PGM"], PedX[,"PGM"], "==") &
-                       outer(PedX[,"PGF"], PedX[,"PGF"], "==")) |
-                    (outer(PedX[,"MGM"], PedX[,"PGM"], "==") &
-                       outer(PedX[,"MGF"], PedX[,"PGF"], "==")) |
-                    (outer(PedX[,"PGM"], PedX[,"MGM"], "==") &
-                       outer(PedX[,"PGF"], PedX[,"MGF"], "=="))] <- 1
-    # cousins not implemented for hermaphrodites yet.
-  }
-
-  # some exceptions
-  if (GenBack == 2) {
-    RelA[,,"FC1"][RelA[,,"MHS"]==1 | RelA[,,"PHS"]==1 | RelA[,,"XHS"]==1] <- 0
-    RelA[,,"HA"][RelA[,,"FA"]==1] <- 0
-    RelA[,,"FA"][RelA[,,"M"]==1 | RelA[,,"P"]==1] <- 0
-  }
-  for (r in c("FS", "MHS", "PHS", "XHS")) {
-    RelA[,,r][RelA[,,"S"]==1] <- 0
-    if (r=="FS")  next
-    RelA[,,r][RelA[,,"FS"]==1] <- 0
-  }
-
-  if (!patmat) {
-    RelsB <- c("S", "MP", "O", "FS", "HS")
-    if (GenBack == 2) {
-      RelsB <- c(RelsB, "GP", "GO",
-                 "FA", "FN", "HA", "HN", "DFC1", "FC1")
+    if (!patmat) {   # combine maternal & paternal relatives
+      RelL[['MP']] <- rbind(RelL[['M']], RelL[['P']])
+      RelL[['HS']] <- rbind(RelL[['MHS']], RelL[['PHS']], RelL[['XHS']])
+      if (GenBack == 2) {
+        RelL[['GP']] <- rbind(RelL[['MGM']], RelL[['MGF']], RelL[['PGM']], RelL[['PGF']])
+      }
+      RelL <- RelL[ RelsB ]
     }
-    RelA.B <- array(0, dim = c(nInd, nInd, length(RelsB)),
-                    dimnames=list(Ped$id, Ped$id, RelsB))
-    RelA.B[,,"MP"] <- RelA[,,"M"] | RelA[,,"P"]
-    RelA.B[,,"HS"] <- RelA[,,"MHS"] | RelA[,,"PHS"] | RelA[,,"XHS"]
-    if (GenBack == 2) {
-      RelA.B[,,"GP"] <- RelA[,,"MGM"] | RelA[,,"MGF"] | RelA[,,"PGM"] | RelA[,,"PGF"]
-    }
-    for (r in RelsB) {
-      if (r %in% c("MP", "HS", "GP"))  next
-      RelA.B[,,r] <- RelA[,,r]
-    }
-    RelA <- RelA.B
-  }
 
-  return( RelA )
+    return( RelL )
+
+  } else {
+
+    RelA <- array(TMP$relv, dim = c(nInd, nInd, nRel),
+                  dimnames = list(ID1 = Ped[,1], ID2 = Ped[,1], Rel = Rels) )
+
+
+    if (!patmat) {   # combine maternal & paternal relatives
+      RelA.B <- array(0, dim = c(nInd, nInd, length(RelsB)),
+                      dimnames=list(Ped$id, Ped$id, RelsB))
+      RelA.B[,,"MP"] <- RelA[,,"M"] | RelA[,,"P"]
+      RelA.B[,,"HS"] <- RelA[,,"MHS"] | RelA[,,"PHS"] | RelA[,,"XHS"]
+      if (GenBack == 2) {
+        RelA.B[,,"GP"] <- RelA[,,"MGM"] | RelA[,,"MGF"] | RelA[,,"PGM"] | RelA[,,"PGF"]
+      }
+      for (r in RelsB) {
+        if (r %in% c("MP", "HS", "GP"))  next
+        RelA.B[,,r] <- RelA[,,r]
+      }
+      RelA <- RelA.B
+    }
+
+    return( RelA )
+  }
 }
 
 

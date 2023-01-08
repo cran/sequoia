@@ -12,7 +12,6 @@
 #' @seealso \code{\link{PedCompare}}
 #'
 #' @examples
-#' data(SeqOUT_griffin, FieldMums_griffin, package="sequoia")
 #' PC.g <- PedCompare(Ped1 = cbind(FieldMums_griffin, sire=NA),
 #'                    Ped2 = SeqOUT_griffin$Pedigree)
 #' PlotPedComp(PC.g$Counts)

@@ -8,8 +8,10 @@ MkGenoErrors(
   SGeno,
   CallRate = 0.99,
   SnpError = 5e-04,
-  ErrorFM = function(E) {     matrix(c(1 - E - (E/2)^2, E, (E/2)^2, E/2, 1 - E, E/2,
-    (E/2)^2, E, 1 - E - (E/2)^2), 3, 3, byrow = TRUE) },
+  ErrorFM = function(E) {
+     matrix(c(1 - E - (E/2)^2, E, (E/2)^2, E/2, 1 - E, E/2,
+    (E/2)^2, E, 1 - E - (E/2)^2), 3, 3, byrow = TRUE)
+ },
   Error.shape = 0.5,
   CallRate.shape = 1
 )
@@ -46,7 +48,6 @@ Generate errors and missing values in a (simulated) genotype
   matrix.
 }
 \examples{
-data(Ped_HSg5)
 GenoM <- SimGeno(Ped = Ped_HSg5, nSnp = 100, ParMis = 0.2,
                  SnpError=0, CallRate=1)
 GenoM.actual <- GenoM

@@ -34,13 +34,53 @@
 #' @inheritParams sequoia
 #'
 #' @return A list with
-#'   \item{MaybePar or MaybeRel}{A dataframe with non-assigned likely
-#'     relatives, with columns ID1 - ID2 - TopRel - LLR - OH - BirthYear1 -
-#'     BirthYear2 - AgeDif - Sex1 - Sex2 - SNPdBoth}
-#'   \item{MaybeTrio}{A dataframe with non-assigned parent-parent-offspring
-#'     trios, with columns id - parent1 - parent2 - LLRparent1 - LLRparent2 -
-#'     LLRpair - OHparent1 - OHparent2 - MEpair - SNPd.id.parent1 -
-#'     SNPd.id.parent2}
+#' \item{MaybePar}{A dataframe with non-assigned likely parent-offspring pairs,
+#'  with columns:
+#'     \itemize{
+#'       \item ID1
+#'       \item ID2
+#'       \item TopRel: the most likely relationship, using abbreviations listed
+#'         below
+#'        \item LLR: Log10-Likelihood Ratio between most likely and next most
+#'        likely relationship
+#'        \item OH: Number of loci at which the two individuals are opposite
+#'        homozygotes
+#'        \item BirthYear1: Birth year of ID1 (copied from LifeHistData)
+#'        \item BirthYear2
+#'        \item AgeDif: Age difference; BirthYear1 - BirthYear2
+#'        \item Sex1: Sex of ID1 (copied from LifeHistData)
+#'        \item Sex2
+#'        \item SnpdBoth: Number of loci at which the two individuals are both
+#'        successfully genotyped
+#'     }}
+#' \item{MaybeRel}{A dataframe with non-assigned likely pairs of relatives,
+#' with columns identical to \code{MaybePar}}
+#' \item{MaybeTrio}{A dataframe with non-assigned parent-parent-offspring
+#'     trios, with columns:
+#'     \itemize{
+#'       \item ID
+#'       \item parent1
+#'       \item parent2
+#'       \item TopRel: the most likely relationship, using abbreviations listed
+#'         below
+#'        \item LLRparent1: Log10-Likelihood Ratio between parent1 being a
+#'        parent of ID vs the next most likely relationship between the pair,
+#'        ignoring parent2
+#'        \item LLRparent2: as LLRparent1
+#'        \item LLRpair: LLR for the parental pair, versus the next most likely
+#'        configuration between the three individuals (with one or neither
+#'        parent assigned)
+#'        \item OHparent1: Number of loci at which ID and parent1 are opposite
+#'        homozygotes
+#'        \item OHparent2: as OHparent1
+#'        \item MEpair: Number of Mendelian errors between the offspring and the
+#'    parent pair, includes OH as well as e.g. parents being opposing
+#'    homozygotes, but the offspring not being a heterozygote. The offspring
+#'    being OH with both parents is counted as 2 errors.
+#'        \item SNPd.id.parent1: Number of loci at which ID and parent1 are both
+#'        successfully genotyped
+#'        \item SNPd.id.parent2: as SNPd.id.parent1
+#'     }}
 #' The following categories are used in column 'TopRel', indicating the most
 #' likely relationship category:
 #' \item{PO}{Parent-Offspring}
@@ -64,28 +104,32 @@
 #'   the likelihoods underlying the LLR.
 #'
 #' @examples
-#' \donttest{
-#' SeqOUT <- sequoia(GenoM = SimGeno_example,
-#'                   LifeHistData = LH_HSg5,
-#'                   Module = "par",
-#'                   quiet=TRUE, Plot=FALSE)
-#' MaybePO <- GetMaybeRel(GenoM = SimGeno_example,
-#'                       SeqList = SeqOUT)
+#' \dontrun{
+#' # without conditioning on pedigree
+#' MaybeRel_griffin <- GetMaybeRel(GenoM=Geno_griffin, Err=0.001, Module='par')
+#' }
+#' names(MaybeRel_griffin)
+#'
+#' # conditioning on pedigree
+#' MaybePO <- GetMaybeRel(GenoM = Geno_griffin, SeqList = SeqOUT_griffin,
+#'                       Module = 'par')
 #' head(MaybePO$MaybePar)
 #'
-#' # instead of providing the entire SeqList, one may
-#' # specify the relevant elements separately
-#' Maybe <- GetMaybeRel(GenoM = SimGeno_example,
-#'                      Pedigree = SeqOUT$PedigreePar,
-#'                      LifeHistData = LH_HSg5,
+#' # instead of providing the entire SeqList, one may specify the relevant
+#' # elements separately
+#' Maybe <- GetMaybeRel(GenoM = Geno_griffin,
+#'                      Pedigree = SeqOUT_griffin$PedigreePar,
+#'                      LifeHistData = LH_griffin,
 #'                      Err=0.0001, Complex = "full",
 #'                      Module = "ped")
 #' head(Maybe$MaybeRel)
 #'
 #' # visualise results, turn dataframe into matrix first:
-#' MaybeM <- GetRelM(Pairs=Maybe$MaybeRel)
+#' MaybeM <- GetRelM(Pairs = Maybe$MaybeRel)
 #' PlotRelPairs(MaybeM)
-#' }
+#' # or combine with pedigree (note suffix '?')
+#' RelM <- GetRelM(Pedigree =SeqOUT_griffin$PedigreePar, Pairs = Maybe$MaybeRel)
+#' PlotRelPairs(RelM)
 #'
 #' @useDynLib sequoia, .registration = TRUE
 #'

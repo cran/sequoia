@@ -37,7 +37,6 @@
 #' \item{X}{Not genotyped and not dummifiable, or no parent in pedigree}
 #'
 #' @examples
-#' data(Ped_HSg5, SimGeno_example, package="sequoia")
 #' PedA <- getAssignCat(Ped_HSg5, rownames(SimGeno_example))
 #' tail(PedA)
 #' table(PedA$dam.cat, PedA$sire.cat, useNA="ifany")
@@ -59,7 +58,8 @@
 getAssignCat <- function(Pedigree, SNPd, minSibSize = "1sib1GP") {
   # check input
   if (is.null(SNPd))  stop("Must provide 'SNPd'")
-  Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)
+  Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK = FALSE,
+                        StopIfInvalid=FALSE, KeepAllRows = TRUE)
   if (length(intersect(Pedigree$id, SNPd)) == 0)
     stop("'Pedigree' and 'SNPd' have no IDs in common")
 

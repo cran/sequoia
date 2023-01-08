@@ -36,9 +36,9 @@
 #'   \itemize{
 #'      \item '1sib' : sibship of size 1, with or without grandparents. The
 #'      latter aren't really a sibship, but can be useful in some situations.
-#'      \item '1sib1GP': sibship of size 1 with at least 1 grandparent
+#'      \item '1sib1GP': sibship of size 1 with at least 1 grandparent (default)
 #'      \item '2sib': at least 2 siblings, with or without grandparents
-#'        (default)
+#'        (default prior to version 2.4)
 #'  }
 #' @param Plot show square Venn diagrams of counts?
 #'
@@ -162,28 +162,23 @@
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
 #' @seealso \code{\link{ComparePairs}} for comparison of all pairwise
-#'   relationships in 2 pedigrees, \code{\link{EstConf}} for repeated
-#'   simulate-reconstruct-compare, \code{\link{sequoia}} for the main pedigree
-#'   reconstruction function, \code{\link{getAssignCat}} for all parents in the
-#'   reference pedigree that could have been assigned.
+#'   relationships in 2 pedigrees; \code{\link{EstConf}} for repeated
+#'   simulate-reconstruct-compare; \code{\link{getAssignCat}} for all parents in
+#'   the reference pedigree that could have been assigned;
+#'   \code{\link{CalcOHLLR}} to check how well an 'old' pedigree fits with the
+#'   SNP data.
 #'
 #' @examples
-#' \donttest{
-#' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-#' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-#'   Err=0.0001, quiet=TRUE, Plot=FALSE)
-#' # (Performance is better when using Err=0.001, but this makes for a more
-#' # interesting example)
-#'
-#' compare <- PedCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
-#' compare$Counts["TT",,]  # totals only
+#' compare <- PedCompare(Ped_griffin, SeqOUT_griffin$Pedigree)
+#' compare$Counts["TT",,]  # totals only; 45 dams & 47 sires non-assigned
 #' compare$Counts[,,"dam"]  # dams only
-#' # 2 mismatch & 3+1 non-assigned, due to simulated genotyping errors
 #'
-#' # inspect 'assignable but non-assigned in Ped2', id + dam both genotyped:
-#' compare$P1only[compare$P1only$id.dam.cat=="GG", ]
-#' # further inspection:
-#' compare$MergedPed[which(compare$MergedPed$dam.1=="a00013"), ]
+#' # inspect non-assigned in Ped2, id genotyped, dam might-be-dummy
+#' PedM <- compare$MergedPed  # for brevity
+#' PedM[PedM$id.dam.cat=='GD' & PedM$dam.class=='P1only',]
+#' # zoom in on specific dam
+#' PedM[which(PedM$dam.1=="i011_2001_F"), ]
+#' # no sire for 'i034_2002_F' -> impossible to tell if half-sibs or avuncular
 #'
 #' # overview of all non-genotyped -- dummy matches
 #' head(compare$DummyMatch)
@@ -191,7 +186,13 @@
 #' # success of paternity assignment, if genotyped mother correctly assigned
 #' dimnames(compare$Counts.detail)
 #' compare$Counts.detail["G","G",,"Match",]
-#' }
+#'
+#' # default before version 3.5: minSibSize = '2sib'
+#' compare_2s <- PedCompare(Ped_griffin, SeqOUT_griffin$Pedigree,
+#'                          minSibSize = '2sib')
+#' compare_2s$Counts[,,"dam"]  # note decrease in Total 'dummies
+#' with(compare_2s$MergedPed, table(id.dam.cat, dam.class))
+#' # some with id.cat = 'X' or dam.cat='X' are nonetheless dam.class='Match'
 #' @export
 
 PedCompare <- function(Ped1 = NULL,
@@ -199,11 +200,11 @@ PedCompare <- function(Ped1 = NULL,
                        DumPrefix = c("F0", "M0"),
                        SNPd = NULL,
                        Symmetrical = TRUE,
-                       minSibSize = "2sib",
+                       minSibSize = "1sib1GP",
                        Plot = TRUE)
 {
-  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)[, 1:3]
-  Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE)[, 1:3]
+  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
+  Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
   if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
 
   if (is.null(SNPd)) {
@@ -327,6 +328,9 @@ PedCompare <- function(Ped1 = NULL,
                         minSibSize = minSibSize)
   PedZ <- merge(PedY, Ped.a[, c("id", "id.cat", "dam.cat", "sire.cat")],
                 by.x="id.r", by.y="id", all.x=TRUE)
+
+  if (any(is.na(PedZ$id.cat)) | any(is.na(PedZ$dam.cat)) | any(is.na(PedZ$sire.cat)))
+    stop('PedCompare() batman bug!!')
 
   if (Symmetrical) {  # take 'highest' category across the 2 pedigrees
     Ped.b <- getAssignCat(PedY[, c("id", "dam.2", "sire.2")], SNPd,

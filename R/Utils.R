@@ -1,5 +1,5 @@
 #======================================================================
-# Miscelaneous functions
+# Miscelaneous functions (and a data vector)
 #======================================================================
 
 
@@ -47,30 +47,6 @@ FacToNum <- function(x) as.numeric(as.character(x))
 
 
 #======================================================================
-# add GP columns to pedigree ----
-GPcols <- function(Ped) {
-  IDorder <- Ped$id   # merge() ignores sort=FALSE
-  Ped <- merge(Ped, setNames(Ped[Ped$id %in% Ped$dam, c("id","dam","sire")],
-                             c("dam", "MGM", "MGF")), all.x=TRUE)
-  Ped <- merge(Ped, setNames(Ped[Ped$id %in% Ped$sire, c("id","dam","sire")],
-                             c("sire", "PGM", "PGF")), all.x=TRUE)
-  rownames(Ped) <- Ped$id
-  ColOrder <- c("id","dam","sire","MGM", "MGF","PGM", "PGF")
-  return( Ped[IDorder, c(ColOrder, setdiff(colnames(Ped), ColOrder))] )
-}
-
-
-#======================================================================
-# inflate square matrix to larger square matrix with more IDs
-inflate <- function(M, IDnew) {
-  Mnew <- matrix(NA, length(IDnew), length(IDnew), dimnames=list(IDnew, IDnew))
-  if (is.null(rownames(M)) & nrow(M)==ncol(M))  rownames(M) <- colnames(M)
-  Mnew[rownames(M), colnames(M)] <- M
-  return( Mnew )
-}
-
-
-#======================================================================
 # function adapted from Examples from integer {base}
 is.wholenumber <- function(x, tol = .Machine$double.eps^0.5) {
   ifelse(!is.numeric(x) | !is.finite(x),
@@ -115,25 +91,6 @@ MergeFill <- function(df1, df2, by, overwrite=FALSE, ...) {
 
 
 #======================================================================
-# merge huge dataframes ----
-# merge.dt <- function(df1, df2, key, quiet, ...) {
-#   if (requireNamespace("data.table", quietly = TRUE)) {
-#     df.12 <- as.data.frame(merge(data.table::data.table(df1, key=key),
-#                    data.table::data.table(df2, key=key),
-#                  ...))
-#   } else {
-#     df.12 <- merge(df1, df2, ...)
-#     if (!quiet & (nrow(df1)>5000 | nrow(df2)>5000)) {  # fairly arbitrary
-#       message("installing package 'data.table' is recommended to speed up",
-#               "merging huge data.frames")
-#     }
-#   }
-#
-#   return( df.12 )
-# }
-
-
-#======================================================================
 # make a named list, i.e. namedlist(a, b, x) i.o. list(a=a, b=b, x=x) ----
 namedlist <- function(...) {
   L <- list(...)
@@ -146,6 +103,15 @@ namedlist <- function(...) {
   return( L )
 }
 
+
+#======================================================================
+# priority of relationships (close -> distant)
+# used by GetRelM() & ComparePairs()
+RelRank <- c("S", "M", "P", "MP", "O", "PO?",
+               "FS","FS?", "MHS", "PHS", "HS", "HS?",
+               "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
+               "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
+               "DFC1", "FC1", "XX?", "Q?", "U", "X")
 
 #======================================================================
 # simpleCap ----
@@ -269,3 +235,33 @@ tryCatch.W.E <- function(expr)
 #
 #
 # #======================================================================
+# add GP columns to pedigree ----
+# GPcols <- function(Ped) {
+#   IDorder <- Ped$id   # merge() ignores sort=FALSE
+#   Ped <- merge(Ped, setNames(Ped[Ped$id %in% Ped$dam, c("id","dam","sire")],
+#                              c("dam", "MGM", "MGF")), all.x=TRUE)
+#   Ped <- merge(Ped, setNames(Ped[Ped$id %in% Ped$sire, c("id","dam","sire")],
+#                              c("sire", "PGM", "PGF")), all.x=TRUE)
+#   rownames(Ped) <- Ped$id
+#   ColOrder <- c("id","dam","sire","MGM", "MGF","PGM", "PGF")
+#   return( Ped[IDorder, c(ColOrder, setdiff(colnames(Ped), ColOrder))] )
+# }
+#
+#
+# #======================================================================
+# merge huge dataframes ----
+# merge.dt <- function(df1, df2, key, quiet, ...) {
+#   if (requireNamespace("data.table", quietly = TRUE)) {
+#     df.12 <- as.data.frame(merge(data.table::data.table(df1, key=key),
+#                    data.table::data.table(df2, key=key),
+#                  ...))
+#   } else {
+#     df.12 <- merge(df1, df2, ...)
+#     if (!quiet & (nrow(df1)>5000 | nrow(df2)>5000)) {  # fairly arbitrary
+#       message("installing package 'data.table' is recommended to speed up",
+#               "merging huge data.frames")
+#     }
+#   }
+#
+#   return( df.12 )
+# }

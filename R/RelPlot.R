@@ -56,11 +56,10 @@
 #'   graphical pedigree summaries.
 #'
 #' @examples
-#' data(Ped_griffin, package="sequoia")
 #' Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
 #' PlotRelPairs(Rel.griffin)
 #'
-#' \donttest{
+#' \dontrun{
 #' PlotRelPairs(Rel.griffin, pch.symbols = TRUE)
 #' # plot with unicode symbols not supported on all platforms
 #' }

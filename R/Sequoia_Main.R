@@ -22,10 +22,12 @@
 #'   \eqn{(E/2)^2}; the probability to observe a true heterozygote as \emph{aa}
 #'   = the probability to observe it as \emph{AA} \eqn{= E/2}. This error
 #'   structure can be fully customised by providing a 3x3 matrix of observed
-#'   genotype (columns) conditional on actual genotype (rows) instead.
+#'   genotype (columns) conditional on actual genotype (rows) instead, see
+#'   \code{\link{ErrToM}} for examples.
 #'
 #'   Full explanation of the various options and interpretation of the output is
-#'   provided in the vignette.
+#'   provided in the vignette and on the package website,
+#'   https://jiscah.github.io/index.html .
 #'
 #' @param GenoM  numeric matrix with genotype data: One row per individual, and
 #'   one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
@@ -72,7 +74,8 @@
 #'   assignment only.
 #' @param Err estimated genotyping error rate, as a single number or 3x3 matrix.
 #'   Details below. The error rate is presumed constant across SNPs, and
-#'   missingness is presumed random with respect to actual genotype.
+#'   missingness is presumed random with respect to actual genotype. Using
+#'   \code{Err} >5\% is not recommended.
 #' @param ErrFlavour function that takes \code{Err} (single number) as input,
 #'   and returns a 3x3 matrix of observed (columns) conditional on actual (rows)
 #'   genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
@@ -106,9 +109,7 @@
 #' @param args.AP list with arguments to be passed on to
 #'   \code{\link{MakeAgePrior}}.
 #' @param FindMaybeRel \strong{DEPRECATED AND IGNORED}, advised to run
-#'   \code{\link{GetMaybeRel}} separately. TRUE/FALSE to identify pairs of
-#'   non-assigned likely relatives after pedigree reconstruction. Can be
-#'   time-consuming in large datasets.
+#'   \code{\link{GetMaybeRel}} separately.
 #' @param CalcLLR  TRUE/FALSE; calculate log-likelihood ratios for all assigned
 #'   parents (genotyped + dummy; parent vs. otherwise related). Time-consuming
 #'   in large datasets. Can be done separately with \code{\link{CalcOHLLR}}.
@@ -120,13 +121,17 @@
 #'   graphics state' can be dealt with by clearing the plotting area with
 #'   dev.off().
 #'
-#' @return A list with some or all of the following components:
+#' @return A list with some or all of the following components, depending on
+#'   \code{Module}. All input except \code{GenoM} is included in the output.
 #' \item{AgePriors}{Matrix with age-difference based probability ratios for
 #'   each relationship, used for full pedigree reconstruction; see
 #'   \code{\link{MakeAgePrior}} for details. When running only parentage
 #'   assignment (\code{Module="par"}) the returned AgePriors has been updated to
 #'   incorporate the information of the assigned parents, and is ready for use
 #'   during full pedigree reconstruction.}
+#' \item{args.AP}{(input) arguments used to specify age prior matrix. If a
+#'   custom ageprior was provided via \code{SeqList$AgePrior}, this matrix is
+#'   returned instead}
 #' \item{DummyIDs}{Dataframe with pedigree for dummy individuals, as well as
 #' their sex, estimated birth year (point estimate, upper and lower bound of
 #' 95\% confidence interval; see also \code{\link{CalcBYprobs}}), number of
@@ -139,13 +144,14 @@
 #' \item{DupLifeHistID}{Dataframe, row numbers of duplicated IDs in life
 #'   history dataframe. For convenience only, but may signal a problem. The
 #'   first entry is used.}
-#' \item{ErrM}{Error matrix; probability of observed genotype (columns)
+#' \item{ErrM}{(input) Error matrix; probability of observed genotype (columns)
 #'   conditional on actual genotype (rows)}
 #' \item{ExcludedInd}{Individuals in GenoM which were excluded because of a
 #'   too low genotyping success rate (<50\%).}
 #' \item{ExcludedSNPs}{Column numbers of SNPs in GenoM which were excluded
 #'   because of a too low genotyping success rate (<10\%).}
-#' \item{LifeHist}{Provided dataframe with sex and birth year data.}
+#' \item{LifeHist}{(input) Dataframe with sex and birth year data. All missing
+#'   birth years are coded as '-999', all missing sex as '3'.}
 #' \item{LifeHistPar}{LifeHist with additional columns 'Sexx' (inferred Sex when
 #' assigned as part of parent-pair), 'BY.est' (mode of birth year probability
 #' distribution), 'BY.lo' (lower limit of 95\% highest density region), 'BY.hi'
@@ -153,14 +159,6 @@
 #' probability distribution is flat between 'BY.lo' and 'BY.hi'.}
 #' \item{LifeHistSib}{as LifeHistPar, but estimated after full pedigree
 #' reconstruction}
-#' \item{MaybeParent}{Dataframe with pairs of individuals who are more likely
-#'   parent-offspring than unrelated, but which could not be phased due to
-#'   unknown age difference or sex, or for whom LLR did not pass Tassign.}
-#' \item{MaybeRel}{Dataframe with pairs of individuals who are more likely
-#'   to be first or second degree relatives than unrelated, but which could not
-#'   be assigned.}
-#' \item{MaybeTrio}{Dataframe with non-assigned parent-parent-offspring trios
-#' (both parents are of unknown sex), with similar columns as the pedigree}
 #' \item{NoLH}{Vector, IDs in genotype data for which no life history data is
 #'  provided.}
 #' \item{Pedigree}{Dataframe with assigned genotyped and dummy parents from
@@ -209,6 +207,28 @@
 #' claims to do, there is absolutely no guarantee that the results provided are
 #' correct. Use of sequoia is entirely at your own risk.
 #'
+#' @section (Too) Few Assignments?:
+#' Possibly \code{Err} is much lower than the actual genotyping error rate.
+#'
+#' Alternatively, a true parent will not be assigned when it is:
+#' \itemize{
+#'   \item unclear who is the parent and who the offspring, due to unknown birth
+#'   year for one or both individuals
+#'   \item unclear whether the parent is the father or mother
+#'   \item unclear if it is a parent or e.g. full sibling or grandparent, due to
+#'   insufficient genetic data
+#'   }
+#'  And true half-siblings will not be clustered when it is:
+#'  \itemize{
+#'    \item unclear if they are maternal or paternal half-siblings
+#'    \item unclear if they are half-siblings, full avuncular, or grand-parental
+#'    \item unclear what type of relatives they are due to insufficient genetic
+#'    data
+#'  }
+#'  All pairs of non-assigned but likely/definitely relatives can be found with
+#'  \code{\link{GetMaybeRel}}. For further information see the vignette.
+#'
+#'
 #' @seealso
 #' \itemize{
 #'   \item \code{\link{GenoConvert}} to read in various data formats,
@@ -219,6 +239,7 @@
 #'   \item \code{\link{GetMaybeRel}} to find pairs of potential relatives,
 #'   \item \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to visualise
 #'   results,
+#'   \item \code{\link{sequoia_report}} for a summary report of input + results,
 #'   \item \code{\link{GetRelM}} to turn a pedigree into pairwise relationships,
 #'   \item \code{\link{CalcOHLLR}} to calculate Mendelian errors and LLR for any
 #'    pedigree,
@@ -232,9 +253,10 @@
 #'   \item vignette("sequoia") for detailed manual & FAQ.
 #' }
 #'
+#'
+#'
 #' @examples
 #' # ===  EXAMPLE 1: simulated data  ===
-#' data(SimGeno_example, LH_HSg5, package="sequoia")
 #' head(SimGeno_example[,1:10])
 #' head(LH_HSg5)
 #' # parentage assignment:
@@ -249,6 +271,7 @@
 #'
 #' \donttest{
 #' # parentage assignment + full pedigree reconstruction:
+#' # (note: this can be rather time consuming)
 #' SeqOUT2 <- sequoia(GenoM = SimGeno_example, Err = 0.005,
 #'                   LifeHistData = LH_HSg5, Module="ped", quiet="verbose")
 #' SeqOUT2$Pedigree[34:42, ]
@@ -269,6 +292,7 @@
 #' PC2.b <- PedCompare(Ped_HSg5, SeqOUT2.b$Pedigree)
 #' PC2.b$Counts["GT",,]
 #' }
+#'
 #' \dontrun{
 #' # ===  EXAMPLE 2: real data  ===
 #' # ideally, select 400-700 SNPs: high MAF & low LD
@@ -324,7 +348,6 @@ sequoia <- function(GenoM = NULL,
   if (is.null(Plot))   # default
     Plot <- ifelse(quietR, FALSE, TRUE)
 
-
   # Backwards compatibility: Module vs MaxSibIter ----
   # if MaxSibIter is not default (42), and Module is default (ped), MaxSibIter overrides Module
   if (MaxSibIter != 42 && Module == "ped") {
@@ -345,20 +368,24 @@ sequoia <- function(GenoM = NULL,
     warning("'MaxMismatch' has been deprecated and is ignored,",
             "now calculated automatically via CalcMaxMismatch()", immediate.=TRUE)
 
+  if (!is.null(LifeHistData) & !inherits(LifeHistData, 'data.frame'))
+    stop("LifeHistData must be a data.frame or NULL")
+  if (!is.null(SeqList) & !inherits(SeqList, 'list'))
+    stop("SeqList must be a list or NULL")
+
   if (!is.null(SeqList)) {
-    if (any(is.na(names(SeqList))))
+    SeqList_names <- c("Specs", "ErrM", "args.AP", "AgePriors", "LifeHist",
+                       "PedigreePar", "MaxSibIter")
+    if (!any(names(SeqList) %in% SeqList_names) | any(is.na(names(SeqList))) )
       stop("You seem to have misspelled one or more names of elements of SeqList")
   }
 
 
   # Check genotype matrix ----
-  Excl <- CheckGeno(GenoM, quietR, Plot, Return = "excl", DumPrefix=DummyPrefix)
+  Excl <- CheckGeno(GenoM, quiet=quietR, Plot=Plot, Return = "excl", DumPrefix=DummyPrefix)
   if ("ExcludedSnps" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
   if ("ExcludedSnps-mono" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps-mono"]]]
   if ("ExcludedIndiv" %in% names(Excl))  GenoM <- GenoM[!rownames(GenoM) %in% Excl[["ExcludedIndiv"]], ]
-
-  if (!is.null(SeqList) && (!is.list(SeqList) | is.data.frame(SeqList)))  # dataframes are lists
-    stop("SeqList must be a list or NULL")
 
 
   # Check life history data ----
@@ -519,6 +546,7 @@ sequoia <- function(GenoM = NULL,
                              message("AgePrior: error!")
                              return(ParList)
                            })
+
   } else if ("AgePriors" %in% names(SeqList) & !"PedigreePar" %in% names(SeqList)) {
     if(!quietR)  message("using AgePriors in SeqList again")
   }
@@ -548,10 +576,21 @@ sequoia <- function(GenoM = NULL,
 
   #=====================
   # Output ----
+
+  if (!quietR & Module %in% c('par', 'ped')) {
+    message('Possibly not all ', c(par = 'parents', ped = 'relatives')[as.character(Module)],
+    ' were assigned, consider running GetMaybeRel() to check')
+  }
+
   OUT <- list()
   OUT[["Specs"]] <- ParamToSpecs(PARAM, TimeStart, ErrFlavour)
   OUT[["ErrM"]] <- PARAM$ErrM
   if (is.function(ErrFlavour))  OUT[["ErrFlavour"]] <- ErrFlavour
+  if ("AgePriors" %in% names(SeqList)) {
+    OUT[["args.AP"]] <- SeqList[['AgePriors']]
+  } else {
+    OUT[["args.AP"]] <- args.AP
+  }
   if (length(Excl)>0)  OUT <- c(OUT, Excl)
   OUT[["AgePriors"]] <- AgePriors
   OUT[["LifeHist"]] <- LifeHistData

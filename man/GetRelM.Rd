@@ -9,13 +9,16 @@ GetRelM(
   Pairs = NULL,
   GenBack = 1,
   patmat = FALSE,
-  Return = "Matrix"
+  Return = "Matrix",
+  Pairs_suffix = "?"
 )
 }
 \arguments{
 \item{Pedigree}{dataframe with columns id - dam - sire.}
 
-\item{Pairs}{dataframe with columns ID1 - ID2 - Rel.}
+\item{Pairs}{dataframe with columns ID1 - ID2 - Rel, e.g. as returned by
+\code{\link{GetMaybeRel}}. Combining \code{Pedigree} and \code{Pairs} works
+best if the relationships are coded as listed below.}
 
 \item{GenBack}{number of generations back to consider; 1 returns
 parent-offspring and sibling relationships, 2 also returns grand-parental,
@@ -24,10 +27,19 @@ avuncular and first cousins.}
 \item{patmat}{logical, distinguish between paternal versus maternal relative
 pairs? For avuncular pairs, the distinction is never made.}
 
-\item{Return}{'Matrix' or 'Array'. The former returns an N x N matrix with
-the closest relationship between each pair, the latter an N x N x R array
-with for each of the R considered relationships whether it exists between
-the pair (1) or not (0). See Details below.}
+\item{Return}{'Matrix', 'Array', or 'List'. 'Matrix' returns an N x N matrix
+with the closest relationship between each pair. 'Array' returns an N x N x
+R array with for each of the R considered relationships whether it exists
+between the pair (1) or not (0). See Details below. 'List' returns a list
+with for each of the R considered relationships a 2-column matrix with the
+IDs of the pairs having such a relationship. The size of the list (in Mb)
+is much smaller than for the matrix or array, and this is therefore the
+only format suitable for pedigrees with many thousands of individuals. If
+\code{Pairs} is specified, the only possible return type is 'Matrix'.}
+
+\item{Pairs_suffix}{symbol added to the relationship abbreviations derived
+from \code{Pairs}, when both \code{Pedigree} and \code{Pairs} are
+provided. Can be an empty string.}
 }
 \value{
 If \code{Return='Matrix'}, an N x N square matrix, with N equal to
@@ -37,8 +49,8 @@ If \code{Return='Matrix'}, an N x N square matrix, with N equal to
   with R, the number of different relationships, determined by \code{GenBack}
   and \code{patmat}.
 
- The following abbreviations are used within the returned \code{Matrix}, or as
- names of the 3rd dimension in the \code{Array}:
+ The following abbreviations are used within the returned \code{Matrix}, or
+ as names of the 3rd dimension in the \code{Array} or of the \code{List}:
    \item{S}{Self}
    \item{M}{Mother}
    \item{P}{Father}
@@ -55,12 +67,12 @@ If \code{Return='Matrix'}, an N x N square matrix, with N equal to
    \item{PGF}{Paternal grandfather}
    \item{GP}{Grandparent (\code{patmat=FALSE})}
    \item{GO}{Grand-offspring}
-   \item{FA}{Full avuncular; maternal or paternal aunt or uncle}
-   \item{HA}{Half avuncular}
+   \item{FA}{Full avuncular; maternal or paternal aunt or uncle.}
    \item{FN}{Full nephew/niece}
+   \item{HA}{Half avuncular}
    \item{HN}{Half nephew/niece}
-   \item{FC1}{Full first cousin}
    \item{DFC1}{Double full first cousin}
+   \item{FC1}{Full first cousin}
    \item{U}{Unrelated (or otherwise related)}
 }
 \description{
@@ -76,16 +88,16 @@ Double relationships are ignored when \code{Return='Matrix'}, but
 
   Note that full siblings are the exception to this rule: in the \code{Array}
   they will be indicated as 'FS' only, and not as 'MHS' or 'PHS'. Similarly,
-  full avuncular pairs are not indicated as 'HA'.
+  full avuncular pairs are not indicated as 'HA'. Double half-avuncular
+  relationships are indicated as both FA and HA.
 
   When \code{Pairs} is provided, \code{GenBack} and \code{patmat} are
   ignored, and no check is performed if the abbreviations are compatible with
   other functions.
 }
 \examples{
-data(Ped_griffin)
 Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
-table(c(Rel.griffin))
+table(as.vector(Rel.griffin))
 # turning matrix into vector first makes table() much faster
 PlotRelPairs(Rel.griffin)
 

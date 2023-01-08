@@ -3,7 +3,7 @@
 \docType{data}
 \name{LH_griffin}
 \alias{LH_griffin}
-\title{Example lifehistory data: griffins}
+\title{Example life history data: griffins}
 \format{
 A data frame with 200 rows and 3 variables (ID, Sex, BirthYear)
 }
@@ -11,7 +11,16 @@ A data frame with 200 rows and 3 variables (ID, Sex, BirthYear)
 data(LH_griffin)
 }
 \description{
-Example lifehistory data for griffin pedigree
+Example life history data associated with the griffin pedigree.
+}
+\examples{
+\dontrun{
+BY <- rep(c(2001:2010), each=20)
+Sex <- sample.int(n=2, size=200, replace=TRUE)
+ID <- paste0("i", formatC(1:200, width=3, flag="0"), "_", BY, "_",
+             ifelse(Sex==1, "F", "M"))
+LH_griffin <- data.frame(ID, Sex, BirthYear = BY)
+}
 }
 \seealso{
 \code{\link{Ped_griffin}}, \code{\link{SeqOUT_griffin}}

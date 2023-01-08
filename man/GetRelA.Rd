@@ -4,7 +4,7 @@
 \alias{GetRelA}
 \title{Array with Pairwise Relationships}
 \usage{
-GetRelA(Ped = NULL, GenBack = 1, patmat = TRUE)
+GetRelA(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
 }
 \arguments{
 \item{Ped}{dataframe with columns id - dam - sire.}
@@ -15,6 +15,8 @@ avuncular and first cousins.}
 
 \item{patmat}{logical, distinguish between paternal versus maternal relative
 pairs? For avuncular pairs, the distinction is never made.}
+
+\item{List}{logical, return a list instead of the default array}
 }
 \value{
 a 3D array indicating if the pair has the specified relationship (1)

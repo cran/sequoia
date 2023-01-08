@@ -82,7 +82,8 @@
 #'   currently supported by the pedigree reconstruction with
 #'   \code{\link{sequoia}} !
 #' @param InheritFile  file name of file with inheritance patterns, with
-#'   extension csv, txt, xls or xlsx (the latter two require library xlsx).
+#'   extension csv, txt, xls or xlsx (the latter two require library
+#'   \pkg{openxlsx}).
 #' @param quiet suppress messages.
 #'
 #' @return If \code{ReturnStats=FALSE} (the default), a matrix with genotype
@@ -115,7 +116,6 @@
 #'   of pedigree reconstruction performance.
 #'
 #' @examples
-#' data(Ped_HSg5)
 #' GenoM <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = c(0.2, 0.7))
 #'
 #' \dontrun{
@@ -276,9 +276,9 @@ SimGeno <- function(Pedigree,
 
     # inheritance patterns
     if (is.na(InheritFile) | is.null(InheritFile)) {
-      utils::data(Inherit)
-      INHA <- Inherit
-      rm(Inherit)
+      Inherit_patterns <- NULL
+      utils::data(Inherit_patterns, package='sequoia')
+      INHA <- Inherit_patterns
     } else {
       INHA <- ReadSpecialInherit(InheritFile, quiet)  # array: inherit - off sex - geno off - dam - sire
     }
@@ -286,6 +286,7 @@ SimGeno <- function(Pedigree,
     # founders
     founderProp <- apply(INHA, 1:3, sum)
     SGeno.4 <- matrix(NA, nInd, nSnp, dimnames=list(Ped[,1], NULL))
+    if (length(Inherit)==1)  Inherit <- rep(Inherit, nSnp)
     for (i in which(Ped$gen==0)) {
       SGeno.4[i, ] <- sapply(1:nSnp, function(l) sample.int(4, size=1,
                                 prob=c(Q[l]^2, Q[l]*(1-Q[l]), Q[l]*(1-Q[l]), (1-Q[l])^2) *
@@ -295,11 +296,12 @@ SimGeno <- function(Pedigree,
     # non-founders
     Gprob <- matrix(NA, nSnp, 4,
                     dimnames=list(1:nSnp, c("aa", "aA", "Aa", "AA")))
+    Inherit <- factor(Inherit, levels = dimnames(INHA)[[1]])
     for (g in 1:nGen) {
       for (i in which(Ped$gen==g)) {
         if (Ped$damIDx[i] != 0 & Ped$sireIDx[i] != 0) {
           for (x in 1:4) {  #
-            Gprob[,x] <- INHA[,Ped$Sex[i],x,,][cbind(Inherit, SGeno[Ped$damIDx[i],], SGeno[Ped$sireIDx[i],]) ]
+            Gprob[,x] <- INHA[,Ped$Sex[i],x,,][cbind(Inherit, SGeno.4[Ped$damIDx[i],], SGeno.4[Ped$sireIDx[i],]) ]
           }
         } else {
           stop("Non-autosomal single parents not implemented yet!!")
@@ -415,7 +417,6 @@ SimGeno <- function(Pedigree,
 #'   set to missing (-9).
 #'
 #' @examples
-#' data(Ped_HSg5)
 #' GenoM <- SimGeno(Ped = Ped_HSg5, nSnp = 100, ParMis = 0.2,
 #'                  SnpError=0, CallRate=1)
 #' GenoM.actual <- GenoM
@@ -540,17 +541,18 @@ DoErrors <- function(SGeno, RealToObs) {
 ReadSpecialInherit <- function(InheritFile, quiet) {
   inherit.L <- list()
   if (tools::file_ext(InheritFile) %in% c("xls", "xlsx")) {
-    if (!requireNamespace("xlsx", quietly = TRUE)) {
+    if (!requireNamespace("openxlsx", quietly = TRUE)) {
       if (interactive() & !quiet) {
-        ANS <- readline(prompt = paste("library 'xlsx' not found. Install Y/N? "))
-        if (!substr(ANS, 1, 1) %in% c("Y", "y", "J", "j", "")) stop()
+        ANS <- readline(prompt = paste("library 'openxlsx' not found. Install Y/N? "))
+        if (!substr(ANS, 1, 1) %in% c("Y", "y")) stop()
       }
-      utils::install.packages("xlsx")
+      utils::install.packages("openxlsx")
     }
-    TypeNames <- names(xlsx::getSheets(xlsx::loadWorkbook(InheritFile)))
+    TypeNames <- openxlsx::getSheetNames(InheritFile)
     TmpL <- list()
-    for (type in seq_along(TypeNames)) {
-      TmpL[[type]] <-  xlsx::read.xlsx(InheritFile,  sheetIndex = type)
+    for (type in TypeNames) {
+      TmpL[[type]] <-  openxlsx::read.xlsx(xlsxFile = InheritFile, sheet = type,
+                                           colnames = TRUE, detectDates = FALSE)
     }
 
   } else {
@@ -563,24 +565,24 @@ ReadSpecialInherit <- function(InheritFile, quiet) {
     TmpL <- plyr::dlply(TmpDF, "Mode", function(df) df[, -1])
   }
 
-  for (type in seq_along(TmpL)) {
-    if (is.null(TmpL[[type]]))  next
+  for (y in seq_along(TmpL)) {
+    if (is.null(TmpL[[y]]))  next
     INH <- array(0, dim = c(3,4,4,4),  # off sex, geno off - dam - sire
                  dimnames = c(list(c("fem","male", "unk")),
                               lapply(1:3, function(i) c("aa", "aA", "Aa", "AA"))))
-    if (all(TmpL[[type]]$Sex == 3)) {
+    if (all(TmpL[[y]]$Sex == 3)) {
       for (i in 1:4) {
-        INH[3,i,,] <- t(matrix(as.matrix(TmpL[[type]][,4:7])[,i], 4,4))
+        INH[3,i,,] <- t(matrix(as.matrix(TmpL[[y]][,4:7])[,i], 4,4))
       }
       for (s in 1:2) {
         INH[s,,,] <- INH[3,,,]
       }
 
-    } else if (all(TmpL[[type]]$Sex %in% 1:2)){
+    } else if (all(TmpL[[y]]$Sex %in% 1:2)){
       for (s in 1:2) {
-        if (!any(TmpL[[type]]$Sex == s)) next
+        if (!any(TmpL[[y]]$Sex == s)) next
         for (i in 1:4) {
-          INH[s,i,,] <- t(matrix(as.matrix(TmpL[[type]][TmpL[[type]]$Sex==s, 4:7])[,i], 4,4))
+          INH[s,i,,] <- t(matrix(as.matrix(TmpL[[y]][TmpL[[y]]$Sex==s, 4:7])[,i], 4,4))
         }
       }
       INH[3,,,] <- apply(INH[1:2,,,], c(2:4), mean)
@@ -589,7 +591,7 @@ ReadSpecialInherit <- function(InheritFile, quiet) {
       stop("mix of known & unknown sex in INHERIT not implemented")
     }
 
-    inherit.L[[TypeNames[type]]] <- INH
+    inherit.L[[TypeNames[y]]] <- INH
   }
 
   INHA <- plyr::laply(inherit.L, function(x) x)

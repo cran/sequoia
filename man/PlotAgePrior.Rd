@@ -25,7 +25,6 @@ Visualise the age-difference based prior probability ratios as a
   heatmap.
 }
 \examples{
-data(SeqOUT_griffin, package="sequoia")
 PlotAgePrior(SeqOUT_griffin$AgePriors)
 PlotAgePrior(SeqOUT_griffin$AgePriorExtra)
 

@@ -9,9 +9,22 @@
 #'   (TRUE, default) or return the Pedigree, to see where the problem(s) occur.
 #'
 #' @return  A vector with the generation number for each individual, starting at
-#'   0 for founders. NA indicates a pedigree loop where an individual is its own
-#'   ancestor (or that the pedigree has >1000 generations). Returned invisibly
-#'   to be a part of QC.
+#'   0 for founders. Offspring of G0 X G0 are G1, offfspring of G0 X G1 or G1 x
+#'   G1 are G2, etc. \code{NA} indicates a pedigree loop where an individual is
+#'   its own ancestor (or that the pedigree has >1000 generations).
+#'
+#'   If no output name is specified, no results are returned, only an error
+#'   message when the pedigree contains a loop.
+#'
+#'
+#' @examples
+#' # returns nothing if OK, else error:
+#' getGenerations(SeqOUT_griffin$Pedigree)
+#'
+#' # returns vector with generation numbers:
+#' G <- getGenerations(SeqOUT_griffin$Pedigree, StopIfInvalid=FALSE)
+#' table(G, useNA='ifany')
+#' Ped_plus_G <- cbind(SeqOUT_griffin$Pedigree, G)
 #'
 #' @export
 
@@ -20,6 +33,8 @@ getGenerations <- function(Ped, StopIfInvalid=TRUE) {
     Ped[which(Ped[,p]==0), p] <- NA
   }
   Ped <- as.data.frame(Ped)
+
+  if (nrow(Ped) == 0)  return( 0 )
 
   if (!all(na.exclude(unlist(Ped[,2:3])) %in% Ped[,1]))
     stop("Some parents do not occur in first column; please call PedPolish() first")

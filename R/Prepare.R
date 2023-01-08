@@ -21,7 +21,7 @@ SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
   # backwards compatability
   if (exists("Module")) {
     Specs$Module <- Module
-  } else if (!"Module" %in% names(Specs)) {
+  } else if (!"Module" %in% names(Specs) & 'MaxSibIter' %in% names(Specs)) {
     Module <- cut(Specs$MaxSibIter,
                   breaks= c(-Inf, -9, -1, 0, Inf),
                   labels = c("pre", "dup", "par", "ped"))
@@ -55,7 +55,7 @@ SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
                              nAgeClasses,
                              MaxSibshipSize,
                              Module,
-                             MaxSibIter,
+#                             MaxSibIter,
                              DummyPrefix = c(DummyPrefixFemale,
                                              DummyPrefixMale),
                              Complex = Complexity,
@@ -128,14 +128,14 @@ ParamToSpecs <- function(PARAM, TimeStart, ErrFlavour)
                         nAgeClasses = nAgeClasses,
                         MaxSibshipSize = MaxSibshipSize,
                         Module = as.character(Module),
-                        MaxSibIter = MaxSibIter,
+                    #    MaxSibIter = MaxSibIter,  deprecated (now Module)
                         DummyPrefixFemale = DummyPrefix[1],
                         DummyPrefixMale = DummyPrefix[2],
                         DummyPrefixHerm = DummyPrefix[3],
                         Complexity = Complex,
                         Herm = Herm,
                         UseAge = UseAge,
-                        FindMaybeRel = FALSE,
+                    #    FindMaybeRel = FALSE,   deprecated  (now GetMaybeRel() )
                         CalcLLR = CalcLLR,
                         ErrFlavour = ifelse(length(Err)==9,
                                             "customMatrix",

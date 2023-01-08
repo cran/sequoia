@@ -24,7 +24,6 @@ Get log10-likelihood ratios for a specific age difference from
   matrix \code{AgePriorExtra}.
 }
 \examples{
-data(SeqOUT_griffin, package="sequoia")
 PairsG <- data.frame(ID1="i122_2007_M",
                      ID2 = c("i124_2007_M", "i042_2003_F", "i083_2005_M"),
                      AgeDif = c(0,4,2))

@@ -56,10 +56,10 @@
 #'   relationships.
 #'
 #' @examples
-#' data(SeqOUT_griffin, package="sequoia")
 #' BYprobs <- CalcBYprobs(Pedigree = SeqOUT_griffin$Pedigree,
 #'                        LifeHistData = SeqOUT_griffin$LifeHist)
-#' \donttest{
+#' \dontrun{
+#' # heatmap
 #' lattice::levelplot(t(BYprobs), aspect="fill", col.regions=hcl.colors)
 #' }
 #'

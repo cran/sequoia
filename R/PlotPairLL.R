@@ -31,7 +31,6 @@
 #' @importFrom graphics par layout
 #'
 #' @examples
-#' data(SimGeno_example)
 #' Pairs <- data.frame(ID1 = "a01005",
 #'                     ID2 = c("a00013", "a00008", "a00011", "b00001",
 #'                             "b01006", "b01007", "b01013", "b01014"),

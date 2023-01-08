@@ -134,7 +134,7 @@ GenoConvert <- function(InData = NULL,
   } else if (!is.null(InFile) & !is.null(InData)) {
     stop("please provide either 'InFile' or 'InData', not both")
   }
-  if (length(InData)==1 & class(InData)=="character") {
+  if (length(InData)==1 & inherits(InData, "character")) {
     InFile <- InData
     InData <- NULL
   } else if (is.matrix(InFile) | is.data.frame(InFile)) {
@@ -232,7 +232,7 @@ GenoConvert <- function(InData = NULL,
   if (IDcol==0) {
     IDs_geno <- rownames(GenoTmp)
   } else {
-    IDs_geno <- GenoTmp[, IDcol]
+    IDs_geno <- trimws( GenoTmp[, IDcol] )
   }
   if (!is.na(FIDcol))  FID <- GenoTmp[, FIDcol]
   dropcol <- na.exclude(c(FIDcol, IDcol, dropcol))
@@ -263,16 +263,19 @@ GenoConvert <- function(InData = NULL,
   }
 
   if (InFormat %in% c("col", "ped", "single", "double")) {  # A/C/T/G -> 0/1/2
-    GCA <- array(dim=c(2, nrow(GenoTmp), ncol(GenoTmp)/2))
+
     if (InFormat %in% c("ped", "col", "double")) {
+      GCA <- array(dim=c(2, nrow(GenoTmp), ncol(GenoTmp)/2))
       GCA[1,,] <- GenoTmp[, seq(1,ncol(GenoTmp)-1,2)]
       GCA[2,,] <- GenoTmp[, seq(2,ncol(GenoTmp),2)]
-    } else {
+    } else if (InFormat %in% c("single")){
+      GCA <- array(dim=c(2, nrow(GenoTmp), ncol(GenoTmp)))
       GCA[1,,] <- substr(GenoTmp,1,1)
       GCA[2,,] <- substr(GenoTmp,2,2)
     }
-    Alleles <- apply(GCA, 3, function(x) table(factor(x,
-                                          levels=sort(na.exclude(unique(c(GenoTmp)))))))
+    UniqueAlleles <- sort(na.exclude(unique(c(GCA))))
+    Alleles <- apply(GCA, 3, function(x) table(factor(x, levels = UniqueAlleles)))
+
     if (is.matrix(Alleles)) {
       NumAlleles <- apply(Alleles, 2, function(x) sum(x>0))
       minorAllele <- apply(Alleles, 2, function(x) names(sort(x[x>0]))[1])

@@ -3,7 +3,7 @@
 \docType{data}
 \name{SeqOUT_griffin}
 \alias{SeqOUT_griffin}
-\title{Example sequoia output (griffins)}
+\title{Example output from pedigree inference: griffins}
 \format{
 a list, see \code{\link{sequoia}}
 }
@@ -12,23 +12,18 @@ data(SeqOUT_griffin)
 }
 \description{
 Example output of a sequoia run including sibship clustering,
-based on the griffin pedigree.
+  with \code{\link{Geno_griffin}} as input (simulated from
+  \code{\link{Ped_griffin}}).
 }
 \examples{
 \dontrun{
-GenoS <- SimGeno(Ped.griffin, nSnp=400, ParMis=0.4)
-griffin.sex <- sapply(as.character(Ped_griffin$id), function(x)
-                      substr(x, start=nchar(x), stop=nchar(x)))
-LH.griffin <- data.frame(ID = Ped_griffin$id,
-                         Sex = ifelse(griffin.sex=="F", 1, 2),
-                         BirthYear = Ped_griffin$birthyear)
-SeqOUT.GX <- sequoia(GenoS, LH.griffin,
-                     Module = "ped",
-                     args.AP = list(Smooth = FALSE))
+SeqOUT_griffin <- sequoia(GenoM = Geno_griffin,
+                          LifeHistData = LH_griffin,
+                          Module = 'ped')
 }
 }
 \seealso{
-\code{\link{Ped_griffin}, \link{sequoia}}
+\code{\link{sequoia}}
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}

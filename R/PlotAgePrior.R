@@ -20,7 +20,6 @@
 #' @importFrom grDevices hcl
 #'
 #' @examples
-#' data(SeqOUT_griffin, package="sequoia")
 #' PlotAgePrior(SeqOUT_griffin$AgePriors)
 #' PlotAgePrior(SeqOUT_griffin$AgePriorExtra)
 #'

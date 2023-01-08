@@ -126,37 +126,46 @@ static R_NativePrimitiveArgType eType[] = {
 };
 
 
-extern void F77_NAME(makeped)(int *ng, int *specsintglb, int *specsintmkped, 
-  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf, 
-	double *aprf, int *parentsrf, double *lrrf, int *ohrf, 
+static R_NativePrimitiveArgType relType[] = {
+  INTSXP,
+  INTSXP,
+  INTSXP,
+  INTSXP,
+};
+
+
+extern void F77_NAME(makeped)(int *ng, int *specsintglb, int *specsintmkped,
+  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf,
+	double *aprf, int *parentsrf, double *lrrf, int *ohrf,
 	int *nd, int *dumparrf, double *dumlrrf, int *dumbyrf, double *totll, double *apout);
-  
-extern void F77_NAME(duplicates)(int *ng, int *specsint, double *specsdbl, 
-	double *errv, int *genofr, int *sexrf, int *byrf, double *aprf, 
+
+extern void F77_NAME(duplicates)(int *ng, int *specsint, double *specsdbl,
+	double *errv, int *genofr, int *sexrf, int *byrf, double *aprf,
 	int *ndupgenos, int *dupgenos, int *nmismatch, int *snpdboth, double *duplr);
 
 extern void F77_NAME(findambig)(int *ng, int *specsint, int *specsintamb, double *specsdbl,
-  double *errv, int *genofr, int *sexrf, int *byrf, double *aprf, int *parentsrf, 
-  int *dumparrf, int *namb, int *ambigid, int *ambigrel, double *ambiglr, int *ambigoh, 
+  double *errv, int *genofr, int *sexrf, int *byrf, double *aprf, int *parentsrf,
+  int *dumparrf, int *namb, int *ambigid, int *ambigrel, double *ambiglr, int *ambigoh,
 	int *ntrio, int *trioids, double *triolr, int *triooh);
 
-extern void F77_NAME(getpedllr)(int *ng, int *specsint, int *specsintmkped, 
-  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf, 
-  double *aprf, int *parentsrf, int *ohrf, double *lrrf, int *snpdboth, int *dumparrf, 
+extern void F77_NAME(getpedllr)(int *ng, int *specsint, int *specsintmkped,
+  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf,
+  double *aprf, int *parentsrf, int *ohrf, double *lrrf, int *snpdboth, int *dumparrf,
   double *dumlrrf, int *dumbyrf);
-  
-extern void F77_NAME(getpairll)(int *ng, int *np, int *specsint, double *specsdbl, 
-  double *errv, int *genofr, int *byrf, double *aprf, 
+
+extern void F77_NAME(getpairll)(int *ng, int *np, int *specsint, double *specsdbl,
+  double *errv, int *genofr, int *byrf, double *aprf,
   int *pairids, int *pairsex, int *pairagediff, int *pairfocal, int *pairk,
   int *dropp, int *parentsrf, int *dumparrf, double *llrf, int *toprf, double *dlrf);
-  
-extern void F77_NAME(getbyprobs)(int *ng, int *nx, int *nap, int *nyearsin, int *byrf, 
+
+extern void F77_NAME(getbyprobs)(int *ng, int *nx, int *nap, int *nyearsin, int *byrf,
   double *aprf, int *parentsrf, double *byprobv);
-	
-extern void F77_NAME(deallocall)();
+
+extern void F77_NAME(deallocall)(void);
 
 extern void F77_NAME(mkerrors)(int *nind, int *nsnp, int *genofr, double *eprobfr);
 
+extern void F77_NAME(getrel)(int *nind, int *pedrf, int *nrel, int *relv);
 
 
 static const R_FortranMethodDef FortranEntries[] = {
@@ -168,6 +177,7 @@ static const R_FortranMethodDef FortranEntries[] = {
   {"getbyprobs", (DL_FUNC) &F77_NAME(getbyprobs), 8, BYprobType},
   {"deallocall", (DL_FUNC) &F77_NAME(deallocall), 0},
 	{"mkerrors", (DL_FUNC) &F77_NAME(mkerrors), 4, eType},
+  {"getrel", (DL_FUNC) &F77_NAME(getrel), 4, relType},
   {NULL, NULL, 0, NULL}
 };
 

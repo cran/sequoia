@@ -15,11 +15,24 @@ sire. Column names are ignored, as are additional columns.}
 }
 \value{
 A vector with the generation number for each individual, starting at
-  0 for founders. NA indicates a pedigree loop where an individual is its own
-  ancestor (or that the pedigree has >1000 generations). Returned invisibly
-  to be a part of QC.
+  0 for founders. Offspring of G0 X G0 are G1, offfspring of G0 X G1 or G1 x
+  G1 are G2, etc. \code{NA} indicates a pedigree loop where an individual is
+  its own ancestor (or that the pedigree has >1000 generations).
+
+  If no output name is specified, no results are returned, only an error
+  message when the pedigree contains a loop.
 }
 \description{
 For each individual in a pedigree, count the number of
   generations since its most distant pedigree founder.
+}
+\examples{
+# returns nothing if OK, else error:
+getGenerations(SeqOUT_griffin$Pedigree)
+
+# returns vector with generation numbers:
+G <- getGenerations(SeqOUT_griffin$Pedigree, StopIfInvalid=FALSE)
+table(G, useNA='ifany')
+Ped_plus_G <- cbind(SeqOUT_griffin$Pedigree, G)
+
 }

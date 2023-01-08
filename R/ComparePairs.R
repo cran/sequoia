@@ -20,10 +20,10 @@
 #' @param Ped1 first (e.g. original/reference) pedigree, dataframe with 3
 #'   columns: id-dam-sire.
 #' @param Ped2 optional second (e.g. inferred) pedigree.
-#' @param Pairs2 optional dataframe with relationships categories between pairs
-#'   of individuals, instead of or in addition to \code{Ped2}, e.g. as returned
-#'   by \code{\link{GetMaybeRel}}. First three columns: ID1-ID2-relationship,
-#'   column names and any additional columns are ignored.
+#' @param Pairs2 optional dataframe with as first three columns: ID1-ID2-
+#'   relationship, e.g. as returned by \code{\link{GetMaybeRel}}. Column names
+#'   and any additional columns are ignored. May be provided in addition to, or
+#'   instead of \code{Ped2}.
 #' @param GenBack  number of generations back to consider; 1 returns
 #'   parent-offspring and sibling relationships, 2 also returns grandparental,
 #'   avuncular and first cousins. GenBack >2 is not implemented.
@@ -120,7 +120,9 @@
 #' Note that for avuncular and cousin relationships no distinction is made
 #' between paternal versus maternal, as this may differ between the two
 #' individuals and would generate a large number of sub-classes. When a pair is
-#' related via multiple paths, the first-listed relationship is returned.
+#' related via multiple paths, the first-listed relationship is returned. To get
+#' all the different paths between a pair, use \code{\link{GetRelM}} with
+#' \code{Return='Array'}.
 #'
 #' When \code{GenBack=2, patmat=FALSE}, MGM, MGF, PGM and PGF are combined
 #' into GP, with the rest of the categories analogous to the above.
@@ -134,8 +136,6 @@
 #'   see examples at \code{\link{EstConf}}.
 #'
 #' @examples
-#' \donttest{
-#' data(Ped_griffin, SeqOUT_griffin, package="sequoia")
 #' PairsG <- ComparePairs(Ped_griffin, SeqOUT_griffin[["Pedigree"]],
 #'                        patmat = TRUE, ExcludeDummies = TRUE, Return = "All")
 #' PairsG$Counts
@@ -153,7 +153,6 @@
 #' FullSibDyads <- with(RelDF, RelDF[Ped1 == "FS" & id.A < id.B, ])
 #' HalfSibDyads <- with(RelDF, RelDF[Ped1 == "HS" & id.A < id.B, ])
 #' # Use 'id.A < id.B' because each pair is listed 2x
-#' }
 #'
 #' @export
 
@@ -177,10 +176,76 @@ ComparePairs <- function(Ped1 = NULL,
   if (!GenBack %in% 1:2)  stop("'GenBack' must be 1 or 2")
   if (!patmat %in% c(TRUE,FALSE))  stop("'patmat' must be TRUE or FALSE")
 
-  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK=FALSE, StopIfInvalid=FALSE)
-  if (GenBack==2)  Ped1 <- GPcols(Ped1)
+  # check & polish pedigrees
+  Ped1 <- PedPolish(Ped1, ZeroToNA=TRUE, NullOK=FALSE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
+  if (!is.null(Ped2)) {
+    Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
+    if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
+  }
+
+  # check & polish Pairs2
+  if (!is.null(Pairs2)) {
+    if (!class(Pairs2) %in% c("data.frame", "matrix"))  stop("Pairs2 should be a dataframe or matrix")
+    if (!any(Pairs2[,1] %in% Ped1$id) & !any(Pairs2[,2] %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
+    # is 'Pairs2' output from GetMaybeRel?
+    lvls_MaybeRel <- c("PO", "FS", "HS", "GP", "FA", "2nd", "HA", "Q")
+    MR <- all(c("ID1", "ID2", "TopRel", "LLR", "OH") %in% names(Pairs2)) &&  all(Pairs2$TopRel %in% lvls_MaybeRel)
+  } else {
+    MR <- FALSE
+  }
+
+  # get relationship matrices
   RCM.1 <- GetRelM(Ped1, GenBack=GenBack, patmat=patmat, Return="Matrix")
 
+  if (!is.null(Ped2) & is.null(Pairs2)) {
+    RCM.2 <- GetRelM(Pedigree = Ped2,
+                     GenBack=GenBack, patmat=patmat, Return="Matrix")
+  } else if (is.null(Ped2) & !is.null(Pairs2)) {
+    RCM.2 <- GetRelM(Pairs = Pairs2[, 1:3],
+                     GenBack=GenBack, patmat=patmat, Return="Matrix")
+    RCM.2 <- apply(RCM.2, 1, function(x) ifelse(x %in% c('U', 'S'), x, paste0(x, '?')))
+  } else if (!is.null(Ped2) & !is.null(Pairs2)) {
+    RCM.2 <- GetRelM(Pedigree = Ped2,
+                     Pairs = Pairs2[, 1:3],
+                     GenBack=GenBack, patmat=patmat, Return="Matrix",
+                     Pairs_suffix = ifelse(MR, '?', '_'))
+  } else {
+    RCM.2 <- NULL
+  }
+
+  # align the two matrices into an array
+  IDs <- unique(c(colnames(RCM.1),  colnames(RCM.2)))
+  RCA <- array(dim=c(2, length(IDs), length(IDs)),
+               dimnames=list(c("Ped1", "Ped2"), IDs, IDs))
+  RCA["Ped1", colnames(RCM.1), colnames(RCM.1)] <- RCM.1
+  RCA["Ped2", colnames(RCM.2), colnames(RCM.2)] <- RCM.2
+  RCA[is.na(RCA)] <- "X"
+
+  # delete dummies (doing this earlier causes trouble with 2-generations-back GetRelM)
+  if (ExcludeDummies) {
+    DPnc <- nchar(DumPrefix)
+    Dummies <- rep(FALSE, length(IDs))
+    for (x in seq_along(DumPrefix)) {
+      Dummies <- ifelse(Dummies, Dummies, substr(IDs,1,DPnc[x]) == DumPrefix[x])
+    }
+    if (sum(Dummies)>0) {
+      RCA <- RCA[, !Dummies, !Dummies]
+      IDs <- IDs[!Dummies]
+    }
+  }
+
+  #@@@  return options  @@@@@@@@@@@@@@@@
+
+  # Array ----
+  if (Return == "Array") {
+    if (!is.null(Ped2) | !is.null(Pairs2)) {
+      return( RCA )
+    } else {
+      return( RCA["Ped1", , , drop=TRUE])
+    }
+  }
+
+  # relationship options & order, for each GenBack/patmat combo (-> factor levels)
   lvls <- list(GB1 = list(no = c("S", "MP", "O", "FS", "HS", "U", "X"),
                           yes = c("S","M", "P", "O", "FS", "MHS", "PHS", "U", "X")),
                GB2 = list(no = c("S","MP", "O", "FS", "HS", "GP", "GO", "FA",
@@ -189,180 +254,92 @@ ComparePairs <- function(Ped1 = NULL,
                                   "MGF", "PGM", "PGF", "GO",
                                   "FA", "FN", "HA", "HN", "DFC1", "FC1","U", "X")))
 
-  if (!is.null(Ped2)) {
-    Ped2 <- PedPolish(Ped2, ZeroToNA=TRUE, StopIfInvalid=FALSE)[, 1:3]
-    if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
-    if (GenBack==2)  Ped2 <- GPcols(Ped2)
-    RCM.2 <- GetRelM(Ped2, GenBack=GenBack, patmat=patmat, Return="Matrix")
-  }
+  lvls.dup <- c("FS", "HS", "MHS", "PHS", "FC1", "DFC1", "U","X")   # pairs included twice in matrix with same abbreviation
 
-  RelRank <- c("S", "M", "P", "MP", "O", "PO?",
-               "FS","FS?", "MHS", "PHS", "HS", "HS?",
-               "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
-               "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
-               "DFC1", "FC1", "XX?", "Q?", "U", "X")
-	#@@@@@@@@@@@@@@@@@@@
-
-	if (!is.null(Pairs2)) {
-	  if (!class(Pairs2) %in% c("data.frame", "matrix"))  stop("Pairs2 should be a dataframe or matrix")
-	  MaybeRelNames <- c("PO", "FS", "HS", "GP", "FA", "2nd", "HA", "Q")
-	  if (all(c("ID1", "ID2", "TopRel", "LLR", "OH") %in% names(Pairs2)) &&
-	      all(Pairs2$TopRel %in% MaybeRelNames)) {
-	    Pairs2$TopRel <- paste0(Pairs2$TopRel, "?")  # output from GetMaybeRel()
-	  }
-		if (!"TopRel" %in% names(Pairs2))  names(Pairs2)[1:3] <- c("ID1", "ID2", "TopRel")
-
-		MaybeRelNames <- c(paste0(MaybeRelNames, "?"), "U")
-
-		if (is.factor(Pairs2$TopRel)) {
-		  lvls.X2 <- levels(Pairs2$TopRel)
-		} else {
-  		lvls.X2 <- sort(unique(na.exclude(Pairs2$TopRel)))
-		}
-	  if (all(lvls.X2 %in% MaybeRelNames)) {  # !is.null(Ped2) &
-		  lvls.X2 <- MaybeRelNames
-	  }
-		lvls.Y2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
-
-		if (!is.null(Ped2) | all(lvls.X2 %in% lvls.Y2)) {
-		  lvls2 <- unique(c(lvls.X2, lvls.Y2))
-		} else {
-		  lvls2 <- lvls.X2
-		}
-		lvls2 <- c(RelRank[RelRank %in% lvls2], lvls2[!lvls2 %in% RelRank])
-
-
-    RCM.X2 <- GetRelM(Pairs = Pairs2[, c("ID1", "ID2", "TopRel")],
-                      GenBack=GenBack, patmat=patmat)
-
-		if (is.null(Ped2)) {
-			RCM.2 <- RCM.X2
-		} else {
-#      RCM.X2 <- matrix(paste0(RCM.X2, "?"), dim(RCM.X2))  # enable distinction between Ped2 & Pairs2 origin
-			IDs2 <- unique(c(colnames(RCM.2), colnames(RCM.X2)))
-			RCM.2i <- inflate(RCM.2, IDs2)
-			RCM.X2i <- inflate(RCM.X2, IDs2)
-			RCM.2i[is.na(RCM.2i)] <- "X"
-			RCM.X2i[is.na(RCM.X2i)] <- "X"
-			RCM.P2.f <- factor(RCM.2i, levels=lvls2)
-			RCM.X2.f <- factor(RCM.X2i, levels=lvls2)
-			RCM.2 <- matrix(factor(pmin(as.numeric(RCM.P2.f), as.numeric(RCM.X2.f), na.rm=TRUE),
-			                          levels = seq_along(lvls2), labels=lvls2),
-			                   length(IDs2), length(IDs2), dimnames=list(IDs2, IDs2))
-		}
+  if (!is.null(Ped2)) {  # include all possible levels in output
+    lvls2.ped <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
   } else {
-    if (!is.null(Ped2)) {
-		  lvls2 <- lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]
+    lvls2.ped <- "X"
+  }
+  if (!is.null(Pairs2)) {  # only include levels that are present in Pairs2
+    if (MR) {  # output from GetMaybeRel()
+      lvls2.pairs <- paste0(lvls_MaybeRel, '?')
+    } else if (is.factor(Pairs2$TopRel)) {
+      lvls2.pairs <- levels(Pairs2$TopRel)
     } else {
-      lvls2 <- "X"
-      RCM.2 <- NULL
+      lvls2.pairs <- sort(unique(na.exclude(Pairs2$TopRel)))
     }
-		lvls.X2 <- NULL
-	}
+    lvls.dup <- unique(c(lvls.dup, lvls2.pairs))
+  } else {
+    lvls2.pairs <- "X"
+  }
+  lvls2 <- unique(c(lvls2.ped, lvls2.pairs))
+  if (!is.null(Ped2) & !is.null(Pairs2) & !MR) {  # different suffix used
+    RelRank <- gsub('?$', '_?', RelRank)
+  }
+  lvls2 <- c(intersect(RelRank, lvls2), setdiff(lvls2, RelRank))  # sort (RelRank defined in utils.R)
 
-	# align the two matrices into an array
-  IDs <- unique(c(colnames(RCM.1),  colnames(RCM.2)))
-  RCA <- array(dim=c(2, length(IDs), length(IDs)),
-               dimnames=list(c("Ped1", "Ped2"), IDs, IDs))
-  RCA["Ped1", colnames(RCM.1), colnames(RCM.1)] <- RCM.1
-  RCA["Ped2", colnames(RCM.2), colnames(RCM.2)] <- RCM.2
-  RCA[is.na(RCA)] <- "X"
-
-	# delete dummies (doing this earlier may cause trouble with 2-generations-back GetRelM)
-	if (ExcludeDummies) {
-	  DPnc <- nchar(DumPrefix)
-    Dummies <- rep(FALSE, length(IDs))
-    for (x in seq_along(DumPrefix)) {
-      Dummies <- ifelse(Dummies, Dummies, substr(IDs,1,DPnc[x]) == DumPrefix[x])
-    }
-	  if (sum(Dummies)>0) {
-	    RCA <- RCA[, !Dummies, !Dummies]
-	    IDs <- IDs[!Dummies]
-	  }
-	}
-
-
-  # Plot ----
-  # if (Plot) {
-    # PlotRelPairs(RCA["Ped1", , ])
-    # if (!is.null(Ped2) | !is.null(Pairs2)) {
-      # if (interactive()) {
-        # inp <- readline(prompt = "Press <Enter> to continue to next plot ...")
-      # }
-      # PlotRelPairs(RCA["Ped2", , ])
-    # }
-  # }
-
-
-  # Array ----
-	if (Return == "Array") {
-	  if (!is.null(Ped2) | !is.null(Pairs2)) {
-		  return( RCA )
-	  } else {
-	    return( RCA["Ped1", , , drop=TRUE])
-	  }
-	}
-
-  # Counts ----
-	if (Return %in% c("Counts", "Summary", "All")) {
-	  lvls.tbl <- list(GB1 = list(no = c("MP", "FS", "HS", "U", "X"),
-	                              yes = c("M", "P", "FS", "MHS", "PHS", "U", "X")),
-	                   GB2 = list(no = c("MP", "FS", "HS", "GP", "FA", "HA", "FC1", "DFC1", "U", "X"),
-	                              yes = c("M", "P", "FS", "MHS", "PHS","MGM", "MGF", "PGM", "PGF",
-	                                      "FA", "HA","FC1", "DFC1", "U", "X")))
-	  tbl <- table(Ped1 = factor(RCA["Ped1",,], levels=lvls.tbl[[GenBack]][[ifelse(patmat, "yes", "no")]]),
-	               Ped2 = factor(RCA["Ped2",,], levels=lvls2[lvls2 != "S"]))
-	  dup <- c("FS", "HS", "MHS", "PHS", "FC1", "DFC1", "U","X",   # pairs included double
-	           lvls.X2)
-	  these.dup <- rownames(tbl) %in% dup
-		those.dup <- colnames(tbl) %in% dup
-	  tbl[these.dup, those.dup] <- tbl[these.dup, those.dup]/2
-	  if (Return == "Counts") return( tbl )
-
-	}
 
   # Dataframe ----
-	if (Return %in% c("Dataframe", "All")) {
-	  DF <- data.frame(id.A = rep(IDs, times=length(IDs)),
-	                   id.B = rep(IDs, each=length(IDs)),
-	                   Ped1 = factor(RCA["Ped1",,],
-	                                 levels=lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]),
-	                   Ped2 = factor(RCA["Ped2",,], levels=lvls2))
-	  if (Return == "Dataframe") return( DF )
-	}
+  if (Return %in% c("Dataframe", "All")) {
+    DF <- data.frame(id.A = rep(IDs, times=length(IDs)),
+                     id.B = rep(IDs, each=length(IDs)),
+                     Ped1 = factor(RCA["Ped1",,],
+                                   levels=lvls[[GenBack]][[ifelse(patmat, "yes", "no")]]),
+                     Ped2 = factor(RCA["Ped2",,], levels=lvls2))
+    if (Return == "Dataframe")  return( DF )
+  }
+
+  # Counts ----
+  if (Return %in% c("Counts", "Summary", "All")) {
+    lvls.tbl <- list(GB1 = list(no = c("MP", "FS", "HS", "U", "X"),
+                                yes = c("M", "P", "FS", "MHS", "PHS", "U", "X")),
+                     GB2 = list(no = c("MP", "FS", "HS", "GP", "FA", "HA", "FC1", "DFC1", "U", "X"),
+                                yes = c("M", "P", "FS", "MHS", "PHS","MGM", "MGF", "PGM", "PGF",
+                                        "FA", "HA","FC1", "DFC1", "U", "X")))
+    tbl <- table(Ped1 = factor(RCA["Ped1",,], levels=lvls.tbl[[GenBack]][[ifelse(patmat, "yes", "no")]]),
+                 Ped2 = factor(RCA["Ped2",,], levels=lvls2[lvls2 != "S"]))
+
+    these.dup <- rownames(tbl) %in% lvls.dup
+    those.dup <- colnames(tbl) %in% lvls.dup
+    tbl[these.dup, those.dup] <- tbl[these.dup, those.dup]/2
+    if (Return == "Counts")  return( tbl )
+  }
 
   # Summary ----
-	if (Return %in% c("Summary", "All") & !is.null(RCM.2)) {
-	  # if no Ped2 & no Pairs2, 'Summary' is identical to 'Counts'.
-	  tblz <- tbl[rownames(tbl) != "X", colnames(tbl) != "X", drop=FALSE]
-    rowR <- as.numeric(factor(rownames(tblz), levels=RelRank))
-    colR <- as.numeric(factor(colnames(tblz), levels=RelRank))
-    hi <- tblz * outer(rowR, colR, function(x,y) x > y)
-    eq <- tblz * outer(rowR, colR, function(x,y) x == y)
-    tblzz <- tblz
-    if ("U" %in% colnames(tblz))  tblzz[,"U"] <- 0   # not if Pairs2
-    lo <- tblzz * outer(rowR, colR, function(x,y) x < y)
-    ARER <- cbind(n = rowSums(tblz),
-                  OK = rowSums(eq),
-                  lo = rowSums(lo),
-                  hi = rowSums(hi))
-    if (Return == "Summary") return( ARER )
-	} else if (Return %in% c("Summary", "All") & is.null(RCM.2)) {
-	  ARER <- NULL
-	}
+  if (Return %in% c("Summary", "All")) {
+    if (is.null(RCM.2)) {
+      ARER <- NULL  # if no Ped2 & no Pairs2, 'Summary' is identical to 'Counts'.
+    } else {
+      tblz <- tbl[rownames(tbl) != "X", colnames(tbl) != "X", drop=FALSE]
+      rowR <- as.numeric(factor(rownames(tblz), levels=RelRank))
+      colR <- as.numeric(factor(colnames(tblz), levels=RelRank))
+      hi <- tblz * outer(rowR, colR, function(x,y) x > y)
+      eq <- tblz * outer(rowR, colR, function(x,y) x == y)
+      tblzz <- tblz
+      if ("U" %in% colnames(tblz))  tblzz[,"U"] <- 0   # not if Pairs2
+      lo <- tblzz * outer(rowR, colR, function(x,y) x < y)
+      ARER <- cbind(n = rowSums(tblz),
+                    OK = rowSums(eq),
+                    lo = rowSums(lo),
+                    hi = rowSums(hi))
+      if (Return == "Summary")  return( ARER )
+    }
+  }
 
-	if (Return == "All") {
-	  return(list(Array = RCA,
-	              Counts = tbl,
-	              Dataframe = DF,
-	              Summary = ARER))
-	}
+  # All ----
+  if (Return == "All") {
+    return(list(Array = RCA,
+                Counts = tbl,
+                Dataframe = DF,
+                Summary = ARER))
+  }
 }
 
 
 #============================================================================
 #============================================================================
-#' @title Compare Dyads
+#' @title Compare Dyads (DEPRECATED)
 #'
 #' @description Count the number of half and full sibling pairs correctly and
 #'   incorrectly assigned. DEPRECATED - PLEASE USE \code{\link{ComparePairs}}
@@ -380,13 +357,9 @@ ComparePairs <- function(Ped1 = NULL,
 #'   \code{\link{PedCompare}}
 #'
 #' @examples
-#' \donttest{
-#' data(Ped_HSg5, SimGeno_example, LH_HSg5, package="sequoia")
-#' SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5,
-#'                   Module="par", quiet=TRUE, Plot=FALSE)
-#' DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT$Pedigree)
+#' \dontrun{
+#' DyadCompare(Ped1=Ped_HSg5, Ped2=SeqOUT_HSg5$Pedigree)
 #' }
-#'
 #' @export
 
 DyadCompare <- function(Ped1 = NULL,
@@ -405,10 +378,8 @@ DyadCompare <- function(Ped1 = NULL,
   }
   for (i in 1:3) Ped2[, i] <- as.character(Ped2[, i])
   if (!any(Ped2$id %in% Ped1$id))  stop("no common IDs in Ped1 and Ped2")
-  Ped1 <- Ped1[!is.na(Ped1$id), 1:3]
-  Ped2 <- Ped2[!is.na(Ped2$id), 1:3]
-  Ped1 <- PedPolish(Ped1)
-  Ped2 <- PedPolish(Ped2)
+  Ped1 <- PedPolish(Ped1[,1:3], ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
+  Ped2 <- PedPolish(Ped2[,1:3], ZeroToNA=TRUE, NullOK = FALSE, StopIfInvalid=FALSE, KeepAllColumns=FALSE)
 
   # note: each pair is counted double
   RCT <- matrix(NA, 0, 3)

@@ -460,8 +460,6 @@ Incorrect agepriors can also lead to false positives: when it is wrongly believe
 To minimise these problems, `MakeAgePrior()` applies two generic, one-size-fits-most corrections: a `Smooth`ing of dips and padding of the tails, and a `Flatten`ing approach whereby a weighed average of the pedigree-based and flat default ageprior is taken (Figure \@ref(fig:griffinSmoothFlatten)). 
 
 
-<!--- TODO: ref to #sec:FSuseHS --> 
-
 
 ```{r griffinSmoothFlatten, echo=FALSE, fig.cap="Smoothed & Flattened agepriors for overlapping generations (griffin example). Note the different y-axes; non-displayed age differences have an ageprior of zero for all R.", fig.height=8, fig.width=8, message=FALSE}
 AP_list <- list()
@@ -645,10 +643,6 @@ The agepriors for grandparents and avuncular relationships have always been esti
 
 
 
-
-<!--- TODO delete crossrefs 
-# Customisation {#sec:customisation}   --->
-
 # Customise {#sec:customAP}
 Customising the ageprior is generally not necessary, as a sample-specific ageprior will be estimated after parentage assignment based on the scaffold-pedigree. 
 
@@ -667,7 +661,7 @@ During pedigree reconstruction, you can pass arguments to `MakeAgePrior()` via  
 ## Different input pedigree
 If you have a reasonable quality pedigree that contains many more individuals than have been SNP-genotyped, for example based on field observations and/or microsatellite data, an ageprior estimated from that old pedigree may be more informative than the one estimated from a limited number of SNP-genotyped parent-offspring pairs. A pedigree cannot be passed via `args.AP`, but this can be done as follows instead:
 
-```{r APold, eval=FALSE}
+```{r APold, eval=FALSE, purl=FALSE}
 APfromOld <- MakeAgePrior(Pedigree = MyOldPedigree,
                           LifeHistData = LH,
                           Smooth = TRUE)
@@ -689,7 +683,7 @@ PlotAgePrior(AP)
 
 ### Age at first reproduction
 Or, if you wish to specify the minimum age at first reproduction, to e.g. age 3 for females, and age 4 for males:
-```{r minAFR, fig.cap="", error=TRUE}
+```{r minAFR, fig.cap="", error=TRUE, purl=FALSE}
 AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
 AP[c("1","2"), "M"] <- 0
 AP[c(1:3) +1, "P"] <- 0   # 1st row = age difference of 0. 

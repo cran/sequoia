@@ -8,7 +8,7 @@ SnpStats(GenoM, Pedigree = NULL, ErrFlavour = "version2.0", Plot = TRUE)
 }
 \arguments{
 \item{GenoM}{genotype matrix, in sequoia's format: 1 column per SNP, 1 row
-per individual, genotypes coded as 0/1/2/-9, and rownames giving individual
+per individual, genotypes coded as 0/1/2/-9, and row names giving individual
 IDs.}
 
 \item{Pedigree}{dataframe with 3 columns: ID - parent1 - parent2.
@@ -28,8 +28,9 @@ A matrix with a number of rows equal to the number of SNPs
 \item{AF}{Allele frequency of the 'second allele' (the one for which the
   homozygote is coded 2)}
 \item{Mis}{Proportion of missing calls}
+\item{HWE.p}{p-value from chi-square test for Hardy-Weinberg equilibrium}
 When a Pedigree is provided, there are 7 additional columns:
-\item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs succesfully
+\item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs successfully
   genotyped for the SNP}
 \item{OHdam, OHsire}{Count of number of opposing homozygous cases}
 \item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
@@ -70,12 +71,10 @@ estimate for the average error rate, which can be useful for subsequent
 }
 
 \examples{
-\donttest{
-data(Ped_HSg5)
-Genotypes <- SimGeno(Ped_HSg5, nSnp=400, CallRate = runif(400, 0.2, 0.8),
-  SnpError = 0.05)
+Genotypes <- SimGeno(Ped_HSg5, nSnp=100, CallRate = runif(100, 0.5, 0.8),
+                     SnpError = 0.05)
+SnpStats(Genotypes)   # only plots; data is returned invisibly
 SNPstats <- SnpStats(Genotypes, Pedigree=Ped_HSg5)
-}
 
 }
 \seealso{

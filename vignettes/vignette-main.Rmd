@@ -41,7 +41,7 @@ vignette: >
 ```{r setup, include=FALSE}
 library(knitr)
 library(sequoia)
-knitr::opts_chunk$set(echo = TRUE, eval=FALSE, 
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE,
                       auto_pdf = TRUE,
                       fig.height=4, fig.width=6, fig.pos="htb!")
 ```
@@ -54,8 +54,8 @@ knitr::opts_chunk$set(echo = TRUE, eval=FALSE,
 
 ## Simulated Data
 An example pedigree and associated life history data are provided with the package, which can be used to try out some of the functions. This fictional pedigree consists of 5 generations with interconnected half-sib clusters (Pedigree II in @huisman17).
-```{r example1}
-install.packages("sequoia")  # only required first time
+```{r example1, eval=FALSE, purl=FALSE}
+# install.packages("sequoia")  # only required first time
 library(sequoia)             # load the package
 #
 # get the example pedigree and life history data
@@ -69,7 +69,6 @@ Geno <- SimGeno(Ped = Ped_HSg5, nSnp = 200, SnpError=0.001, ParMis=0.4)
 ParOUT <- sequoia(GenoM = Geno,
                   LifeHistData = LH_HSg5,
                   Module = "par")
-# (NOTE: From version 2.1 onward, 'Module = "par"' replaces 'MaxSibIter=0')
 
 names(ParOUT)  # output: a list with the following elements
 # [1] "Specs"  "AgePriors"  "LifeHist"  "PedigreePar"  "MaybeParent"
@@ -79,7 +78,7 @@ names(ParOUT)  # output: a list with the following elements
 # optional: use parents assigned above (in 'ParOUT$PedigreePar')
 SeqOUT <- sequoia(GenoM = Geno,
                   SeqList = ParOUT,
-                  Module = "ped")     # (Module='ped' replaces MaxSibIter>0) 
+                  Module = "ped")     
 #
 # compare the assigned real and dummy parents to the true pedigree
 chk <- PedCompare(Ped1 = Ped_HSg5, Ped2 = SeqOUT$Pedigree)
@@ -96,7 +95,7 @@ For a detailed walk-through of this example, see [here](quick_start_example1.htm
 First get a subset of SNPs which are as informative (high MAF, high call rate), reliable (low error rate), and independent (low LD) as possible. Ideally around 400 -- 700 for full pedigree reconstruction; fewer are necessary for only parentage assignment, while more may be necessary with very high levels of polygamy or inbreeding. In addition you need a dataframe with the sex and birth/hatching year of as many individuals as possible, in arbitrary order. 
 
 It is often prudent to first do a quick partial run to check for duplicates and genetic mismatches between known parent-offspring pairs, before running full pedigree reconstruction. 
-```{r example2}
+```{r example2, eval=FALSE, purl=FALSE}
 # read in genotype data if already coded as 0/1/2, with missing=-9:
 Geno <- as.matrix(read.csv("mydata.csv", header=FALSE, row.names=1))
 CheckGeno(Geno)
@@ -109,7 +108,6 @@ LH <- read.table("LifeHistoryData.txt", header=T)
 # duplicate check & parentage assignment (takes few minutes)
 ParOUT <- sequoia(GenoM = Geno,  LifeHistData = LH_HSg5,  Err=0.005,
                   Module="par", quiet = FALSE, Plot = TRUE)
-# (NOTE: from version 2.1 onward, 'Module' replaces 'MaxSibIter')
 #
 ParOUT$DupGenotype  # inspect duplicates (intentional or accidental)
 #
@@ -548,7 +546,7 @@ Estimate the probability that individual i with unknown birth year is born in ye
 ## Genotypes {#sec:GenoFormat}
 The SNP data should be provided as a numeric matrix `GenoM` with one line per individual, and one column per SNP, with each SNP is coded as 0, 1, 2 copies of the reference allele, or missing (-9). The rownames should be the individual IDs, and column names are ignored.
 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 GenoM <- as.matrix(read.table("MyGenoData.txt", row.names=1, header=FALSE))
 ```
 
@@ -564,12 +562,12 @@ It is advised to 'tweak' the filtering thresholds until a set with a few hundred
 ### PLINK
 Since the full dataset may be too large to easily load into R, creating a subset of SNPs can for example be done using [PLINK](https://www.cog-genomics.org/plink/):
 
-```{bash}
+```{}
 plink --file mydata --geno 0.1 --maf 0.3 --indep 50 5 2
 ```
 which on a windows machine is equivalent to running inside R
 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 system("cmd", input = "plink --file mydata --maf 0.3 --indep 50 5 2")
 ```
 
@@ -577,11 +575,11 @@ This will create a list of SNPs with a missingness below 0.1, a minor allele fre
 
 The resulting list (`plink.prune.in`) can be used to create the genotype file used as input for Sequoia, with SNPs codes as 0, 1, 2, or NA, with the command
 
-```{bash}
+```{}
 plink --file mydata --extract plink.prune.in --recodeA --out inputfile_for_sequoia
 ```
 This will create a file with the extension .RAW, which can be converted to the required input format using  
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 GenoM <- GenoConvert(InFile = "inputfile_for_sequoia.raw", InFormat="raw")
 ```
 This function can also convert from two-columns-per-SNP format, as e.g. used by Colony.
@@ -648,21 +646,21 @@ To minimise such pedigree errors where parent and offspring are flipped the wron
 
 ### `args.AP` (Customising the ageprior) {#sec:custom-AP}
 When running `sequoia()`, you can pass arguments to `MakeAgePrior()` via `args.AP`. For example, when you are sure generations do not overlap, you can specify this via `MakeAgePrior()`'s argument `Discrete`:
-```{r }
-SeqOUT <- sequoia(GenoM = Geno, LifeHistData = LH,
+```{r argsAP, eval=TRUE}
+SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5, Module='par',
                   args.AP = list(Discrete = TRUE))
 ```
 
 Or you can specify that the maximum age of (non-genotyped) parents exceeds the observed age range among SNP-genotyped parent-offspring pairs in `PedigreePar`:
 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 SeqOUT <- sequoia(GenoM = Geno, LifeHistData = LH,
                   args.AP = list(MaxAgeParent = c(11, 9)),  # dams, sires
                   SeqList = ParOUT[c("Specs", "PedigreePar")])
 ```
 
 Alternatively, if you have a field-pedigree or microsatellite-based pedigree that contains many more individuals than have been SNP-genotyped, an ageprior estimated from that old pedigree will be more informative than the one estimated from a limited number of SNP-genotyped parent-offspring pairs. This can be done as follows:
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 APfromOld <- MakeAgePrior(Pedigree = MyOldPedigree,
                           LifeHistData = LH,
                           Smooth = TRUE)
@@ -787,13 +785,11 @@ Parameter settings and input data from one `sequoia()` run can be re-used in a s
 
 
 The parameter values used as arguments when calling `sequoia()` are returned in the list element `Specs`. This 1-row dataframe may be edited (with caution!) before re-use. Other elements of the `sequoia()` output list (`SeqList`) that are used as input by one or more functions are `LifeHist`, `AgePriors`, and `PedigreePar`/`Pedigree`. Details on which elements are used is provided in the help file of each function. 
-`SeqList[["Specs"]]` nearly always take precedent over similarly-named input parameters, with exception of e.g. `sequoia()`'s `Module` (`MaxSibIter`) argument. The other `SeqList` elements generally also take precedent, but not always with a warning. If you wish to use a mixture of `SeqList` elements and 'new' data, it is safest to provide only the minimal subset of `SeqList`, and specify the other data as separate input (or as 'fake' `SeqList` elements).
+`SeqList[["Specs"]]` nearly always take precedent over similarly-named input parameters, with exception of e.g. `sequoia()`'s `Module`  argument. The other `SeqList` elements generally also take precedent, but not always with a warning. If you wish to use a mixture of `SeqList` elements and 'new' data, it is safest to provide only the minimal subset of `SeqList`, and specify the other data as separate input (or as 'fake' `SeqList` elements).
 
-For example, if you wish to change the dummy prefix, but do not want to re-run parentage assignment:
-```{r }
-load("Sequoia_output_date.RData")  # output from an old sequoia run that was saved to disk
-ParOUT$Specs$DummyPrefixFemale <- "D-FEM"
-ParOUT$Specs$DummyPrefixMale <- "D-MALE"
+For example, if you wish to change the maximum sibship size, but do not want to re-run parentage assignment:
+```{r, eval=FALSE, purl=FALSE}
+ParOUT$Specs$MaxSibshipSize <- 150
 SeqOUTX <- sequoia(GenoM = Geno,
                   SeqList = ParOUT[c("Specs", "PedigreePar", "LifeHist")],
                   Module = "ped")
@@ -897,9 +893,7 @@ The 'dummy' parent assigned to each cluster of half-siblings is denoted by a 4-d
 
 
 ### Total likelihood
-The total likelihood provides a measure of how well the observed genotype data is explained by the currently inferred pedigree, the allele frequencies of the SNPs, the presumed genotyping error rate, and the assumption that founder genotypes were drawn from a genepool in Hardy-Weinberg equilibrium. It is always a negative number, and closer to zero indicates a better fit. When an asymptote is reached, typically in 5--10 iterations, either the algorithm is concluded (the default) or dependency on the age prior is increased (if `UseAge = 'extra'`) and the algorithm continues until a new asymptote is reached. 
-
-If you set `MaxSibIter` and there is a large change in value between the second-last and last likelihood of output element `TotLikSib`, consider running the algorithm for more iterations (increase [`MaxSibIter`](#sec:MaxSibIter)). 
+The total likelihood provides a measure of how well the observed genotype data is explained by the currently inferred pedigree, the allele frequencies of the SNPs, the presumed genotyping error rate, and the assumption that founder genotypes were drawn from a genepool in Hardy-Weinberg equilibrium. It is always a negative number, and closer to zero indicates a better fit. When an asymptote is reached, typically in 5--10 iterations, either the algorithm is concluded (the default) or dependency on the age prior is increased (if `UseAge = 'extra'`) and the algorithm continues until a new asymptote is reached.  
 
 
 
@@ -907,34 +901,33 @@ If you set `MaxSibIter` and there is a large change in value between the second-
 ## Save output
 
 There are various ways in which the output can be stored. This includes saving the seqoia list object, and optionally various other objects, in an `.RData` compressed file 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 save(SeqList, LHdata, Geno, file="Sequoia_output_date.RData")
 ```
 
 which can be read back into R at a later point 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 load("Sequoia_output_date.RData")
 # 'SeqList' and 'LHdata' will appear in R environment
 ```
 The advantage is that all data is stored and can easily be manipulated when recalled. The disadvantage is that the file is not human-readable, and (to my knowledge) can only be opened by R.
 
 Alternatively, the various dataframes and list elements can each be written to a text file in a designated folder. This can be done using `write.table` or `write.csv`, or using the wrapper `writeSeq()`: 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 writeSeq(SeqList, GenoM = Geno, folder=paste("Sequoia_OUT", Sys.Date()))
 ```
 
 The same function can also write the dataframes and list elements to an excel file (.xls or .xlsx), each to a separate sheet, using package `xlsx`: 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 writeSeq(SeqList, OutFormat="xls", file="Sequoia_OUT.xlsx")
 ```
-Note that 'GenoM' is ignored, as a very large genotype matrix may result in a file that is too large for excel to open. If you have a genotype matrix of modest size, you can add it to the same excel file: 
-```{r }
+Note that 'GenoM' is ignored, as a very large genotype matrix may result in a file that is too large for excel to open. If you have a genotype matrix of modest size, you can add it to the same excel file; see the example in `?writeSeq`. 
+```{r, eval=FALSE, purl=FALSE }
 library(xlsx)
 write.xlsx(Geno, file = "Sequoia_OUT.xlsx", sheetName="Genotypes",
       col.names=FALSE, row.names=TRUE, append=TRUE, showNA=FALSE)
 ```
 The option `append=TRUE` ensures that the sheet is appended to the file, rather than the file entirely overwritten.
-
 
 
 
@@ -1009,15 +1002,10 @@ More specifically, `PedCompare()` considers it a 'match' if the inferred sibship
 
 ### Example
 
-```{r RunPedComp}
-# load data.
-data(SeqOUT_griffin, FieldMums_griffin, package="sequoia")
-
+```{r RunPedComp, eval=TRUE}
 PCG  <- PedCompare(Ped1 = cbind(FieldMums_griffin,
                                 sire = NA),
-                   Ped2 = SeqOUT_griffin$Pedigree,
-                   SNPd = SeqOUT_griffin$PedigreePar$id,
-                   Symmetrical = TRUE)
+                   Ped2 = SeqOUT_griffin$Pedigree)
 
 # pedigrees side-by-side (subset of columns because no field-observed sires here)
 PCG$MergedPed[127:133, c("id", "dam.1", "dam.2", "dam.r", "id.dam.cat", "dam.class")]
@@ -1058,7 +1046,7 @@ Fairly common (but still rare) pedigree reconstruction errors are
 * the parent-offspring relationship between to dummy individuals, or between two genotyped individuals with unknown birth years, is flipped the wrong way around.  
 
 
-```{r checks}
+```{r checks, eval=TRUE}
 # ~~ Mismatches ~~
 PCG$MergedPed[which(PCG$MergedPed$dam.class == "Mismatch"), 
                c("id", "dam.1", "dam.2", "id.dam.cat")]
@@ -1078,7 +1066,7 @@ PedM[which(PedM$id.2 == "i081_2005_F"), ]
 
 ### Colony
 To compare Colony output with an existing pedigree, use: 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 BestConfig <- read.table("Colony/file/file.BestConfig",
                          header=T, sep="", comment.char="")
 PC <- PedCompare(Ped1 = ExistingPedigree,
@@ -1096,7 +1084,7 @@ Another way to compare two pedigrees is to compare the pedigree-based relatednes
 
 The same can be done for a second pedigree, and the two dataframes merged. As the number of pairs $p$ becomes very large even for moderate numbers of individuals $n$ ($p$ = $n \times (n-1)/2$, so e.g. 2 million pairs for 2 thousand individuals), it is a good idea to use package `data.table` to assist with merging (merge in seconds vs. many minutes or not at all):
 
-```{r, eval=FALSE}
+```{r calcRped, fig.cap="", fig.width=4, out.width="60%"}
 Rped.old <- CalcRped(Ped_griffin, OUT="DF")
 Rped.new <- CalcRped(SeqOUT_griffin$Pedigree, OUT="DF")
 library(data.table)
@@ -1105,11 +1093,8 @@ Rped.both <- merge(data.table(Rped.old, key=c("IID1", "IID2")),
                    all=TRUE, suffixes=c(".old", ".new"))
 
 cor(Rped.both$R.ped.new, Rped.both$R.ped.old, use="pairwise.complete")
-plot(Rped.both$R.ped.old, Rped.both$R.ped.new, pch=16, cex=0.3)
-```
-
-```{r Rped-plot, eval=TRUE, fig.cap="", fig.cap="", fig.width=4, out.width="60%"}
-knitr::include_graphics("Rped_scatter.png")
+plot(Rped.both$R.ped.old, Rped.both$R.ped.new, pch=16, cex=0.3,
+     xlab = 'R (old ped)', ylab = 'R (new ped)')
 ```
 
 
@@ -1117,7 +1102,7 @@ knitr::include_graphics("Rped_scatter.png")
 In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one could compare the pairwise relatedness estimated from the pedigree(s) to a measure of genomic relatedness, estimated directly from the complete SNP data -- which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using [GCTA](http://cnsgenomics.com/software/gcta/#MakingaGRM). Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.
 
 For example: 
-```{r }
+```{r, eval=FALSE, purl=FALSE}
 # read in output from GCTA
 Rel.snp <- read.table("GT.grm.gz")   
 Rel.id <- read.table("GT.grm.id", stringsAsFactors=FALSE)
@@ -1182,8 +1167,8 @@ A genetically identified parent will be assigned when it matches a candidate par
 
 In absence of a pedigree prior, only instances of selfing will be assigned. 
 
-The pedigree 'prior' can only be used during parentage assignment, by specifying `SeqList[["PedigreePar"]]` as input *and* setting `Module='par'` (`MaxSibIter=0`):
-```{r }
+The pedigree 'prior' can only be used during parentage assignment, by specifying `SeqList[["PedigreePar"]]` as input *and* setting `Module='par'`:
+```{r, eval=FALSE, purl=FALSE}
 cand.dams <- read.table("Candidate_dams.txt", header=TRUE,
                         stringsAsFactors=FALSE)
 # cand.dam has columns 'id' and 'dam', and does not need entries for all ids

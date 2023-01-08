@@ -251,28 +251,10 @@ round(W.R, 4)
 ## ----timelineAU, echo=FALSE, fig.cap="Age difference between individual i and aunt/uncle j, and possible 'birth years' for i's parent k.", out.width="60%"----
 knitr::include_graphics("agedif-AU.png")
 
-## ----APold, eval=FALSE--------------------------------------------------------
-#  APfromOld <- MakeAgePrior(Pedigree = MyOldPedigree,
-#                            LifeHistData = LH,
-#                            Smooth = TRUE)
-#  SeqOUT <- sequoia(GenoM = Geno,
-#                    LifeHistData = LH,
-#                    SeqList = list(AgePriors = APfromOld))
-
 ## ----skip, fig.cap="", out.width = "70%"--------------------------------------
 AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
 AP[as.character(seq(1,12,by=2)), c("MS", "FS")] <- 0
 PlotAgePrior(AP)
-
-## ----minAFR, fig.cap="", error=TRUE-------------------------------------------
-AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
-AP[c("1","2"), "M"] <- 0
-AP[c(1:3) +1, "P"] <- 0   # 1st row = age difference of 0. 
-
-# check if valid ageprior:
-chk <- sequoia(SimGeno_example, LifeHistData=LH_HSg5, 
-               SeqList = list(AgePriors = AP), 
-               Module="pre", quiet=TRUE, Plot=FALSE)
 
 ## ----minAFR2, fig.cap="", out.width = "70%"-----------------------------------
 # Fix: a female may breed from age 3 to age 12

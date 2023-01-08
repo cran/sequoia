@@ -77,10 +77,11 @@
 #'     pedigree based on the simulated data}
 #'   \item{SimSNPd}{a list with for each iteration the IDs of the individuals
 #'     simulated to have been genotyped}
-#'   \item{PedComp.fwd}{\code{Counts} from the 'forward' \code{PedCompare},
-#'     from which \code{PedErrors} is calculated}
-#'   \item{RunParams}{a list with the call to \code{EstConf}, as well as
-#'   the default parameter values for \code{SimGeno}, and \code{sequoia}.}
+#'   \item{PedComp.fwd}{array with \code{Counts} from the 'forward'
+#'     \code{PedCompare}, from which \code{PedErrors} is calculated}
+#'   \item{RunParams}{a list with the call to \code{EstConf} as a semi-nested
+#'   list (args.sim, args.seq, nSim, nCores), as well as the default parameter
+#'   values for \code{SimGeno} and \code{sequoia}.}
 #'   \item{RunTime}{\code{sequoia} runtime per simulation in seconds, as
 #'     measured by \code{\link{system.time}()['elapsed']}.}
 #'
@@ -113,64 +114,58 @@
 #'
 #' @seealso \code{\link{SimGeno}, \link{sequoia}, \link{PedCompare}}.
 #'
+#' @importFrom plyr adply
+#'
 #' @examples
-#' \donttest{
-#' data(Ped_HSg5, LH_HSg5, package="sequoia")
+#' # estimate proportion of parents that are genotyped (= 1 - ParMis)
+#' sumry_grif <- SummarySeq(SeqOUT_griffin, Plot=FALSE)
+#' tmp <- apply(sumry_grif$ParentCount['Genotyped',,,],
+#'              MARGIN = c('parentSex', 'parentCat'), FUN = sum)
+#' sweep(tmp, MARGIN='parentCat', STATS = rowSums(tmp), FUN = '/')
 #'
-#' ## Example A: parentage assignment only
-#' conf.A <- EstConf(Pedigree = Ped_HSg5, LifeHistData = LH_HSg5,
-#'    args.sim = list(nSnp = 100, SnpError = 5e-3, ParMis=c(0.2, 0.5)),
-#'    args.seq = list(Module="par", Err=1e-3, Tassign=0.5), nSim = 3)
+#' # Example for parentage assignment only
+#' conf_grif <- EstConf(Pedigree = SeqOUT_griffin$Pedigree,
+#'                LifeHistData = SeqOUT_griffin$LifeHist,
+#'                args.sim = list(nSnp = 100, SnpError = 5e-3, CallRate=0.8,
+#'                                ParMis=c(0.54, 0.44)),
+#'                args.seq = list(Err=5e-3, Module="par"),
+#'                nSim = 2, nCores=1)
 #'
-#' # parent-pair confidence, per category:
-#' conf.A$ConfProb
+#' # parent-pair confidence, per category (Genotyped/Dummy/None)
+#' conf_grif$ConfProb
 #'
-#' # calculate (correct) assignment rates (ignores co-parent)
-#' 1 - apply(conf.A$PedErrors, c(1,3), sum, na.rm=TRUE)
+#' # Proportion of true parents that was correctly assigned
+#' 1 - apply(conf_grif$PedErrors, MARGIN=c('cat','parent'), FUN=sum, na.rm=TRUE)
 #'
-#' ## Example B: with sibship clustering, based on sequoia inferred pedigree
-#' RealGenotypes <- SimGeno(Ped = Ped_HSg5, nSnp = 100,
-#'                          ParMis=c(0.19,0.53), SnpError = 6e-3)
-#' SeqOUT <- sequoia(GenoM = RealGenotypes,
-#'                   LifeHistData = LH_HSg5,
-#'                   Err=5e-3, Module="ped",
-#'                   quiet=TRUE, Plot=FALSE)
-#'
-#' conf.B <- EstConf(Pedigree = SeqOUT$Pedigree,
-#'               LifeHistData = LH_HSg5,
-#'                args.sim = list(nSnp = 100, SnpError = 5e-3,
-#'                                ParMis=c(0.2, 0.5)),
-#'               args.seq = list(Err=5e-3, Module="ped"),
-#'               nSim = 2, nCores=2)
-#' conf.B$ConfProb
-#'
-#' Ped.withConf <- getAssignCat(Pedigree = SeqOUT$Pedigree,
-#'                              SNPd = rownames(RealGenotypes))
-#' Ped.withConf <- merge(Ped.withConf, conf.B$ConfProb, all.x=TRUE, sort=FALSE)
-#' Ped.withConf <- Ped.withConf[, c("id","dam","sire", "dam.conf", "sire.conf",
-#'                                  "id.cat", "dam.cat", "sire.cat")]
+#' # add columns with confidence probabilities to pedigree
+#' # first add columns with category (G/D/X)
+#' Ped.withConf <- getAssignCat(Pedigree = SeqOUT_griffin$Pedigree,
+#'                              SNPd = SeqOUT_griffin$PedigreePar$id)
+#' Ped.withConf <- merge(Ped.withConf, conf_grif$ConfProb, all.x=TRUE,
+#'                       sort=FALSE)  # (note: merge() messes up column order)
 #' head(Ped.withConf[Ped.withConf$dam.cat=="G", ])
-#' head(Ped.withConf[Ped.withConf$dam.cat=="D", ])
 #'
 #'
 #' ## P(actual FS | inferred as FS) etc.
 #' PairL <- list()
-#' for (i in 1:length(conf.A$Pedigree.inferred)) {  # nSim
+#' for (i in 1:length(conf_grif$Pedigree.inferred)) {  # nSim
 #'   cat(i, "\t")
-#'   PairL[[i]] <- ComparePairs(conf.A$Pedigree.reference,
-#'                              conf.A$Pedigree.inferred[[i]],
+#'   PairL[[i]] <- ComparePairs(conf_grif$Pedigree.reference,
+#'                              conf_grif$Pedigree.inferred[[i]],
 #'                              GenBack=1, patmat=TRUE, ExcludeDummies = TRUE,
 #'                              Return="Counts")
 #' }
 #' # P(actual relationship (Ped1) | inferred relationship (Ped2))
-#' PairA <- plyr::laply(PairL, function(M) sweep(M, 2, colSums(M), "/"))
+#' PairA <- plyr::laply(PairL, function(M)
+#'                      sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
 #' PairRel.prop <- apply(PairA, 2:3, mean, na.rm=TRUE)  # mean across simulations
-#' round(PairRel.prop, 2)
-#' #' # or: P(inferred relationship | actual relationship)
-#' PairA2 <- plyr::laply(PairL, function(M) sweep(M, 1, rowSums(M), "/"))
-#' }
+#' round(PairRel.prop, 3)
+#' # or: P(inferred relationship | actual relationship)
+#' PairA2 <- plyr::laply(PairL, function(M)
+#'                       sweep(M, MARGIN='Ped1', STATS=rowSums(M), FUN="/"))
 #'
 #' @export
+
 
 EstConf <- function(Pedigree = NULL,
                     LifeHistData = NULL,
@@ -241,6 +236,9 @@ EstConf <- function(Pedigree = NULL,
       warning("Reducing 'nCores' to ", maxCores, ", as that's all you have",
               immediate.=TRUE)
     }
+    if (nCores > nSim) {
+      nCores <- nSim
+    }
     if (!quiet.EC)  message("Using ", nCores, " out of ", maxCores, " cores")
   }
 
@@ -300,67 +298,76 @@ EstConf <- function(Pedigree = NULL,
   # confidence probabilities ----
   nSimz <- ifelse(nSim>1, nSim,2)  # else problems w R auto-dropping dimension
   CatNames <- c("G", "D", "X")
-  CPP <- array(dim=c(nSimz, 3,3,3,3),
-               dimnames = list(iter = seq_len(nSimz), id.cat=CatNames,
-                               dam.cat=CatNames, sire.cat=CatNames,
-                               Conf=c("dam.conf", "sire.conf", "pair.conf")))
-  Ni <- array(0, dim=c(nSimz, 3,3,3),
-              dimnames = dimnames(CPP)[1:4])
+  ClassNames <- c("Match", "Mismatch", "P1only", "P2only", "_")
 
+  PC.rev.cd <- array(0, dim = c(nSimz, 3,3,3, 5,5),
+                     dimnames = list(iter = seq_len(nSimz),
+                                     id.cat = CatNames, dam.cat = CatNames, sire.cat = CatNames,
+                                     dam.class = ClassNames, sire.class = ClassNames))
   for (i in 1:nSim) {
-    PC.rev <- PedCompare(Ped1 = Pedigree.inferred[[i]], Ped2 = Ped.ref,
-                         SNPd = SimSNPd[[i]], Symmetrical=FALSE, Plot=FALSE)
-    CPP[i,c("G","D"),,,] <- CalcPairConf(PC.rev$Counts.detail, ParSib)
-    Ni[i,,,] <- apply(PC.rev$Counts.detail, 1:3, sum)
+    PC.rev.cd[i,,,,,] <- PedCompare(Ped1 = Pedigree.inferred[[i]],
+                                    Ped2 = Ped.ref,
+                                    SNPd = SimSNPd[[i]],
+                                    Symmetrical=FALSE, Plot=FALSE)$Counts.detail
   }
+
+  Ntot <- apply(PC.rev.cd, c('id.cat', 'dam.cat', 'sire.cat'), sum)
+  OK <- list('G' = 'Match',
+             'D' = 'Match',
+             'X' = c('P2only', '_'))
+  confA <- array(dim = c(3,3,3,3),
+                 dimnames = c(list(paste0(c('dam', 'sire', 'pair'), '.conf')),
+                              dimnames(PC.rev.cd)[2:4]))
+  for (i in c('G','D','X')) {
+    confA['dam.conf' ,,i,] <- apply(PC.rev.cd[,,i,,OK[[i]],], c('id.cat', 'sire.cat'), sum) / Ntot[,i,]
+    confA['sire.conf',,,i] <- apply(PC.rev.cd[,,,i,,OK[[i]]], c('id.cat', 'dam.cat'), sum) / Ntot[,,i]
+    for (j in c('G','D','X')) {
+      confA['pair.conf',,i,j] <- apply(PC.rev.cd[,,i,j,OK[[i]],OK[[j]]], 'id.cat', sum) / Ntot[,i,j]
+    }
+  }
+
+  confA[c("dam.conf" , "pair.conf"),,"X",] <- NA  # no dam
+  confA[c("sire.conf", "pair.conf"),,,"X"] <- NA  # no sire
+
+  Conf.df <- plyr::adply(confA, .margins=2:4)
+  Conf.df <- merge(Conf.df,
+                   plyr::adply(Ntot, .margins=3:1, function(x) data.frame(N=x)))
+  Conf.df <- Conf.df[Conf.df$id.cat != 'X',]
   if (ParSib == "par") {
-    Ni[,,"X",] <- Ni[,,"X",] + Ni[,,"D",]
-    Ni[,,"D",] <- 0
-    Ni[,,,"X"] <- Ni[,,,"X"] + Ni[,,,"D"]
-    Ni[,,,"D"] <- 0
+    Conf.df <- Conf.df[Conf.df$id.cat == 'G' & Conf.df$dam.cat %in% c('G','X') &
+                         Conf.df$sire.cat %in% c('G','X'), ]
   }
-
-  # weighed mean across iterations (or not?)
-  Conf.A <- array(dim=c(3,3,3,3), dimnames = c(dimnames(CPP)[2:5]))
-  for (x in 1:3) {
-    Conf.A[,,,x] <- apply(CPP[,,,,x] * Ni, 2:4, sum, na.rm=TRUE) / apply(Ni, 2:4, sum, na.rm=TRUE)
-  }
-  Conf.A[,"X",,c("dam.conf", "pair.conf")] <- NA
-  Conf.A[,,"X",c("sire.conf", "pair.conf")] <- NA
-
-  Conf.df <- ArrToDF(Conf.A, Ni, ParSib)
+  Conf.df <- Conf.df[order(Conf.df$id.cat, Conf.df$dam.cat, Conf.df$sire.cat), ]
 
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # assignment errors (ignores co-parent) ----
-  PedComp.fwd <-  array(dim=c(nSim, 7,5,2),
-                       dimnames = list(iter = seq_len(nSim),
-                                       cat = c("GG", "GD", "GT", "DG", "DD", "DT", "TT"),
-                                       class = c("Total", "Match", "Mismatch", "P1only", "P2only"),
-                                       parent = c("dam", "sire")))
-
-  PedErrors.r <- array(dim=c(nSim, 7,3,2),
-                       dimnames = list(iter = seq_len(nSim),
-                                       cat = c("GG", "GD", "GT", "DG", "DD", "DT", "TT"),
-                                       class = c("FalseNeg", "FalsePos", "Mismatch"),
-                                       parent = c("dam", "sire")))
+  PedComp.fwd <-  array(0, dim=c(nSimz, 7,5,2),
+                        dimnames = list(iter = seq_len(nSimz),
+                                        cat = c("GG", "GD", "GT", "DG", "DD", "DT", "TT"),
+                                        class = c("Total", "Match", "Mismatch", "P1only", "P2only"),
+                                        parent = c("dam", "sire")))
   for (i in 1:nSim) {
-    PedComp.fwd[i,,,] <- PedCompare(Ped1 = Ped.ref, Ped2 = Pedigree.inferred[[i]],
-                         SNPd = SimSNPd[[i]], Symmetrical=FALSE, Plot=FALSE)$Counts
-    PedErrors.r[i,,,] <- sweep(PedComp.fwd[i,,c("P1only", "P2only","Mismatch"),], c(1,3),
-                               PedComp.fwd[i,,"Total",], "/")
+    PedComp.fwd[i,,,] <- PedCompare(Ped1 = Ped.ref,
+                                    Ped2 = Pedigree.inferred[[i]],
+                                    SNPd = SimSNPd[[i]],
+                                    Symmetrical=FALSE, Plot=FALSE)$Counts
   }
-  # average across iterations:
-  PedErrors <- apply(PedErrors.r, 2:4, mean, na.rm=TRUE)
-  PedErrors[c("GG", "GD", "DG", "DD"), "FalsePos", ] <- NA
+
+  PedComp.tmp <- apply(PedComp.fwd, 2:4, sum)
+  PedErrors <- sweep(PedComp.tmp[,c("P1only", "P2only","Mismatch"),], c(1,3),
+                     PedComp.tmp[,"Total",], "/")
+  PedErrors[c("GG", "GD", "DG", "DD"), "P2only", ] <- NA  # if parent in ref. pedigree, by def not P2only
+  dimnames(PedErrors)[['class']] <- c("FalseNeg", "FalsePos", "Mismatch")
+
 
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # out ----
   RunParams <- list(EstConf = namedlist(args.sim, args.seq, nSim, nCores),
                     SimGeno_default = formals(SimGeno),
-                    sequoia_default = formals(sequoia))
-#                    EstConf_specified = as.list(match.call())[-1L])  doesn't evaluate V[i] etc.
+                    sequoia_default = formals(sequoia),
+                    sequoia_version = as.character(utils::packageVersion("sequoia")))
 
   return( list(ConfProb = Conf.df,
                PedErrors = PedErrors,
@@ -372,61 +379,3 @@ EstConf <- function(Pedigree = NULL,
                RunParams = RunParams,
                RunTime = RunTime) )
 }
-
-
-
-#============================================================================
-CalcPairConf <- function(PedCompDetails, ParSib="sib") {   # per-iteration
-  CP <- array(NA, dim=c(2,3,3,3),
-              dimnames=c(list("id.cat"=c("G","D")), dimnames(PedCompDetails)[2:3],
-                               list(Conf=c("dam", "sire", "pair"))))
-  tots1 <- c("Match", "Mismatch", "P2only")   # total assigned in pedigree 2
-  not1 <- c("P1only", "_")
-  m <- ifelse(ParSib=="par", 1, 2)
-  CD <- PedCompDetails
-  for (i in 1:m) {
-    # parent-pairs
-    for (j in 1:m) {
-      for (k in 1:m) {
-        CP[i,j,k, "dam"] <- sum(CD[i,j,k,"Match", tots1]) / sum(CD[i,j,k,tots1, tots1])
-        CP[i,j,k, "sire"] <- sum(CD[i,j,k,tots1,"Match"]) / sum(CD[i,j,k,tots1,tots1])
-        CP[i,j,k, "pair"] <- CD[i,j,k,"Match", "Match"] / sum(CD[i,j,k,tots1, tots1])
-      }
-    }
-    # single dams
-    for (j in 1:m) {
-      CP[i,j,"X","dam"] <- sum(CD[i,j,,"Match", not1]) / sum(CD[i,j,, tots1, not1])
-    }
-    # single sires
-    for (k in 1:m) {
-      CP[i,"X",k,"sire"] <- sum(CD[i,,k,not1,"Match"]) / sum(CD[i,,k, not1,tots1])
-    }
-  }
-  return( CP )
-}
-
-
-
-#============================================================================
-
-ArrToDF <- function(A.P, A.N, PS) {
-  if (PS == "par") {
-    DF <- plyr::adply(A.P["G",c("G","X"),c("G","X"),,drop="FALSE"], 1:3)
-  } else {
-    DF <- plyr::adply(A.P[c("G","D"),,,], 1:3)
-  }
-  N.df <- plyr::adply(A.N, 2:4, sum)
-  names(N.df)[4] <- "N"
-  DF <- merge(DF, N.df, all.x=TRUE)
-  for (x in 1:3) {
-    DF[,x] <- factor(DF[,x], levels=c("G", "D", "X"))
-  }
-  for (x in 4:6) {
-    DF[,x] <- signif(DF[,x], digits = max(nchar(DF$N)))
-  }
-  DF <- DF[order(DF[,1], DF[,2], DF[,3]), ]
-  rownames(DF) <- 1:nrow(DF)
-  return( DF )
-}
-
-#============================================================================

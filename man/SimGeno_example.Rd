@@ -3,7 +3,7 @@
 \docType{data}
 \name{SimGeno_example}
 \alias{SimGeno_example}
-\title{Example genotype file}
+\title{Example genotype file: 'HSg5'}
 \format{
 A genotype matrix with 214 rows (ids) and 200 columns (SNPs). Each
   SNP is coded as 0/1/2 copies of the reference allele, with -9 for missing
@@ -13,10 +13,11 @@ A genotype matrix with 214 rows (ids) and 200 columns (SNPs). Each
 data(SimGeno_example)
 }
 \description{
-Simulated genotype data for cohorts 1+2 in Pedigree Ped_HSg5
+Simulated genotype data for cohorts 1+2 in Pedigree
+  \code{\link{Ped_HSg5}}
 }
 \seealso{
-\code{\link{Ped_HSg5}, \link{SimGeno}}
+\code{\link{LH_HSg5}, \link{SimGeno}}
 }
 \author{
 Jisca Huisman, \email{jisca.huisman@gmail.com}
