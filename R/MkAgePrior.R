@@ -34,16 +34,18 @@
 #' @param Pedigree dataframe with id - dam - sire in columns 1-3, and optional
 #'   column with birth years. Other columns are ignored.
 #' @param LifeHistData dataframe with 3 or 5 columns: id - sex (not used) -
-#'   birth year (- BY.min - BY.max), with unknown birth years coded as negative
-#'   numbers or NA. Column names are ignored, so the column order is important.
-#'   "Birth year" may be in any arbitrary discrete time unit relevant to the
-#'   species (day, month, decade), as long as parents are never born in the same
-#'   time unit as their offspring. It may include individuals not in the
-#'   pedigree, and not all individuals in the pedigree need to be in
-#'   LifeHistData.
+#'   birthyear (optional columns BY.min - BY.max - YearLast not used), with
+#'   unknown birth years coded as negative numbers or NA. "Birth year" may be in
+#'   any arbitrary discrete time unit relevant to the species (day, month,
+#'   decade), as long as parents are never born in the same time unit as their
+#'   offspring. It may include individuals not in the pedigree, and not all
+#'   individuals in the pedigree need to be in LifeHistData.
+#' @param MinAgeParent  minimum age of a parent, a single number (min across
+#'   dams and sires) or a vector of length two (dams, sires). Defaults to 1.
 #' @param MaxAgeParent  maximum age of a parent, a single number (max across
 #'   dams and sires) or a vector of length two (dams, sires). If NULL, it will
-#'   be estimated from the pedigree. See details below.
+#'   be set to latest - earliest birth year in \code{LifeHistData}, or estimated
+#'   from the pedigree if one is provided. See details below.
 #' @param Discrete  discrete generations? By default (NULL), discrete
 #'   generations are assumed if all parent-offspring pairs have an age
 #'   difference of 1, and all siblings an age difference of 0, and there are at
@@ -201,6 +203,7 @@
 
 MakeAgePrior <- function(Pedigree = NULL,
                          LifeHistData = NULL,
+                         MinAgeParent = NULL,
                          MaxAgeParent = NULL,
                          Discrete = NULL,
                          Flatten = NULL,
@@ -266,7 +269,7 @@ MakeAgePrior <- function(Pedigree = NULL,
     }
     if (Smooth) Smooth <- FALSE  # else maxAgePO = MaxAgeParent +2
     for (p in 1:2) {
-      if (!is.na(MaxAgeParent[p]) && (MaxAgeParent[p]<0 || !is.wholenumber(MaxAgeParent[p]))) {
+      if (!is.na(MaxAgeParent[p]) && (MaxAgeParent[p]<=0 || !is.wholenumber(MaxAgeParent[p]))) {
         stop("'MaxAgeParent' must be a positive whole number")
       }
       if (!is.na(MaxAgeParent[p])) {
@@ -282,17 +285,33 @@ MakeAgePrior <- function(Pedigree = NULL,
   if (max(MaxAgePO) > 100)  stop("MaxAgePO must be smaller than 100; consider a different time unit")
 	names(MaxAgePO) <- c("M", "P")
 
+  # Check MinAgeParent
+  if (is.null(MinAgeParent) || any(is.na(MinAgeParent)))  MinAgeParent <- 1
+  if (length(MinAgeParent)==1) {
+    MinAgePO <- rep(MinAgeParent, 2)
+  } else if (length(MinAgeParent)==2) {
+    MinAgePO <- MinAgeParent
+  } else {
+    stop("MinAgeParent must be a single number, or length 2 vector (NULL or NA also OK)")
+  }
+  for (p in 1:2) {
+    if (!is.na(MinAgePO[p]) && (MinAgePO[p]<=0 || !is.wholenumber(MinAgePO[p]))) {
+      stop("'MinAgeParent' must be a positive whole number")
+    }
+    if (MinAgePO[p] > MaxAgePO[p])  stop("MinAgeParent must not be larger than MaxAgeParent")
+  }
+
 
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   # functions to generate & return default ageprior ----
-  ReturnDefault <- function(MaxP, Return, Disc=Discrete, quietR=quiet) {
+  ReturnDefault <- function(MinP=MinAgePO, MaxP=MaxAgePO, rtrn=Return, Disc=Discrete, quietR=quiet) {
     if (is.null(Disc))  Disc <- all(MaxP == 1)
 		if (!quietR)  message("Ageprior: Flat 0/1, ",
                           ifelse(Disc, "discrete","overlapping"),
                           " generations, MaxAgeParent = ", MaxP[1],",",MaxP[2])
-    LR.RU.A.default <- MkAPdefault(MaxP, Disc)
+    LR.RU.A.default <- MkAPdefault(MinP, MaxP, Disc)
     if (Plot)  PlotAgePrior(LR.RU.A.default)
-  	if (Return == "all") {
+  	if (rtrn == "all") {
 	    Specs.AP <- list(Pedigree = call.AP[["Pedigree"]],
                  LifeHistData = call.AP[["LifeHistData"]],
                  Discrete = Discrete,
@@ -314,7 +333,7 @@ MakeAgePrior <- function(Pedigree = NULL,
 
   RR <- c("M", "P", "FS", "MS", "PS")  # relatedness categories considered
 
-  MkAPdefault <- function(MaxP, Disc) {
+  MkAPdefault <- function(MinP, MaxP, Disc) {
     AP <- matrix(1, max(MaxP)+2, 5,
                  dimnames=list(0:(max(MaxP)+1), RR))
     if(!is.null(Disc) && Disc) {  # always: MaxP[1]==MaxP[2]
@@ -324,11 +343,12 @@ MakeAgePrior <- function(Pedigree = NULL,
 
     } else {
       AP[,] <- 1
-      AP[1, c("M", "P")] <- 0
+      AP[1:MinP[1], "M"] <- 0
+      AP[1:MinP[2], "P"] <- 0
       AP[(MaxP[1]+2):nrow(AP), "M"] <- 0
       AP[(MaxP[2]+2):nrow(AP), "P"] <- 0
-      AP[(MaxP[1]+1):nrow(AP), c("FS", "MS")] <- 0
-      AP[(MaxP[2]+1):nrow(AP), c("FS", "PS")] <- 0
+      AP[(MaxP[1]-MinP[1]+2):nrow(AP), c("FS", "MS")] <- 0
+      AP[(MaxP[2]-MinP[2]+2):nrow(AP), c("FS", "PS")] <- 0
     }
     return( AP )
   }
@@ -338,7 +358,7 @@ MakeAgePrior <- function(Pedigree = NULL,
 	Ped <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=TRUE)
 	if (is.null(Pedigree) | all(is.na(LifeHistData$BirthYear)) |
 	    sum(!is.na(Ped$dam) | !is.na(Ped$sire)) ==0) {
-	  return( ReturnDefault(MaxAgePO, Return) )
+	  return( ReturnDefault() )
 	}
 
   # MaxT: no. rows in tables
@@ -377,22 +397,32 @@ MakeAgePrior <- function(Pedigree = NULL,
 
   # update MaxAgePO ----
   NAK.R <- apply(tblA.R, 2, sum, na.rm=TRUE)
-  ParAge <- suppressWarnings(
+  ParAgeMx <- suppressWarnings(
     apply(tblA.R[, c("M", "P")], 2, function(x) max(which(x > 0)) -1) )  # 1st row = agedif 0
+  ParAgeMn <- suppressWarnings(
+    apply(tblA.R[, c("M", "P")], 2, function(x) min(which(x > 0)) -1) )
 
   MinPairs.AgeKnown <- 20   # minimum no. mother-offspring or father-offspring pairs w known age diff
   # MaxAgeParent = user input
+  DoMinWarning = FALSE
   for (p in 1:2) {
     if (MaxAgePO[p] == (diff(BYrange)+1) & is.na(MaxAgeParent[p]) & NAK.R[p] >= MinPairs.AgeKnown) {
       # ignore MaxAgePO: derived from LifeHistData
-      MaxAgePO[p] <- ParAge[p]
+      MaxAgePO[p] <- ParAgeMx[p]
     } else {
-      MaxAgePO[p] <- max(ParAge[p], MaxAgePO[p], na.rm=TRUE)
+      MaxAgePO[p] <- max(ParAgeMx[p], MaxAgePO[p], na.rm=TRUE)
+    }
+    if (ParAgeMn[p] < MinAgePO[p]) {   # only possible if MinAgeParent specified by user
+      MinAgePO[p] <- ParAgeMn[p]
+      DoMinWarning = TRUE
     }
   }
 
-  if (any(!is.na(MaxAgeParent) & MaxAgePO > MaxAgeParent & !quiet))
+  if (any(!is.na(MaxAgeParent) & MaxAgePO > MaxAgeParent) & !quiet)
     warning("Some pedigree parents older than MaxAgeParent, using new estimate")
+  if (DoMinWarning & !quiet)
+    warning("Minimum age of parents in pedigree are ", ParAgeMn, " while MinAgeParent = ", MinAgeParent,
+      ", using pedigree-based estimate.")
 
 
 	# check/set Discrete ----
@@ -416,12 +446,12 @@ MakeAgePrior <- function(Pedigree = NULL,
   if (Discrete) {
     Flatten <- FALSE   # ignore user-specified
     Smooth <- FALSE
-    return( ReturnDefault(MaxAgePO, Return) )
+    return( ReturnDefault() )
   }
 
 
   # set Flatten ----
-  if (!Discrete && any(MaxAgeParent > ParAge, na.rm=TRUE)) {
+  if (!Discrete && any(MaxAgeParent > ParAgeMx, na.rm=TRUE)) {
     if (!quiet && !is.null(Flatten) && !Flatten) {
           warning("All pedigree parents younger than MaxAgeParent, ",
          "I changed to Flatten=TRUE to adjust ageprior to specified MaxAgeParent")
@@ -498,7 +528,8 @@ MakeAgePrior <- function(Pedigree = NULL,
     if (FSuseHS) {
       W.R["FS"] <- 1-exp(-lambdaNW * mean(c(NAK.R["FS"], min(NAK.R[c("MS", "PS")]))))
     }
-    LR.RU.A.default <- MkAPdefault(MaxP = pmax(MaxAgePO, MaxAgeParent, na.rm=TRUE),  # for input > pedigree-observed
+    LR.RU.A.default <- MkAPdefault(MinP=MinAgePO,
+                                   MaxP = pmax(MaxAgePO, MaxAgeParent, na.rm=TRUE),  # for input > pedigree-observed
                                    Disc=Discrete)
     if (nrow(LR.RU.A.default) < nrow(LR.RU.A.par)) {
       LR.RU.A.default <- rbind(LR.RU.A.default,

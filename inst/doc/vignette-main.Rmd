@@ -2,7 +2,7 @@
 title: "Sequoia User Guide"
 subtitle: "Reconstruction of multi-generational pedigrees from SNP data"
 author: "Jisca Huisman ( jisca.huisman @ gmail.com )"
-date: "26 April 2021"
+date: "15 March 2023"
 output:
   bookdown::html_document2:
     base_format: rmarkdown::html_vignette
@@ -1275,10 +1275,10 @@ When inbreeding and complex relationships (e.g. paternal half-sibling as well as
 
 
 ## Death year
-The year of death forms an upper limit to when an individual could have reproduced, and is used by e.g. [FRANZ](https://www.bioinf.uni-leipzig.de/Software/FRANz/About.html) during parentage assignment. It is not used by sequoia, because it is mainly focussed on populations of wild animals, where it is often impossible to tell whether an individual has emigrated or died, and identification of dead individuals is not always reliable. Emigrants are still candidate parents, as they may reside just outside the study area boundaries, or return briefly and unseen during the breeding season.
+The year of death forms an upper limit to when an individual could have reproduced, and can from version 2.5 onwards be used as input via the `Year.last` column in `LifeHistData`. Note that for many species, the last possible year in which offspring can be born may be after the year of death (e.g. males in many mammal species), or the year preceding the year of death (if a individual died between January 1st and the breeding season). 
 
-The only way in which a known death date can inform pedigree reconstruction by sequoia, is as an upper limit to the estimated birth year, when the exact birth year is unknown.
-
+If it is unclear whether an individual died or emigrated, please do not provide a `Year.last` -- emigrants can still be candidate parents, as they may reside just outside the study area boundaries, or return briefly and unseen during the breeding season.
+is unknown.
 
 
 ## Accuracy
@@ -1305,6 +1305,19 @@ Simulations as performed by 'EstConf()' do not tell which assignments may be inc
 ## Add new individuals
 When new individuals have been genotyped, such as a new cohort of offspring, it is best to re-run the pedigree reconstruction for all genotyped individuals. This ensures that older siblings of the new offspring are identified, as well as any grandparents. A possible exception is when all candidate parents have been genotyped, although even then inclusion of their parents (the new individuals' grandparents) may correct for any genotyping errors they may have.
 
+
+## Results differ from COLONY
+
+Sequoia will typically produce a more conservative pedigree than COLONY, for various reasons:
+
+- COLONY only considers whether individuals are full siblings, half siblings, or unrelated, while `sequoia` also considers full- or half- avuncular (aunts and uncles and their nieces and nephews), and grand-parental. 
+These alternative relationships are impossible among individuals born in the same year when generations do not overlap (`args.AP=list(Discrete=TRUE)`). If all samples are from a single birth year, this is automatically assumed. 
+- `sequoia` also considers double relationships, e.g. paternal half-siblings that are also maternal half-cousins, with a relatedness inbetween full and half siblings. These may be erroneously assigned as full siblings by COLONY when present, but their consideration may cause true full siblings to be only assigned as half-siblings, especially when there is only a moderate amount of genetic data. To ignore double and inbred relationships, use `Complex='simp'`. 
+- `sequoia` considers third degree relationships, such as full cousins. Again, these may result in false positives by COLONY, while their consideration may result in false negatives by `sequoia`. This can not be turned off. 
+- When no parents of known sex can be assigned, there is no way in `sequoia` to differentiate between maternal and paternal half-siblings, and none are assigned (although they may be identified with `GetMaybeRel()`. In COLONY, candidate mothers and fathers can be specified, but this option is not available in `sequoia` (yet?). 
+- When a relationship is uncertain, COLONY will include it in the output with a low confidence probability. `sequoia` only makes assignments of which it is very sure, as the sequential nature of the algorithm may otherwise result in a snowball effect of incorrect assignments. 
+ 
+You can get `sequoia`'s 'opinion' on a COLONY reconstructed pedigree (or any other pedigree) with `CalcOHLLR()`, which for every assigned parent gives the log-likelihood ratio between being parent-offspring with the focal individual, versus otherwise related. You may also use `CalcPairLL()` for a specific set of pairs of individuals to calculate their likelihoods to be parent-offspring, full siblings, ... , and investigate how these likelihoods change when changing the ageprior or with `Complex='simp'`. 
 
  
 

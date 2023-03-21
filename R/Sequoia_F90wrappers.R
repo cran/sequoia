@@ -68,6 +68,7 @@ SeqParSib <- function(ParSib,
                   genofr = as.integer(GenoM),
                   sexrf = as.integer(LHF$Sex),
                   byrf = as.integer(c(LHF$BirthYear, LHF$BY.min, LHF$BY.max)),
+                  lyrf = as.integer(LHF$Year.last),
                   aprf = as.double(AgePriors),
                   # IN/OUT:
                   parentsrf = as.integer(PedN$PedPar),

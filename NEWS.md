@@ -1,5 +1,35 @@
+# sequoia 2.5.1
 
-# sequoia 2.4
+### Bug fixes & minor changes
+- fix error 'sibship number out of bounds'
+- fix error when `LifeHistData$Sex` includes `NA`
+- fix several minor bugs affecting rare cases
+
+
+# sequoia 2.5.0
+
+### New features & major changes
+- improved performance when a large proportion of birth years is not exactly known
+- optional column `Year.last` added to `LifeHistData` (last possible offspring birth year)
+- New functions `GetAncestors` and `GetDescendants`
+
+### Bug fixes & minor changes
+- New parameter `MinAgeParent` for `MakeAgePrior()`
+- New parameter `StrictGenoCheck`, `Strict` for `CheckGeno()` ; update msgs
+- update `CheckLH`, now flexible column order in LifeHistData. 
+- changed maxmismatch from `qntl = 0.999^(1/nrow(GenoM))` to `0.9999^(1/nrow(GenoM))` in 
+all functions calling `CalcMaxMismatch`
+
+
+
+# sequoia 2.4.2
+
+### Bug fixes & minor changes
+- checks up to 6 generations back when making assignment to avoid individual being its own ancestor (was 5)
+- fix bug in `SnpStats()` when AF=0 or SNP is missing for all individuals. 
+
+
+# sequoia 2.4.1
 
 ### New features & major changes
 - R markdown file to create (or serve as a first draft of) a summary report of input and output, called via `sequoia_report()`

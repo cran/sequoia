@@ -170,6 +170,7 @@ GetMaybeRel <- function(GenoM = NULL,
 
   # unpack SeqList ----
   if (!is.null(SeqList)) {
+    if (!inherits(SeqList, 'list'))  stop("'SeqList' must be a list")
     NewName = c(Pedigree = "Pedigree",
                 PedigreePar = "Pedigree",
                 LifeHist = "LifeHistData",
@@ -233,7 +234,7 @@ GetMaybeRel <- function(GenoM = NULL,
     PARAM$MaxMismatchV <- setNames(CalcMaxMismatch(Err=PARAM$ErrM,
                                                    MAF=sts[,"AF"],
                                                    ErrFlavour=PARAM$ErrFlavour,
-                                                   qntl=0.999^(1/nrow(GenoM))),
+                                                   qntl=0.9999^(1/nrow(GenoM))),
                                    c("DUP", "OH", "ME"))
   }
 

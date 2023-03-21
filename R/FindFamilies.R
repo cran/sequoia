@@ -1,54 +1,66 @@
 #' @title Assign Family IDs
 #'
-#' @description Add a column with family IDs (FIDs) to a pedigree, with each
-#'  number denoting a cluster of connected individuals.
+#' @description Find clusters of connected individuals in a pedigree, and assign
+#'   each cluster a unique family ID (FID).
 #'
 #' @details This function repeatedly finds all ancestors and all descendants of
 #'  each individual in turn, and ensures they all have the same Family ID. Not
 #'  all connected individuals are related, e.g. all grandparents of an
 #'  individual will have the same FID, but will typically be unrelated.
 #'
-#' When UseMaybeRel = TRUE, probable relatives are added to existing family
-#'  clusters, or existing family clusters may be linked together. Currently no
-#'  additional family clusters are created.
+#' When \code{UseMaybeRel = TRUE}, probable relatives are added to existing
+#' family clusters, or existing family clusters may be linked together.
+#' Currently no additional family clusters are created.
 #'
-#' @param  Ped dataframe with columns id - parent1 - parent2; only the
+#' @param  Pedigree dataframe with columns id - parent1 - parent2; only the
 #'   first 3 columns will be used.
-#' @param  SeqList list as returned by \code{\link{sequoia}}. If 'Ped' is not
-#'  provided, the element 'Pedigree' from this list will be used if present,
-#'  and element 'Pedigreepar' otherwise.
-#' @param  UseMaybeRel use \code{SeqList$MaybeRel}, the dataframe with probable
-#' but non-assigned relatives, to assign additional family IDs?
+#' @param  SeqList list as returned by \code{\link{sequoia}}. If \code{Pedigree}
+#'   is not provided, the element \code{Pedigree} from this list will be used if
+#'   present, and element \code{Pedigreepar} otherwise.
+#' @param  MaybeRel Output from \code{\link{GetMaybeRel}}, a dataframe with
+#'   probable but non-assigned relatives.
 #'
-#' @return A dataframe with the provided pedigree, with a column 'FID' added.
+#' @return A numeric vector with length equal to the number of unique
+#'   individuals in the pedigree (i.e. number of rows in pedigree after running
+#'   \code{\link{PedPolish}} on \code{Pedigree}).
+#'
+#' @seealso \code{\link{GetAncestors}, \link{GetDescendants},
+#'   \link{getGenerations}}
 #'
 #' @export
+#'
+#' @examples
+#'
+#' PedG <- SeqOUT_griffin$PedigreePar[,1:3]
+#' FID_G <- FindFamilies(PedG)
+#' PedG[FID_G==4,]
 
-FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
-  if (is.null(Ped) & is.null(SeqList)) {
+
+FindFamilies <- function(Pedigree=NULL, SeqList=NULL, MaybeRel=NULL) {
+  if (is.null(Pedigree) & is.null(SeqList)) {
     stop("please provide either Ped or SeqList")
-  } else if (is.null(Ped)) {
+  } else if (is.null(Pedigree)) {
     if (any(names(SeqList)=="Pedigree")) {
-      Ped <- SeqList[["Pedigree"]]
+      Ped <- SeqList[["Pedigree"]][,1:3]
     } else if (any(names(SeqList)=="PedigreePar")) {
-      Ped <- SeqList[["PedigreePar"]]
+      Ped <- SeqList[["PedigreePar"]][,1:3]
     } else {
       stop("please provide either Ped or SeqList with element 'PedigreePar' or 'Pedigree'")
     }
   } else {
-    if (!(is.data.frame(Ped) | is.matrix(Ped)) || nrow(Ped)<2 || ncol(Ped)<3) {
+    if (!(is.data.frame(Pedigree) | is.matrix(Pedigree)) || nrow(Pedigree)<2 || ncol(Pedigree)<3) {
       stop("'Ped' must be a dataframe with at least columns id - dam - sire")
     }
+    Ped <- PedPolish(Pedigree, KeepAllColumns=FALSE, StopIfInvalid=FALSE)
   }
-  Ped <- Ped[, 1:3]
 
-  Ped$FID <- 0
+  FID <- rep(0, nrow(Ped))
   for (i in 1:nrow(Ped)) {
-    if (Ped$FID[i]!=0 | !is.na(Ped[i,2]) | !is.na(Ped[i,3]))  next
-    Ped$FID[i] <- i
+    if (FID[i]!=0 | !is.na(Ped[i,2]) | !is.na(Ped[i,3]))  next
+    FID[i] <- i
     AL <- list()
     DL <- list()
-    AL[[1]] <- unique(unlist(GetAncest(i, Ped)))
+    AL[[1]] <- unique(unlist(GetAnc(i, Ped)))
     DL[[1]] <- unique(unlist(GetDesc(i, Ped)))
     for (x in 1:20) {
 
@@ -66,7 +78,7 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
       if (length(DL[[x]]) > 0) {
         AXL <- list()
         for (d in seq_along(DL[[x]])) {
-          AXL[[d]] <- unique(unlist(GetAncest(which(Ped[,1] == DL[[x]][d]), Ped)))
+          AXL[[d]] <- unique(unlist(GetAnc(which(Ped[,1] == DL[[x]][d]), Ped)))
         }
         AL[[x+1]] <- unique(unlist(AXL))
         if (x>1)  AL[[x+1]] <- setdiff(AL[[x+1]], unlist(c(AL[1:x], DL[1:(x-1)])))
@@ -74,18 +86,33 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
         AL[[x+1]] <- numeric()
       }
     }
-    Ped$FID[Ped[,1] %in% unlist(c(AL, DL))] <- i
+    FID[Ped[,1] %in% unlist(c(AL, DL))] <- i
   }
-  Ped$FID <- as.numeric(factor(Ped$FID))
+  FID <- as.numeric(factor(FID))  # re-number to sequential numbers
 
-  if (UseMaybeRel) {
-    if (any(names(SeqList)=="MaybeRel")) {
-      MR <- SeqList$MaybeRel
+
+  MR <- NULL
+  MR_errmsg <- "'MaybeRel' must be the list returned by GetMaybeRel(), or a dataframe with columns 'ID1' and 'ID2'"
+  if (is.data.frame(MaybeRel)) {
+    if ('ID1' %in% colnames(MaybeRel) & 'ID2' %in% colnames(MaybeRel)) {
+      MR <- MaybeRel[, c('ID1', 'ID2')]
     } else {
-      MR <- SeqList$MaybePar
+      stop(MR_errmsg)
     }
+  } else if (inherits(MaybeRel, 'list')) {
+    if ('MaybeRel' %in% names(MaybeRel)) {
+      MR <- MaybeRel$MaybeRel[, c('ID1', 'ID2')]
+    } else if ('MaybePar' %in% names(MaybeRel)) {
+      MR <- MaybeRel$MaybePar[, c('ID1', 'ID2')]
+    } else {
+      stop(MR_errmsg)
+    }
+  } else if (!is.null(MaybeRel)) {
+    stop(MR_errmsg)
+  }
 
-    PedX <- Ped[, c("id", "FID")]
+  if (!is.null(MR)) {
+    PedX <- data.frame(id=Ped$id, FID)
     Singles <- as.numeric(names(table(PedX$FID)[table(PedX$FID)==1]))
     PedX$FID[PedX$FID %in% Singles] <- 0
     MR <- merge(MR, stats::setNames(PedX, c("ID1", "FID1")), all.x=TRUE)
@@ -95,25 +122,25 @@ FindFamilies <- function(Ped=NULL, SeqList=NULL, UseMaybeRel=FALSE) {
     if (nrow(NewLinks)>0) {
       for (i in 1:nrow(NewLinks)) {
         if (NewLinks$FID1[i]==0 & NewLinks$FID2[i]!=0) {
-          Ped$FID[Ped$id == NewLinks$ID1[i]] <- NewLinks$FID2[i]
+          FID[Ped$id == NewLinks$ID1[i]] <- NewLinks$FID2[i]
         } else if (NewLinks$FID1[i]!=0 & NewLinks$FID2[i]==0) {
-          Ped$FID[Ped$id == NewLinks$ID2[i]] <- NewLinks$FID1[i]
+          FID[Ped$id == NewLinks$ID2[i]] <- NewLinks$FID1[i]
         } else {
           newFID <- min(NewLinks[i, c("FID1", "FID2")])
           oldFID <- max(NewLinks[i, c("FID1", "FID2")])
-          Ped$FID[which(Ped$FID == oldFID)] <- newFID
+          FID[which(FID == oldFID)] <- newFID
         }
       }
     }
   }
 
-  Ped
+  return( FID )
 }
 
 
 #======================================================================
 # get a list with all ancestors of individual on row i of Ped
-GetAncest <- function(i, Ped) {
+GetAnc <- function(i, Ped) {
   PL <- list()
   PL[[1]] <- unique(stats::na.exclude(unlist(Ped[i, 2:3])))
   for (g in 1:100) {   # assuming Ped < 100 generations
@@ -122,6 +149,43 @@ GetAncest <- function(i, Ped) {
   }
   PL
 }
+
+
+#' @title Get ancestors
+#'
+#' @description get all ancestors of an individual
+#'
+#' @param id  id of the individual
+#' @param Pedigree dataframe with columns id - parent1 - parent2; only the
+#'   first 3 columns will be used.
+#'
+#' @return a list with as first element \code{id}, second parents, third
+#'  grandparents, etc.. Each element is a vector with ids, the first three
+#'  elements are named, the rest numbered. Ancestors are unsorted within each
+#'  list element.
+#'
+#' @export
+#'
+#' @examples
+#' Anc_i200  <- GetAncestors('i200_2010_F', Ped_griffin)
+#'
+#'
+
+GetAncestors <- function(id, Pedigree) {
+  Ped <- PedPolish(Pedigree, KeepAllColumns=FALSE, StopIfInvalid=FALSE)
+  row_i <- which(Ped[,1] == id)
+  if (length(row_i)==0)  stop('id not in Pedigree')
+  Anc <- GetAnc(row_i, Ped)
+  if (any(unlist(Anc) == id)) {
+    loopsize <- min(which(sapply(Anc, function(v) id %in% v)))
+    warning('Individual ', id , ' is its own ancestor ', loopsize, ' generations back')
+  }
+  c(list('id' = id,
+         'parents' = Anc[[1]],
+         'grandparents' = Anc[[2]]),
+         Anc[3:(length(Anc)-1)])   # last element is always character(0)
+}
+
 
 
 #======================================================================
@@ -134,6 +198,36 @@ GetDesc <- function(i, Ped) {
     PL[[g+1]] <- unlist(Ped[which(Ped[,2] %in% PL[[g]] | Ped[,3] %in% PL[[g]]), 1])
   }
   PL
+}
+
+
+#' @title Get descendants
+#'
+#' @description get all descendants of an individual
+#'
+#' @param id  id of the individual
+#' @param Pedigree dataframe with columns id - parent1 - parent2; only the
+#'   first 3 columns will be used.
+#'
+#' @return a list with as first element \code{id}, second offspring, third
+#'  grand-offspring, etc.. Each element is a vector with ids, the first three
+#'  elements are named, the rest numbered.
+#'
+#' @export
+
+GetDescendants <- function(id, Pedigree) {
+  Ped <- PedPolish(Pedigree, KeepAllColumns=FALSE, StopIfInvalid=FALSE)
+  row_i <- which(Ped[,1] == id)
+  if (length(row_i)==0)  stop('id not in Pedigree')
+  Desc <- GetDesc(row_i, Ped)
+  if (any(unlist(Desc) == id)) {
+    loopsize <- min(which(sapply(Desc, function(v) id %in% v)))
+    warning('Individual ', id , ' is its own ancestor ', loopsize, ' generations back')
+  }
+  c(list('id' = id,
+         'offspring' = Desc[[1]],
+         'grandoffspring' = Desc[[2]]),
+    Desc[3:(length(Desc)-1)])
 }
 
 
@@ -166,7 +260,7 @@ PedStripFID <- function(Ped, FIDsep="__") {
     PedL[[i]] <- StripFam(Ped[, i], FIDsep=FIDsep)
   }
   stats::setNames(cbind(PedL[[1]], PedL[[2]], PedL[[3]]),
-           c("FID", "id", "dam.FID", "dam", "sire.FID", "sire"))
+                  c("FID", "id", "dam.FID", "dam", "sire.FID", "sire"))
 }
 
 

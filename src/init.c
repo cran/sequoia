@@ -14,16 +14,17 @@ static R_NativePrimitiveArgType psType[] = {
   INTSXP,  // 6 GenoFR
   INTSXP,  // 7 SexRF
   INTSXP,  // 8 BYRF
-  REALSXP, // 9 APRF
-  INTSXP,  // 10 parentsRF
-  REALSXP, // 11 LrRF
-  INTSXP,  // 12 OhRF
-  INTSXP,  // 13 Nd
-  INTSXP,  // 14 DumParRF
-  REALSXP, // 15 DumLrRF
-  INTSXP,  // 16 DumBYRF
-  REALSXP, // 17 TotLL
-	REALSXP, // 18 AP_OUT
+  INTSXP,  // 9 LYRF
+  REALSXP, // 10 APRF
+  INTSXP,  // 11 parentsRF
+  REALSXP, // 12 LrRF
+  INTSXP,  // 13 OhRF
+  INTSXP,  // 14 Nd
+  INTSXP,  // 15 DumParRF
+  REALSXP, // 16 DumLrRF
+  INTSXP,  // 17 DumBYRF
+  REALSXP, // 19 TotLL
+	REALSXP, // 19 AP_OUT
 };
 
 static R_NativePrimitiveArgType dupType[] = {
@@ -113,9 +114,10 @@ static R_NativePrimitiveArgType BYprobType[] = {
   INTSXP,  // 3 nAP
   INTSXP,  // 4 nYearsIn
 	INTSXP,  // 5 BY
-	REALSXP, // 6 AP
-	INTSXP,  // 7 parentsRF
-	REALSXP, // 8 byprobv
+	INTSXP,  // 6 LYRF
+	REALSXP, // 7 AP
+	INTSXP,  // 8 parentsRF
+	REALSXP, // 9 byprobv
 };
 
 static R_NativePrimitiveArgType eType[] = {
@@ -135,7 +137,7 @@ static R_NativePrimitiveArgType relType[] = {
 
 
 extern void F77_NAME(makeped)(int *ng, int *specsintglb, int *specsintmkped,
-  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf,
+  double *specsdbl, double *errv, int *genofr, int *sexrf, int *byrf, int *lyrf,
 	double *aprf, int *parentsrf, double *lrrf, int *ohrf,
 	int *nd, int *dumparrf, double *dumlrrf, int *dumbyrf, double *totll, double *apout);
 
@@ -159,7 +161,7 @@ extern void F77_NAME(getpairll)(int *ng, int *np, int *specsint, double *specsdb
   int *dropp, int *parentsrf, int *dumparrf, double *llrf, int *toprf, double *dlrf);
 
 extern void F77_NAME(getbyprobs)(int *ng, int *nx, int *nap, int *nyearsin, int *byrf,
-  double *aprf, int *parentsrf, double *byprobv);
+  int *lyrf, double *aprf, int *parentsrf, double *byprobv);
 
 extern void F77_NAME(deallocall)(void);
 
@@ -169,12 +171,12 @@ extern void F77_NAME(getrel)(int *nind, int *pedrf, int *nrel, int *relv);
 
 
 static const R_FortranMethodDef FortranEntries[] = {
-	{"makeped", (DL_FUNC) &F77_NAME(makeped), 18, psType},
+	{"makeped", (DL_FUNC) &F77_NAME(makeped), 19, psType},
 	{"duplicates", (DL_FUNC) &F77_NAME(duplicates), 13, dupType},
   {"findambig", (DL_FUNC) &F77_NAME(findambig), 20, ambigType},
 	{"getpedllr", (DL_FUNC) &F77_NAME(getpedllr), 16, pedLLRType},
   {"getpairll", (DL_FUNC) &F77_NAME(getpairll), 19, pairLLType},
-  {"getbyprobs", (DL_FUNC) &F77_NAME(getbyprobs), 8, BYprobType},
+  {"getbyprobs", (DL_FUNC) &F77_NAME(getbyprobs), 9, BYprobType},
   {"deallocall", (DL_FUNC) &F77_NAME(deallocall), 0},
 	{"mkerrors", (DL_FUNC) &F77_NAME(mkerrors), 4, eType},
   {"getrel", (DL_FUNC) &F77_NAME(getrel), 4, relType},

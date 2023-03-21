@@ -16,6 +16,9 @@
 #'   If no output name is specified, no results are returned, only an error
 #'   message when the pedigree contains a loop.
 #'
+#' @seealso \code{\link{GetAncestors}, \link{GetDescendants}} to get all
+#'   ancestors resp. descendants of a specific individual (with a warning if it
+#'   is its own ancestor); \link{FindFamilies} to find connected sub-pedigrees.
 #'
 #' @examples
 #' # returns nothing if OK, else error:

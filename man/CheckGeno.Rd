@@ -9,6 +9,7 @@ CheckGeno(
   quiet = FALSE,
   Plot = FALSE,
   Return = "GenoM",
+  Strict = TRUE,
   DumPrefix = c("F0", "M0")
 )
 }
@@ -21,6 +22,12 @@ CheckGeno(
 
 \item{Return}{either 'GenoM' to return the cleaned-up genotype matrix, or
 'excl' to return a list with excluded SNPs and individuals (see Value).}
+
+\item{Strict}{Exclude any individuals genotyped for <5% of SNPs, and any SNPs
+genotyped for <5% of individuals (TRUE); this was the unavoidable default
+up to version 2.4.1. Otherwise only excluded are (very nearly) monomorphic
+SNPs, SNPs scored for fewer than 2 individuals, and individuals scored for
+fewer than 2 SNPs.}
 
 \item{DumPrefix}{length 2 vector, to check if these don't occur among
 genotyped individuals.}
@@ -73,12 +80,13 @@ if ("ExcludedIndiv" \%in\% names(Excl))
   GenoM <- GenoM[!rownames(GenoM) \%in\% Excl[["ExcludedIndiv"]], ]
 
 # warning about  SNPs scored for <50\% of individuals ?
+# note: this is not necessarily a problem, and sometimes unavoidable.
 SnpCallRate <- apply(GenoM, MARGIN=2,
                      FUN = function(x) sum(x!=-9)) / nrow(GenoM)
 hist(SnpCallRate, breaks=50, col="grey")
 GenoM <- GenoM[, SnpCallRate > 0.6]
 
-# to be on the safe side, filter out low call rate individuals
+# to filter out low call rate individuals: (also not necessarily a problem)
 IndivCallRate <- apply(GenoM, MARGIN=1,
                        FUN = function(x) sum(x!=-9)) / ncol(GenoM)
 hist(IndivCallRate, breaks=50, col="grey")

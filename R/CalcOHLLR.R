@@ -1,10 +1,9 @@
 #=======================================================================
-#' @title Calculate OH and LLR
+#' @title Calculate OH and LLR for a pedigree
 #'
 #' @description Count opposite homozygous (OH) loci between parent-offspring
 #'   pairs and Mendelian errors (ME) between parent-parent-offspring trios, and
-#'   calculate the parental log-likelihood ratios (LLR). Also returns estimate
-#'   of actual genotypes.
+#'   calculate the parental log-likelihood ratios (LLR).
 #'
 #' @details Any individual in \code{Pedigree} that does not occur in
 #'   \code{GenoM} is substituted by a dummy individual; these can be recognised
@@ -173,7 +172,11 @@ CalcOHLLR <- function(Pedigree = NULL,
   }
 
   #~~~~~~~~~
-  Ped <- PedPolish(Pedigree, rownames(GenoM), DropNonSNPd=FALSE, NullOK = FALSE)
+  # drop individuals not in Pedigree from GenoM
+  PedX <- PedPolish(Pedigree)  # ensure all dams & sires have own id row
+  gID <- intersect(rownames(GenoM), PedX$id)
+  GenoM <- GenoM[gID,]
+  Ped <- PedPolish(Pedigree, gID=gID, DropNonSNPd=FALSE, NullOK = FALSE)
   Ped <- Ped[, !names(Ped) %in% c("OHdam", "OHsire", "MEpair",
                                      "SNPd.id.dam", "SNPd.id.sire",
                                      "LLRdam", "LLRsire", "LLRpair")]
@@ -225,7 +228,7 @@ CalcOHLLR <- function(Pedigree = NULL,
     PARAM$MaxMismatchV <- setNames(CalcMaxMismatch(Err=PARAM$ErrM,
                                                    MAF=sts[,"AF"],
                                                    ErrFlavour=PARAM$ErrFlavour,
-                                                   qntl=0.999^(1/nrow(GenoM))),
+                                                   qntl=0.9999^(1/nrow(GenoM))),
                                    c("DUP", "OH", "ME"))
   }
 

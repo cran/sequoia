@@ -243,6 +243,11 @@ GenoConvert <- function(InData = NULL,
     IDs_geno <- paste(FID, IDs_geno, sep=FIDsep)
   }
 
+  if (any(duplicated(IDs_geno))) {
+    stop("'GenoM' has duplicate IDs in ", ifelse(IDcol==0, 'rownames.', paste0('column ', IDcol, '.')),
+         "Please exclude or rename these samples, or specify IDcol or UseFID.")
+  }
+
   for (misX in Missing) {
     if (any(GenoTmp == misX, na.rm=TRUE)) {
       GenoTmp <- array(gsub(misX, NA, GenoTmp, fixed=TRUE),
@@ -288,7 +293,7 @@ GenoConvert <- function(InData = NULL,
       stop(paste("There are", n.problem, "SNPs with >2 alleles  ",
                  ifelse(n.problem<=10, paste(which(sapply(Alleles, length) > 2), collapse="-"),"")))
     }
-    if (any(NumAlleles ==1) & !quiet) {
+    if (any(NumAlleles ==1) & !quiet & OutFormat!='seq') {
       warning(paste("There are", sum((NumAlleles ==1)), "monomorphic SNPs"))
     }
 
@@ -300,7 +305,7 @@ GenoConvert <- function(InData = NULL,
   } else {
     AllHom0 <- apply(GenoTmp, 2, function(x) all(na.exclude(x) == 0))
     AllHom2 <- apply(GenoTmp, 2, function(x) all(na.exclude(x) == 2))
-    if ((any(AllHom0) | any(AllHom2)) & !quiet) {
+    if ((any(AllHom0) | any(AllHom2)) & !quiet & OutFormat!='seq') {
       warning(paste("There are", sum(AllHom0)+sum(AllHom2), "monomorphic SNPs"))
     }
 

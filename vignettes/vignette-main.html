@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jisca Huisman ( jisca.huisman @ gmail.com )" />
 
-<meta name="date" content="2021-04-26" />
+<meta name="date" content="2023-03-15" />
 
 <title>Sequoia User Guide</title>
 
@@ -350,7 +350,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Sequoia User Guide</h1>
 <h3 class="subtitle">Reconstruction of multi-generational pedigrees from SNP data</h3>
 <h4 class="author">Jisca Huisman ( jisca.huisman @ gmail.com )</h4>
-<h4 class="date">26 April 2021</h4>
+<h4 class="date">15 March 2023</h4>
 
 
 <div id="TOC">
@@ -491,6 +491,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li><a href="#data-simulation" id="toc-data-simulation"><span class="toc-section-number">9.4.3</span> Data simulation</a></li>
 </ul></li>
 <li><a href="#add-new-individuals" id="toc-add-new-individuals"><span class="toc-section-number">9.5</span> Add new individuals</a></li>
+<li><a href="#results-differ-from-colony" id="toc-results-differ-from-colony"><span class="toc-section-number">9.6</span> Results differ from COLONY</a></li>
 </ul></li>
 <li><a href="#references" id="toc-references">References</a></li>
 </ul>
@@ -1176,11 +1177,11 @@ Latest year in which individual may have been born</li>
 ## Initial total LL :
 ## [1] -18301.9
 ## Post-parentage total LL :
-## [1] -13773.87
+## [1] -13690.07
 ## Estimating birth years ...
 ## Calculating parental LLR ...</code></pre>
-<pre><code>## assigned 121 dams and 165 sires to 214 individuals</code></pre>
-<pre><code>## Possibly not all parents were assigned, consider running GetMaybeRel() to check</code></pre>
+<pre><code>## assigned 126 dams and 165 sires to 214 individuals</code></pre>
+<pre><code>## Possibly not all parents were assigned, consider running GetMaybeRel() conditional on this pedigree to check</code></pre>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
 <p>Or you can specify that the maximum age of (non-genotyped) parents exceeds the observed age range among SNP-genotyped parent-offspring pairs in <code>PedigreePar</code>:</p>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>SeqOUT <span class="ot">&lt;-</span> <span class="fu">sequoia</span>(<span class="at">GenoM =</span> Geno, <span class="at">LifeHistData =</span> LH,</span>
@@ -1435,19 +1436,19 @@ Use age information in a permissive way: accept a proposed assignment if <span c
 <tbody>
 <tr class="odd">
 <td align="left">SNP</td>
-<td align="right">-409.7</td>
-<td align="right">-345.9</td>
-<td align="right">-335.7</td>
-<td align="right">-335.7</td>
-<td align="right">-335.7</td>
-<td align="right">-335.4</td>
-<td align="right">-339.7</td>
+<td align="right">-374.0</td>
+<td align="right">-334.6</td>
+<td align="right">-327</td>
+<td align="right">-327.0</td>
+<td align="right">-327.0</td>
+<td align="right">-327.0</td>
+<td align="right">-333.6</td>
 </tr>
 <tr class="even">
 <td align="left">Age</td>
 <td align="right">-0.4</td>
 <td align="right">-3.0</td>
-<td align="right">-3.0</td>
+<td align="right">-3</td>
 <td align="right">0.3</td>
 <td align="right">-0.3</td>
 <td align="right">-0.3</td>
@@ -1455,13 +1456,13 @@ Use age information in a permissive way: accept a proposed assignment if <span c
 </tr>
 <tr class="odd">
 <td align="left">SNP + Age</td>
-<td align="right">-410.1</td>
-<td align="right">-348.9</td>
-<td align="right">-338.7</td>
-<td align="right">-335.4</td>
-<td align="right">-336.0</td>
-<td align="right">-335.7</td>
-<td align="right">-339.7</td>
+<td align="right">-374.3</td>
+<td align="right">-337.6</td>
+<td align="right">-330</td>
+<td align="right">-326.8</td>
+<td align="right">-327.4</td>
+<td align="right">-327.3</td>
+<td align="right">-333.6</td>
 </tr>
 </tbody>
 </table>
@@ -2045,8 +2046,9 @@ source code.
 </div>
 <div id="death-year" class="section level2" number="9.3">
 <h2><span class="header-section-number">9.3</span> Death year</h2>
-<p>The year of death forms an upper limit to when an individual could have reproduced, and is used by e.g. <a href="https://www.bioinf.uni-leipzig.de/Software/FRANz/About.html">FRANZ</a> during parentage assignment. It is not used by sequoia, because it is mainly focussed on populations of wild animals, where it is often impossible to tell whether an individual has emigrated or died, and identification of dead individuals is not always reliable. Emigrants are still candidate parents, as they may reside just outside the study area boundaries, or return briefly and unseen during the breeding season.</p>
-<p>The only way in which a known death date can inform pedigree reconstruction by sequoia, is as an upper limit to the estimated birth year, when the exact birth year is unknown.</p>
+<p>The year of death forms an upper limit to when an individual could have reproduced, and can from version 2.5 onwards be used as input via the <code>Year.last</code> column in <code>LifeHistData</code>. Note that for many species, the last possible year in which offspring can be born may be after the year of death (e.g. males in many mammal species), or the year preceding the year of death (if a individual died between January 1st and the breeding season).</p>
+<p>If it is unclear whether an individual died or emigrated, please do not provide a <code>Year.last</code> – emigrants can still be candidate parents, as they may reside just outside the study area boundaries, or return briefly and unseen during the breeding season.
+is unknown.</p>
 </div>
 <div id="accuracy" class="section level2" number="9.4">
 <h2><span class="header-section-number">9.4</span> Accuracy</h2>
@@ -2069,6 +2071,19 @@ source code.
 <div id="add-new-individuals" class="section level2" number="9.5">
 <h2><span class="header-section-number">9.5</span> Add new individuals</h2>
 <p>When new individuals have been genotyped, such as a new cohort of offspring, it is best to re-run the pedigree reconstruction for all genotyped individuals. This ensures that older siblings of the new offspring are identified, as well as any grandparents. A possible exception is when all candidate parents have been genotyped, although even then inclusion of their parents (the new individuals’ grandparents) may correct for any genotyping errors they may have.</p>
+</div>
+<div id="results-differ-from-colony" class="section level2" number="9.6">
+<h2><span class="header-section-number">9.6</span> Results differ from COLONY</h2>
+<p>Sequoia will typically produce a more conservative pedigree than COLONY, for various reasons:</p>
+<ul>
+<li>COLONY only considers whether individuals are full siblings, half siblings, or unrelated, while <code>sequoia</code> also considers full- or half- avuncular (aunts and uncles and their nieces and nephews), and grand-parental.
+These alternative relationships are impossible among individuals born in the same year when generations do not overlap (<code>args.AP=list(Discrete=TRUE)</code>). If all samples are from a single birth year, this is automatically assumed.</li>
+<li><code>sequoia</code> also considers double relationships, e.g. paternal half-siblings that are also maternal half-cousins, with a relatedness inbetween full and half siblings. These may be erroneously assigned as full siblings by COLONY when present, but their consideration may cause true full siblings to be only assigned as half-siblings, especially when there is only a moderate amount of genetic data. To ignore double and inbred relationships, use <code>Complex=&#39;simp&#39;</code>.</li>
+<li><code>sequoia</code> considers third degree relationships, such as full cousins. Again, these may result in false positives by COLONY, while their consideration may result in false negatives by <code>sequoia</code>. This can not be turned off.</li>
+<li>When no parents of known sex can be assigned, there is no way in <code>sequoia</code> to differentiate between maternal and paternal half-siblings, and none are assigned (although they may be identified with <code>GetMaybeRel()</code>. In COLONY, candidate mothers and fathers can be specified, but this option is not available in <code>sequoia</code> (yet?).</li>
+<li>When a relationship is uncertain, COLONY will include it in the output with a low confidence probability. <code>sequoia</code> only makes assignments of which it is very sure, as the sequential nature of the algorithm may otherwise result in a snowball effect of incorrect assignments.</li>
+</ul>
+<p>You can get <code>sequoia</code>‘s ’opinion’ on a COLONY reconstructed pedigree (or any other pedigree) with <code>CalcOHLLR()</code>, which for every assigned parent gives the log-likelihood ratio between being parent-offspring with the focal individual, versus otherwise related. You may also use <code>CalcPairLL()</code> for a specific set of pairs of individuals to calculate their likelihoods to be parent-offspring, full siblings, … , and investigate how these likelihoods change when changing the ageprior or with <code>Complex=&#39;simp&#39;</code>.</p>
 </div>
 </div>
 <div id="references" class="section level1 unnumbered">

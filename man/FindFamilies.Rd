@@ -4,25 +4,27 @@
 \alias{FindFamilies}
 \title{Assign Family IDs}
 \usage{
-FindFamilies(Ped = NULL, SeqList = NULL, UseMaybeRel = FALSE)
+FindFamilies(Pedigree = NULL, SeqList = NULL, MaybeRel = NULL)
 }
 \arguments{
-\item{Ped}{dataframe with columns id - parent1 - parent2; only the
+\item{Pedigree}{dataframe with columns id - parent1 - parent2; only the
 first 3 columns will be used.}
 
-\item{SeqList}{list as returned by \code{\link{sequoia}}. If 'Ped' is not
-provided, the element 'Pedigree' from this list will be used if present,
-and element 'Pedigreepar' otherwise.}
+\item{SeqList}{list as returned by \code{\link{sequoia}}. If \code{Pedigree}
+is not provided, the element \code{Pedigree} from this list will be used if
+present, and element \code{Pedigreepar} otherwise.}
 
-\item{UseMaybeRel}{use \code{SeqList$MaybeRel}, the dataframe with probable
-but non-assigned relatives, to assign additional family IDs?}
+\item{MaybeRel}{Output from \code{\link{GetMaybeRel}}, a dataframe with
+probable but non-assigned relatives.}
 }
 \value{
-A dataframe with the provided pedigree, with a column 'FID' added.
+A numeric vector with length equal to the number of unique
+  individuals in the pedigree (i.e. number of rows in pedigree after running
+  \code{\link{PedPolish}} on \code{Pedigree}).
 }
 \description{
-Add a column with family IDs (FIDs) to a pedigree, with each
- number denoting a cluster of connected individuals.
+Find clusters of connected individuals in a pedigree, and assign
+  each cluster a unique family ID (FID).
 }
 \details{
 This function repeatedly finds all ancestors and all descendants of
@@ -30,7 +32,17 @@ This function repeatedly finds all ancestors and all descendants of
  all connected individuals are related, e.g. all grandparents of an
  individual will have the same FID, but will typically be unrelated.
 
-When UseMaybeRel = TRUE, probable relatives are added to existing family
- clusters, or existing family clusters may be linked together. Currently no
- additional family clusters are created.
+When \code{UseMaybeRel = TRUE}, probable relatives are added to existing
+family clusters, or existing family clusters may be linked together.
+Currently no additional family clusters are created.
+}
+\examples{
+
+PedG <- SeqOUT_griffin$PedigreePar[,1:3]
+FID_G <- FindFamilies(PedG)
+PedG[FID_G==4,]
+}
+\seealso{
+\code{\link{GetAncestors}, \link{GetDescendants},
+  \link{getGenerations}}
 }

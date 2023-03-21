@@ -85,9 +85,17 @@ SnpStats <- function(GenoM,
   freq.e <- rbind('0' = (1-AF)^2,
                   '1' = 2*AF*(1-AF),
                   '2' = AF^2)
-  HWE.p <- sapply(1:ncol(GenoM),
-                  function(i) suppressWarnings(chisq.test(x = counts.o[,i],
-                                                          p = freq.e[,i])$p.value))
+  freq.e[, Mis==1] <- 0.0
+  calc.HWE.p <- function(i) {
+    if (all(counts.o[,i]==0)) {
+      NA  # all missing
+    } else {
+      suppressWarnings(chisq.test(x = counts.o[,i],
+                                  p = freq.e[,i])$p.value)
+    }
+  }
+  HWE.p <- sapply(1:ncol(GenoM), calc.HWE.p)
+
   OUT <- cbind(AF, Mis, HWE.p)
 
   if (is.logical(Pedigree)) {
@@ -110,7 +118,17 @@ SnpStats <- function(GenoM,
   }
 
   if (Plot) {
-    PlotSnpStats( OUT, Pedigree )
+
+  }
+
+  if (Plot) {
+    img <- tryCatch(
+      {
+        suppressWarnings( PlotSnpStats( OUT, Pedigree ) )
+      },
+      error = function(e) {
+        message("Plotting area too small for SnpStats() plot (or other plotting problem)")
+      })
   }
 
   rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT),
@@ -309,14 +327,14 @@ PlotSnpStats <- function(OUT,
                'HWE' = -log10(OUT[,"HWE.p"]))
 
   # top 5% worst SNPs by each metric (coloured red in scatter plots)
-  q95 <- list('MAF' = OUT[,'MAF'] < stats::quantile(OUT[,'MAF'], prob=0.05),
-              'Mis' = OUT[,"Mis"] > stats::quantile(OUT[,"Mis"], prob=0.95),
-              'HWE' = OUT[,"HWE"] > stats::quantile(OUT[,"HWE"], prob=0.95))
+  q95 <- list('MAF' = OUT[,'MAF'] < stats::quantile(OUT[,'MAF'], prob=0.05, na.rm=TRUE),
+              'Mis' = OUT[,"Mis"] > stats::quantile(OUT[,"Mis"], prob=0.95, na.rm=TRUE),
+              'HWE' = OUT[,"HWE"] > stats::quantile(OUT[,"HWE"], prob=0.95, na.rm=TRUE))
   vars <- c('Minor allele frequency' = 'MAF',
             'Missingness' = 'Mis',
             'HWE test: -log10(p)' = 'HWE')
   if (!is.null(Pedigree)) {
-    q95[['Err.hat']] = OUT[,"Err.hat"] > stats::quantile(OUT[,"Err.hat"], prob=0.95)
+    q95[['Err.hat']] = OUT[,"Err.hat"] > stats::quantile(OUT[,"Err.hat"], prob=0.95, na.rm=TRUE)
     vars <- c(vars, 'Genotyping error' = 'Err.hat')
   }
 

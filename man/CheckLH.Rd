@@ -8,7 +8,7 @@ CheckLH(LifeHistData, gID = NA, sorted = TRUE, returnDups = FALSE)
 }
 \arguments{
 \item{LifeHistData}{the dataframe with ID - Sex - Birth year, and optionally
-BY.min - BY.max.}
+BY.min - BY.max - YearLast.}
 
 \item{gID}{character vector with names of genotyped individuals, i.e.
 rownames(GenoM).}

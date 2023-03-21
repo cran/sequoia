@@ -7,6 +7,7 @@
 MakeAgePrior(
   Pedigree = NULL,
   LifeHistData = NULL,
+  MinAgeParent = NULL,
   MaxAgeParent = NULL,
   Discrete = NULL,
   Flatten = NULL,
@@ -22,17 +23,20 @@ MakeAgePrior(
 column with birth years. Other columns are ignored.}
 
 \item{LifeHistData}{dataframe with 3 or 5 columns: id - sex (not used) -
-birth year (- BY.min - BY.max), with unknown birth years coded as negative
-numbers or NA. Column names are ignored, so the column order is important.
-"Birth year" may be in any arbitrary discrete time unit relevant to the
-species (day, month, decade), as long as parents are never born in the same
-time unit as their offspring. It may include individuals not in the
-pedigree, and not all individuals in the pedigree need to be in
-LifeHistData.}
+birthyear (optional columns BY.min - BY.max - YearLast not used), with
+unknown birth years coded as negative numbers or NA. "Birth year" may be in
+any arbitrary discrete time unit relevant to the species (day, month,
+decade), as long as parents are never born in the same time unit as their
+offspring. It may include individuals not in the pedigree, and not all
+individuals in the pedigree need to be in LifeHistData.}
+
+\item{MinAgeParent}{minimum age of a parent, a single number (min across
+dams and sires) or a vector of length two (dams, sires). Defaults to 1.}
 
 \item{MaxAgeParent}{maximum age of a parent, a single number (max across
 dams and sires) or a vector of length two (dams, sires). If NULL, it will
-be estimated from the pedigree. See details below.}
+be set to latest - earliest birth year in \code{LifeHistData}, or estimated
+from the pedigree if one is provided. See details below.}
 
 \item{Discrete}{discrete generations? By default (NULL), discrete
 generations are assumed if all parent-offspring pairs have an age

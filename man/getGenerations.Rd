@@ -36,3 +36,8 @@ table(G, useNA='ifany')
 Ped_plus_G <- cbind(SeqOUT_griffin$Pedigree, G)
 
 }
+\seealso{
+\code{\link{GetAncestors}, \link{GetDescendants}} to get all
+  ancestors resp. descendants of a specific individual (with a warning if it
+  is its own ancestor); \link{FindFamilies} to find connected sub-pedigrees.
+}

@@ -199,6 +199,8 @@ GetRelM <- function(Pedigree = NULL,
 #'  \item{XS}{other sibs: mother of A is father of B, or vv}
 #' etc.
 #'
+#' @useDynLib sequoia, .registration = TRUE
+#'
 #' @keywords internal
 
 GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
@@ -218,7 +220,7 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
                "FA", "FN", "HA", "HN", "DFC1", "FC1")
   }
 
-  TMP <- .Fortran("getrel",
+  TMP <- .Fortran(getrel,
                   nind = nInd,
                   pedrf = as.integer(PedN$PedPar),
                   nrel = as.integer(nRel),

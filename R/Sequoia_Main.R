@@ -32,21 +32,23 @@
 #' @param GenoM  numeric matrix with genotype data: One row per individual, and
 #'   one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
 #'   \code{\link{GenoConvert}}.
-#' @param LifeHistData dataframe with 3 columns (optionally 5):
+#' @param LifeHistData data.frame with up to 6 columns:
 #'  \describe{
 #'  \item{ID}{max. 30 characters long}
 #'  \item{Sex}{1 = female, 2 = male, 3 = unknown, 4 = hermaphrodite,
 #'            other numbers or NA = unknown}
 #' \item{BirthYear }{birth or hatching year, integer, with missing values as NA
-#'   or any negative value.}
+#'   or any negative number.}
 #' \item{BY.min}{minimum birth year, only used if BirthYear is missing}
-#' \item{BY.max}{maximum birth year, only used if BirthYear is missing} }
-#' If the species has multiple generations per year, use an integer coding such
-#' that the candidate parents' `Birth year' is at least one smaller than their
-#' putative offspring's. Column names are ignored, so ensure column order is ID
-#' - sex - birth year (- BY.min - BY.max). Individuals do not need to be in the
-#' same order as in `GenoM', nor do all genotyped individuals need to be
-#' included.
+#' \item{BY.max}{maximum birth year, only used if BirthYear is missing}
+#' \item{Year.last}{Last year in which individual could have had offspring. Can
+#'   e.g. in mammals be the year before death for females, and year after death
+#'   for males. } }
+#' "Birth year" may be in any arbitrary discrete time unit relevant to the
+#' species (day, month, decade), as long as parents are never born in the same
+#' time unit as their offspring, and only integers are used. Individuals do not
+#' need to be in the same order as in `GenoM', nor do all genotyped individuals
+#' need to be included.
 #' @param SeqList list with output from a previous run, to be re-used in the
 #'   current run. Used are elements `PedigreePar', `LifeHist', `AgePriors',
 #'   `Specs', and `ErrM', and these override the corresponding input parameters.
@@ -67,11 +69,6 @@
 #'   NOTE: \emph{Until `MaxSibIter` is fully deprecated: if `MaxSibIter` differs
 #'   from the default (\code{42}), and `Module` equals the default
 #'   (\code{'ped'}), MaxSibIter overrides `Module`.}
-#' @param MaxSibIter \strong{[will be deprecated]} number of iterations of
-#'   sibship clustering, including assignment of grandparents to sibships and
-#'   avuncular relationships between sibships. Clustering continues until
-#'   convergence or until MaxSibIter is reached. Set to 0 for parentage
-#'   assignment only.
 #' @param Err estimated genotyping error rate, as a single number or 3x3 matrix.
 #'   Details below. The error rate is presumed constant across SNPs, and
 #'   missingness is presumed random with respect to actual genotype. Using
@@ -81,8 +78,6 @@
 #'   genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
 #'   'version1.1', referring to the sequoia version in which they were the
 #'   default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.
-#' @param MaxMismatch \strong{DEPRECATED AND IGNORED}. Now calculated
-#'   automatically using \code{\link{CalcMaxMismatch}}.
 #' @param Tfilter threshold log10-likelihood ratio (LLR) between a proposed
 #'   relationship versus unrelated, to select candidate relatives. Typically a
 #'   negative value, related to the fact that unconditional likelihoods are
@@ -103,13 +98,13 @@
 #'   sire role, default if at least 1 individual with sex=4), or "B" (no
 #'   distinction between dam and sire role). Both of the latter deal with
 #'   selfing.
-#' @param UseAge  either "yes" (default), "no", or "extra" (additional rounds
-#'   with extra reliance on ageprior, may boost assignments but increased risk
-#'   of erroneous assignments); used during full reconstruction only.
+#' @param UseAge  either "yes" (default), "no" (only use age differences for
+#'   filtering), or "extra" (additional rounds with extra reliance on ageprior,
+#'   may boost assignments but increased risk of erroneous assignments). Used
+#'   during full reconstruction only.
 #' @param args.AP list with arguments to be passed on to
-#'   \code{\link{MakeAgePrior}}.
-#' @param FindMaybeRel \strong{DEPRECATED AND IGNORED}, advised to run
-#'   \code{\link{GetMaybeRel}} separately.
+#'   \code{\link{MakeAgePrior}}, e.g. `Discrete` (non-overlapping generations),
+#'   `MinAgeParent`, `MaxAgeParent`.
 #' @param CalcLLR  TRUE/FALSE; calculate log-likelihood ratios for all assigned
 #'   parents (genotyped + dummy; parent vs. otherwise related). Time-consuming
 #'   in large datasets. Can be done separately with \code{\link{CalcOHLLR}}.
@@ -120,6 +115,21 @@
 #'   large', enlarge the plotting area (drag with mouse). Error 'invalid
 #'   graphics state' can be dealt with by clearing the plotting area with
 #'   dev.off().
+#' @param StrictGenoCheck Automatically exclude any individuals genotyped for
+#'   <5% of SNPs, and any SNPs genotyped for <5% of individuals (TRUE); this was
+#'   the unavoidable default up to version 2.4.1. Otherwise only excluded are
+#'   (very nearly) monomorphic SNPs, SNPs scored for fewer than 2 individuals,
+#'   and individuals scored for fewer than 2 SNPs.
+#' @param MaxSibIter \strong{will be DEPRECATED, use \code{Module}} number of
+#'   iterations of sibship clustering, including assignment of grandparents to
+#'   sibships and avuncular relationships between sibships. Clustering continues
+#'   until convergence or until MaxSibIter is reached. Set to 0 for parentage
+#'   assignment only.
+#' @param MaxMismatch \strong{DEPRECATED AND IGNORED}. Now calculated
+#'   automatically using \code{\link{CalcMaxMismatch}}.
+#' @param FindMaybeRel \strong{DEPRECATED AND IGNORED}, advised to run
+#'   \code{\link{GetMaybeRel}} separately.
+#'
 #'
 #' @return A list with some or all of the following components, depending on
 #'   \code{Module}. All input except \code{GenoM} is included in the output.
@@ -239,7 +249,6 @@
 #'   \item \code{\link{GetMaybeRel}} to find pairs of potential relatives,
 #'   \item \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to visualise
 #'   results,
-#'   \item \code{\link{sequoia_report}} for a summary report of input + results,
 #'   \item \code{\link{GetRelM}} to turn a pedigree into pairwise relationships,
 #'   \item \code{\link{CalcOHLLR}} to calculate Mendelian errors and LLR for any
 #'    pedigree,
@@ -309,7 +318,9 @@
 #' SeqOUT <- sequoia(GenoM, LHdata, Err=0.005)
 #' SummarySeq(SeqOUT)
 #'
-#' writeSeq(SeqOUT, folder="sequoia_output")  # several text files
+#' SeqOUT$notes <- "Trial run on cleaned data"  # add notes for future reference
+#' saveRDS(SeqOUT, file="sequoia_output_42.RDS")  # save to R-specific file
+#' writeSeq(SeqOUT, folder="sequoia_output")  # save to several plain text files
 #'
 #' # runtime:
 #' SeqOUT$Specs$TimeEnd - SeqOUT$Specs$TimeStart
@@ -321,10 +332,8 @@ sequoia <- function(GenoM = NULL,
                     LifeHistData = NULL,
                     SeqList = NULL,
                     Module = "ped",
-                    MaxSibIter = 42,
                     Err = 0.0001,
                     ErrFlavour = "version2.0",
-                    MaxMismatch = NA,  # DEPRECATED
                     Tfilter = -2.0,
                     Tassign = 0.5,
                     MaxSibshipSize = 100,
@@ -333,10 +342,13 @@ sequoia <- function(GenoM = NULL,
                     Herm = "no",
                     UseAge = "yes",
                     args.AP = list(Flatten=NULL, Smooth=TRUE),
-                    FindMaybeRel = FALSE,  # DEPRECATED
                     CalcLLR = TRUE,
                     quiet = FALSE,
-                    Plot = NULL)
+                    Plot = NULL,
+                    StrictGenoCheck = TRUE,
+                    MaxSibIter = 42,  # DEPRECATED
+                    MaxMismatch = NA,  # DEPRECATED
+                    FindMaybeRel = FALSE)  # DEPRECATED
 {
 
   TimeStart <- Sys.time()
@@ -382,7 +394,8 @@ sequoia <- function(GenoM = NULL,
 
 
   # Check genotype matrix ----
-  Excl <- CheckGeno(GenoM, quiet=quietR, Plot=Plot, Return = "excl", DumPrefix=DummyPrefix)
+  Excl <- CheckGeno(GenoM, quiet=quietR, Plot=Plot, Return = "excl",
+                    Strict = StrictGenoCheck, DumPrefix=DummyPrefix)
   if ("ExcludedSnps" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
   if ("ExcludedSnps-mono" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps-mono"]]]
   if ("ExcludedIndiv" %in% names(Excl))  GenoM <- GenoM[!rownames(GenoM) %in% Excl[["ExcludedIndiv"]], ]
@@ -436,7 +449,7 @@ sequoia <- function(GenoM = NULL,
     if (Module=="ped")  PARAM$MaxSibIter <- 42
   } else {
     if (is.logical(UseAge))   UseAge <- ifelse(UseAge, "yes", "no")
-    if ((Herm != "no" | any(LifeHistData$Sex==4)) & length(DummyPrefix)==2)
+    if ((Herm != "no" | any(LifeHistData$Sex==4, na.rm=TRUE)) & length(DummyPrefix)==2)
       DummyPrefix <- c(DummyPrefix, "H")
 
     PARAM <- namedlist(dimGeno = dim(GenoM),
@@ -464,13 +477,13 @@ sequoia <- function(GenoM = NULL,
     PARAM$MaxMismatchV <- setNames(CalcMaxMismatch(Err=PARAM$ErrM,
                                                    MAF=sts[,"AF"],
                                                    ErrFlavour=PARAM$ErrFlavour,
-                                                   qntl=0.999^(1/nrow(GenoM))),
+                                                   qntl=0.9999^(1/nrow(GenoM))),
                                    c("DUP", "OH", "ME"))
   }
 
 
   # hermaprhodites ----
-  if (any(LifeHistData$Sex==4) && PARAM$Herm == "no") {  #!grepl("herm", PARAM$Complex)) {
+  if (any(LifeHistData$Sex==4, na.rm=TRUE) && PARAM$Herm == "no") {  #!grepl("herm", PARAM$Complex)) {
     if (!quietR) message("\nDetected hermaphrodites (sex=4), changing Herm to 'A'\n")
 #    PARAM$Complex <- "herm"
     PARAM$Herm <- "A"
@@ -524,9 +537,9 @@ sequoia <- function(GenoM = NULL,
   }
   utils::flush.console()
 
+  # check that PedigreePar is a valid pedigree (no indiv is its own ancestor)
   W <- tryCatch.W.E(getGenerations(ParList$PedigreePar, StopIfInvalid=FALSE))$warning
   if (!is.null(W)) {
-    print(W)
     if (Module=="ped")  warning("Cancelling full pedigree reconstruction.")
   }
 
@@ -579,7 +592,7 @@ sequoia <- function(GenoM = NULL,
 
   if (!quietR & Module %in% c('par', 'ped')) {
     message('Possibly not all ', c(par = 'parents', ped = 'relatives')[as.character(Module)],
-    ' were assigned, consider running GetMaybeRel() to check')
+    ' were assigned, consider running GetMaybeRel() conditional on this pedigree to check')
   }
 
   OUT <- list()

@@ -256,11 +256,6 @@ AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
 AP[as.character(seq(1,12,by=2)), c("MS", "FS")] <- 0
 PlotAgePrior(AP)
 
-## ----minAFR2, fig.cap="", out.width = "70%"-----------------------------------
-# Fix: a female may breed from age 3 to age 12
-# --> maternal sibs have max age dif. of 9 years
-AP[c(10:12) +1, "MS"] <- 0     # +1 because 1st row is '0'
-# a male may breed from age 4 up to age 8  --> max age dif of PS is 4 years
-AP[c(5:12) +1, c("PS", "FS")] <- 0
-PlotAgePrior(AP)
+# check if valid ageprior:
+chk <- sequoia:::CheckAP(AP) 
 

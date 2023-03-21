@@ -655,7 +655,7 @@ The ageprior used for full pedigree reconstruction may require tweaking if for e
 
 
 ## Via `args.AP`
-During pedigree reconstruction, you can pass arguments to `MakeAgePrior()` via  `sequoia()`'s argument `args.AP`. Use this to explicitly specify [`Discrete`](#sec:Discrete), [`Smooth`](#sec:Smooth) or [`Flatten`](#sec:Flatten), or to increase [`MaxAgeParent`](#sec:MaxAgePO).  
+During pedigree reconstruction, you can pass arguments to `MakeAgePrior()` via  `sequoia()`'s argument `args.AP`. Use this to explicitly specify [`Discrete`](#sec:Discrete), [`Smooth`](#sec:Smooth) or [`Flatten`](#sec:Flatten), or to increase [`MaxAgeParent`](#sec:MaxAgePO) or `MinAgeParent`.  
 
 
 ## Different input pedigree
@@ -679,28 +679,9 @@ The easiest way to create a fully custom ageprior is to generate an approximate 
 AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
 AP[as.character(seq(1,12,by=2)), c("MS", "FS")] <- 0
 PlotAgePrior(AP)
-```
-
-### Age at first reproduction
-Or, if you wish to specify the minimum age at first reproduction, to e.g. age 3 for females, and age 4 for males:
-```{r minAFR, fig.cap="", error=TRUE, purl=FALSE}
-AP <- MakeAgePrior(MaxAgeParent = c(12, 8), Plot=FALSE)
-AP[c("1","2"), "M"] <- 0
-AP[c(1:3) +1, "P"] <- 0   # 1st row = age difference of 0. 
 
 # check if valid ageprior:
-chk <- sequoia(SimGeno_example, LifeHistData=LH_HSg5, 
-               SeqList = list(AgePriors = AP), 
-               Module="pre", quiet=TRUE, Plot=FALSE)
-```
-
-```{r minAFR2, fig.cap="", out.width = "70%"}
-# Fix: a female may breed from age 3 to age 12
-# --> maternal sibs have max age dif. of 9 years
-AP[c(10:12) +1, "MS"] <- 0     # +1 because 1st row is '0'
-# a male may breed from age 4 up to age 8  --> max age dif of PS is 4 years
-AP[c(5:12) +1, c("PS", "FS")] <- 0
-PlotAgePrior(AP)
+chk <- sequoia:::CheckAP(AP) 
 ```
 
 
@@ -718,8 +699,12 @@ The ageprior must abide by the following rules:
 - any age differences not included (i.e. > `nrows` -1) are presumed impossible for all types of parents and siblings ($0$ in all 5 columns);
 - the maximum age difference between siblings must be consistent with the maximum breeding tenure of a parent (minimum -- maximum age of reproduction).
 
-To check whether your ageprior matrix satisfies these criteria, use it in any function that takes `AgePriors` (or `SeqList`) as input, which will call the internal function `CheckAP()`.
+To check whether your ageprior matrix satisfies these criteria, use it in any function that takes `AgePriors` (or `SeqList`) as input, or call the internal function `CheckAP()` directly.
 
+
+
+# Estimate birth years
+The estimated the distribution of age differences among relatives (i.e. ageprior matrix) can be used to estimate the birth year of individuals for which this is unknown. A requirement is that these focal individuals have one or more parents, offspring, or siblings with known birth year or BY.min + BY.max; the more relatives and the more exact their birth years, the better the birth year estimate of the focal individual. This can be done with function `CalcBYprobs()`, with any pedigree. 
 
 
 

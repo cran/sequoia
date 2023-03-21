@@ -121,6 +121,9 @@
 #'   likely relative pairs not in the pedigree.
 #'
 #' @examples
+#' CalcPairLL(Pairs = data.frame(ID1='i116_2006_M', ID2='i119_2006_M'),
+#'            GenoM = Geno_griffin, Err = 1e-04, Plot=FALSE)
+#'
 #' ## likelihoods underlying parent LLR in pedigree:
 #' # Example: dams for bottom 3 individuals
 #' tail(SeqOUT_griffin$PedigreePar, n=3)
@@ -275,7 +278,7 @@ CalcPairLL <- function(Pairs = NULL,
     PARAM$MaxMismatchV <- setNames(CalcMaxMismatch(Err=PARAM$ErrM,
                                                    MAF=sts[,"AF"],
                                                    ErrFlavour=PARAM$ErrFlavour,
-                                                   qntl=0.999^(1/nrow(GenoM))),
+                                                   qntl=0.9999^(1/nrow(GenoM))),
                                    c("DUP", "OH", "ME"))
   }
 
@@ -377,7 +380,8 @@ FortifyPairs <- function(Pairs,   # pairs with character IDs etc
   if (ncol(Pairs)==2) {
     colnames(Pairs) <- c("ID1", "ID2")
   } else if (!all(c("ID1", "ID2") %in% names(Pairs))) {
-    stop("Pairs must  have at least columns 'ID1' and 'ID2'")
+    warning("Assuming columns 1 and 2 of Pairs are 'ID1' and 'ID2'")
+    colnames(Pairs)[1:2] <- c("ID1", "ID2")
   }
   for (x in c("ID1", "ID2"))   Pairs[,x] <- as.character(Pairs[,x])
 
