@@ -100,10 +100,10 @@ CalcBYprobs <- function(Pedigree = NULL,
                   nx = as.integer(NumNoBY),
                   nap = as.integer(nrow(AP)),
                   nYearsIn = as.integer(nYears),
-                  byrf = as.integer(c(LHF$BirthYear, LHF$BY.min, LHF$BY.max)),
-                  lyrf = as.integer(LHF$YearLast),
+                  byrf = as.integer(c(LHF[['BirthYear']], LHF[['BY.min']], LHF[['BY.max']])),
+                  lyrf = as.integer(LHF[['Year.last']]),
                   aprf = as.double(AP),
-                  parentsrf = as.integer(PedN$PedPar),
+                  parentsrf = as.integer(PedN[['PedPar']]),
                   # OUT
                   byprobv = double(NumNoBY*nYears) )
 

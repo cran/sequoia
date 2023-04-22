@@ -559,7 +559,7 @@ tdf <- function(M)
   }
   DF <- as.data.frame(DF, stringsAsFactors = FALSE, row.names=colnames(M))
   for (r in 1:ncol(DF)) {
-    if (all.is.numeric(DF[, r]))  DF[, r] <- as.numeric(DF[, r])
+    if (allNumeric(DF[, r]))  DF[, r] <- as.numeric(DF[, r])
   }
   names(DF) <- rownames(M)
   DF
@@ -568,7 +568,7 @@ tdf <- function(M)
 
 #======================================================================
 # adapted from Hmisc::all.is.numeric
-all.is.numeric <- function (x, what = c("test", "vector"))
+allNumeric <- function (x, what = c("test", "vector"))
 {
   what <- match.arg(what)
   isnum <- suppressWarnings(!any(is.na(as.numeric(stats::na.exclude(x)))))

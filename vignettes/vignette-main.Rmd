@@ -89,7 +89,7 @@ save(SeqOUT, Geno, OtherStuff, file="Sequoia_output_date.RData")
 writeSeq(SeqList = SeqOUT, GenoM = Geno, folder = "Sequoia-OUT")
 ```
 
-For a detailed walk-through of this example, see [here](quick_start_example1.html)
+For a detailed walk-through of this example, see [here](https://CRAN.R-project.org/package=sequoia/vignettes/quick_start_example1.html)
 
 ## Real Data
 First get a subset of SNPs which are as informative (high MAF, high call rate), reliable (low error rate), and independent (low LD) as possible. Ideally around 400 -- 700 for full pedigree reconstruction; fewer are necessary for only parentage assignment, while more may be necessary with very high levels of polygamy or inbreeding. In addition you need a dataframe with the sex and birth/hatching year of as many individuals as possible, in arbitrary order. 
@@ -185,7 +185,7 @@ but can be changed via parameters `Err` and `ErrFlavour`.
 ## Likelihoods
 Assignments are based on the likelihods for all different possible relationships between a pair, calculated conditional on all assignments made up onto that point. If the focal relationship is more likely than all alternatives (by a margin `Tassign`), the assignment is made. 
 
-The relationships are condensed into seven categories (Table \@ref(tab:rel7)). Under the default settings (`Complx='full'`), these also include their combinations (section [Unusual relationships](#sec:WeirdRels)), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male. 
+The relationships are condensed into seven categories (Table \@ref(tab:rel7)). Under the default settings (`Complx='full'`), these also include their combinations (see section Unusual relationships](#sec:WeirdRels)), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male. 
 
 ```{r rel7, echo=FALSE, eval=TRUE, results="asis"}
 knitr::kable(cbind(" "= c("PO", "FS", "HS", "GP", "FA", "HA", "U"),
@@ -297,7 +297,7 @@ The value may vary from $0$ (impossible), to $1$ (just as likely), and typically
 
 For example, in datasets with only one or two ageclasses, it is worth contemplating whether or not avuncular relationships should be considered as alternatives to siblings. The behaviour can be changed by explicitly declaring generations as `Discrete` (avuncular cannot have age difference of 0), and/or by setting `MaxAgeParent`. 
 
-You can find extensive details about the ageprior [in this separate vignette](vignette-age.html), including worked examples, mathematical framework, and full range of options.
+You can find extensive details about the ageprior [in this separate vignette](https://CRAN.R-project.org/package=sequoia/vignettes/vignette-age.pdf), including worked examples, mathematical framework, and full range of options.
 
 
 ### Implementation
@@ -378,7 +378,7 @@ There are four main causes a pair of true relatives are not assigned, which are 
 3. It is clear the pair are mother and daughter (or grandmother -- grand-granddaughter), but it is unclear which of the two is the (grand)mother, due to unknown birth year(s) and absence of a 'complementary' candidate father (and analogous for father-son);
 4. There is more than one plausible candidate (dummy) (grand)parents of one sex, all of which are more likely to be a parent than otherwise related, even when considered jointly. This includes the situation where true offspring are among the candidate parents due to unknown birth years. 
 
-For more details, see [FAQ](sec:FAQlowAR).
+For more details, see [FAQ](#sec:FAQlowAR).
 
 Cause (1) has two common underlying causes, which again are not mutually exclusive:
 
@@ -388,7 +388,7 @@ Cause (1) has two common underlying causes, which again are not mutually exclusi
 
 
 ### Remedies
-Sometimes it is possible to reduce the number of non-assigned parents in the pedigree by providing more life history data, removing SNPs with the highest error rates, or lowering the thresholds `Tfilter` and/or `Tassign`. The latter will reduce the probability of false negatives, but at the same time increase the probability for false positives. If inbreeding and double relationships are rare, using `Complx='simp'` may also improve assignment (see [here](sec:Complx)).
+Sometimes it is possible to reduce the number of non-assigned parents in the pedigree by providing more life history data, removing SNPs with the highest error rates, or lowering the thresholds `Tfilter` and/or `Tassign`. The latter will reduce the probability of false negatives, but at the same time increase the probability for false positives. If inbreeding and double relationships are rare, using `Complx='simp'` may also improve assignment (see [here](#sec:Complx)).
 
 Small adjustments may 'get the snowball rolling' (Figure \@ref(fig:ClusterMatPat)) and greatly increase assignments. Once a sibling pair is assigned, adding additional siblings to the cluster becomes progressively easier as it becomes more and more obvious whether an individual is related to all individuals in the sibship, or to none. 
 
@@ -601,7 +601,7 @@ Checks for individuals and SNPs with low call rate, and monomorphic SNPs, are do
 
 
 ### Very large datasets
-When the number of individuals is very large, it may be impossible to load the genotype data into R as it will exceed R's memory limit. A stand-alone version of the algorithm underlying this R package does not suffer from this limitation, and is available as Fortran source code from [github](https://github.com/JiscaH/sequoia/tree/master/Standalone), where you can also find its manual. The standalone is not faster than the R package, as the bulk of the computations are done in Fortran regardless. 
+When the number of individuals is very large, it may be impossible to load the genotype data into R as it will exceed R's memory limit. A stand-alone version of the algorithm underlying this R package does not suffer from this limitation, and is available as Fortran source code from [github](https://github.com/JiscaH/sequoia_notR), where you can also find its manual. The standalone is not faster than the R package, as the bulk of the computations are done in Fortran regardless. 
 
 
 ## Birth years \& sex
@@ -830,7 +830,7 @@ The maximum number of iterations was always only intended as a safety net in cas
 
 
 ## Input check
-SNP datasets are typically too large to easily spot any problems by simply looking at the data in a spreadsheet. There are many tools available to deal with genotype data and do proper quality control; the function `CheckGeno()` merely checks that the data are in the [correct format](sec:GenoFormat) for `sequoia`, and that there are no SNPs or individuals with excessively many missing values.
+SNP datasets are typically too large to easily spot any problems by simply looking at the data in a spreadsheet. There are many tools available to deal with genotype data and do proper quality control; the function `CheckGeno()` merely checks that the data are in the [correct format](#sec:GenoFormat) for `sequoia`, and that there are no SNPs or individuals with excessively many missing values.
 
 The function `SnpStats()` can be used to count the number of Mendelian errors per SNP. It is not automatically called by `sequoia()`, but excluding SNPs with exceptionally high genotyping error rates is recommended to improve accuracy of the inferred pedigree. 
 
@@ -1028,7 +1028,7 @@ PCG$Counts
 # dim3: dam/sire
 ```
 
-See [here]() for a detailed walk-through of this example, and suggestions on how to trace the underlying cause of discrepancies between the newly-inferred genetic pedigree and an existing field pedigree. 
+See [here](https://CRAN.R-project.org/package=sequoia/vignettes/PedComp.html) for a detailed walk-through of this example, and suggestions on how to trace the underlying cause of discrepancies between the newly-inferred genetic pedigree and an existing field pedigree. 
 
 In short, the main aim of checking the discrepancies is to figure out the underlying cause of each case:   
 
@@ -1099,7 +1099,7 @@ plot(Rped.both$R.ped.old, Rped.both$R.ped.new, pch=16, cex=0.3,
 
 
 ### Genomic relatedness
-In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one could compare the pairwise relatedness estimated from the pedigree(s) to a measure of genomic relatedness, estimated directly from the complete SNP data -- which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using [GCTA](http://cnsgenomics.com/software/gcta/#MakingaGRM). Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.
+In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one could compare the pairwise relatedness estimated from the pedigree(s) to a measure of genomic relatedness, estimated directly from the complete SNP data -- which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using [GCTA](https://yanglab.westlake.edu.cn/software/gcta/#MakingaGRM). Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.
 
 For example: 
 ```{r, eval=FALSE, purl=FALSE}
@@ -1236,7 +1236,7 @@ For smaller datasets (say up to 1000 individuals) it may be useful to read in th
 
 
 ## Low assignment rate   {#sec:FAQlowAR}
-See also [key points](sec:lowAR).
+See also [key points](#sec:lowAR).
 
 In many cases, assignment rate can be boosted without increasing the number of SNPs: by assuming a different genotyping error rate, providing sex or birth year information on more individuals, or fine-tuning the ageprior. Sometimes *reducing* the number of SNPs may increase assignment rate, by removing those with the highest error rate and/or SNPs in close LD.
 

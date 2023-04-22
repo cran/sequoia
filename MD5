@@ -1,7 +1,7 @@
-3640131958ca5f24b7879ead4109b6c8 *DESCRIPTION
+23e0889a27721f322c3acb8503786b6f *DESCRIPTION
 7cb142d1305e28f5920a9cb83f336cc7 *NAMESPACE
-ce7b8d499ef177407175c0e581ee564b *NEWS.md
-d8e9129d9619661adb5f09de48fa1531 *R/CalcBYprobs.R
+e3f58bb1cc58966582062e62af32f4c3 *NEWS.md
+84c5861f949aa813f2d6e335389e9699 *R/CalcBYprobs.R
 d64cef2393a43c187a893b6bb34a9624 *R/CalcMaxMismatch.R
 a51728cc95ea0a353525d8f99dad7d8d *R/CalcOHLLR.R
 0d5b85fdbffdf2175f190421b5b534ef *R/CalcPairLL.R
@@ -9,7 +9,7 @@ b0b782046eebe53c4b18af4dcb9abe9c *R/CalcRped.R
 99f486486ee99e731f47dd18e94494d5 *R/CheckGeno.R
 d6f7fca830b6814d024391a2f731e261 *R/CheckLifeHist.R
 e3e6cb079031086d2c1cb88cc0c5236a *R/ComparePairs.R
-d2413325558fcae108e94bf55bda0523 *R/ComparePeds.R
+1a1a565113bd616d8810365c14da3d78 *R/ComparePeds.R
 d48549ea70fd3b91a8796562b2b2ed5c *R/ConfProb.R
 8e419b4621f5d09f967bed93c1714033 *R/CountGenerations.R
 f2f942cf2d44bf293e20ae4d04b936a1 *R/Data_documentation.R
@@ -36,7 +36,7 @@ c510d397cc1aa85ad5938c7c4866c2e4 *R/Sequoia_Main.R
 e86f9ad88e48166f377d1c4c9f643606 *R/getAssignable.R
 bce5202917be36ba877e03275f75fdf5 *R/getRelM.R
 1c928a07aab5854948ddd213fff94899 *R/zzz.R
-4d257d2044c633a0182ded97fb24be7c *build/vignette.rds
+1bf60f8ad7ed431076980811c6df1037 *build/vignette.rds
 9f320e2db7e11dd8d4b3f04f3de00127 *cleanup
 242b04da235395d8328b75e10166584d *cleanup.win
 c3131e2873511647171a615b50536c95 *data/Conf_griffin.rda
@@ -63,10 +63,10 @@ d6971f841d53182eef5e3861dc7ebb2c *inst/doc/quick_start_example1.html
 a3087f1cddff3e316125d78de33ceb74 *inst/doc/quick_start_example1.rmd
 3db092319abbc41acd17536ea791424c *inst/doc/vignette-age.R
 ec7aa4e9047853f91e959d18bf2f4d45 *inst/doc/vignette-age.Rmd
-ff92d6d666c98b932d36cefa9bcc9968 *inst/doc/vignette-age.pdf
+7cbf1625a365a3ca8dc2f1950cbdfea6 *inst/doc/vignette-age.pdf
 c98add46dc56ab76e49203a19ec2645b *inst/doc/vignette-main.R
-f0907f715fdf65786e775e2237ecb0b8 *inst/doc/vignette-main.Rmd
-9964bbd24e9e4785a7df8d9611d95131 *inst/doc/vignette-main.pdf
+c06ed87d197085030fc487668826fdd2 *inst/doc/vignette-main.Rmd
+16af84cc5443a53f32eda76730b0376c *inst/doc/vignette-main.html
 ecbe7375c3dc2684af41d4edf5f16a63 *inst/extdata/Inherit_patterns.csv
 549b1102d45295072bfb550ca9c9a064 *inst/extdata/Inherit_patterns.xlsx
 07cc7e2561f9945417f1f100c6e900f5 *man/CalcBYprobs.Rd
@@ -147,7 +147,7 @@ adbe060a0323bf53e221a030e4458dae *man/orderLH.Rd
 47141a7b200e3ee1e7480f3efdb9cb0a *man/writeColumns.Rd
 da6fc349959902f48ffe46a79f5a0c36 *man/writeSeq.Rd
 d64feb66e7e4d14fd2a3136d65c4414b *src/MkRelA.f90
-00e18243244ef7b83755218a738bc5ca *src/Sequoia.f90
+5d0d631489496744d1011076d7c365e4 *src/Sequoia.f90
 c98fd6ca1f8fa56572027e412d7980c8 *src/SimGenoErrors.f90
 43a634f75ad920fe7a5b2d1c22dee68a *src/init.c
 9574a94124441e2e03adbf553c64c542 *src/sequoia-win.def
@@ -178,5 +178,4 @@ a3087f1cddff3e316125d78de33ceb74 *vignettes/quick_start_example1.rmd
 2a53bd20a2be2eaa19bfa515fcf7f660 *vignettes/selfed_parent.png
 0ec317a94471c9679105156bc4d62cb3 *vignettes/sequoia_refs.bib
 ec7aa4e9047853f91e959d18bf2f4d45 *vignettes/vignette-age.Rmd
-f0907f715fdf65786e775e2237ecb0b8 *vignettes/vignette-main.Rmd
-715d4e9578229491d55d6766423e9b1f *vignettes/vignette-main.html
+c06ed87d197085030fc487668826fdd2 *vignettes/vignette-main.Rmd

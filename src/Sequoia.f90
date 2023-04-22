@@ -15825,16 +15825,14 @@ WHERE(YearLast <= 0)  YearLast = 999
 WHERE (YearLast /= 999)  YearLast = YearLast - BYzero                                                     
 
 ! min/max BY based on YearLast
-!do i=1, nInd
-!  if (YearLast(i)==999)  cycle
-!  if (BYrange(i,1) < 0)  BYrange(i,1) = MAX(YearLast(i) - MaxAgePO, 1)
-!  if (BYrange(i,2) < 0)  BYrange(i,2) = MIN(YearLast(i), nYears)
-!enddo
+do i=1, nInd
+  if (YearLast(i)==999)  cycle
+  if (BYrange(i,1) < 0)  BYrange(i,1) = MAX(YearLast(i) - MaxAgePO, 1)
+  if (BYrange(i,2) < 0)  BYrange(i,2) = MIN(YearLast(i), nYears)
+enddo
 
 WHERE (BYRange(:,1) <0) BYrange(:,1) = 1
 WHERE (BYRange(:,2) <0) BYrange(:,2) = nYears  
-
-
 
 !===  Initiate indiv BY prob distr  ==============
 allocate(IndBY(1:nYears, nInd, 5))  ! year - indiv - own/wo/w dummy off+par
@@ -15843,7 +15841,7 @@ do i=1, nInd
   if (BY(i) >=0) then
     IndBY(:, i, :) = LOG10(zero)
     IndBY(BY(i), i, :) = zero  
-  else !if (ALL(BYrange(i,:) >= 0)) then
+  else 
     if (BYrange(i,1) < 1)  call ErStop('BY.min < 1', .TRUE.)
     if (BYrange(i,2) > nYears)  call ErStop('BY.max > nYears', .TRUE.)
     IndBY(:, i, :) = LOG10(zero)

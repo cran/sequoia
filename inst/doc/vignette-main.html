@@ -535,7 +535,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># save results: single compressed .RData file, and/or folder with text files</span></span>
 <span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(SeqOUT, Geno, OtherStuff, <span class="at">file=</span><span class="st">&quot;Sequoia_output_date.RData&quot;</span>)</span>
 <span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="fu">writeSeq</span>(<span class="at">SeqList =</span> SeqOUT, <span class="at">GenoM =</span> Geno, <span class="at">folder =</span> <span class="st">&quot;Sequoia-OUT&quot;</span>)</span></code></pre></div>
-<p>For a detailed walk-through of this example, see <a href="quick_start_example1.html">here</a></p>
+<p>For a detailed walk-through of this example, see <a href="https://CRAN.R-project.org/package=sequoia/vignettes/quick_start_example1.html">here</a></p>
 </div>
 <div id="real-data" class="section level2" number="1.2">
 <h2><span class="header-section-number">1.2</span> Real Data</h2>
@@ -623,7 +623,7 @@ but can be changed via parameters <code>Err</code> and <code>ErrFlavour</code>.<
 <div id="likelihoods" class="section level2" number="3.2">
 <h2><span class="header-section-number">3.2</span> Likelihoods</h2>
 <p>Assignments are based on the likelihods for all different possible relationships between a pair, calculated conditional on all assignments made up onto that point. If the focal relationship is more likely than all alternatives (by a margin <code>Tassign</code>), the assignment is made.</p>
-<p>The relationships are condensed into seven categories (Table <a href="#tab:rel7">3.1</a>). Under the default settings (<code>Complx=&#39;full&#39;</code>), these also include their combinations (section <a href="#sec:WeirdRels">Unusual relationships</a>), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male.</p>
+<p>The relationships are condensed into seven categories (Table <a href="#tab:rel7">3.1</a>). Under the default settings (<code>Complx=&#39;full&#39;</code>), these also include their combinations (see section Unusual relationships](#sec:WeirdRels)), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male.</p>
 <table>
 <caption><span id="tab:rel7">Table 3.1: </span>Main relationships considered</caption>
 <thead>
@@ -763,7 +763,7 @@ Figure 3.3: Runtimes are shorter with lower genotyping error rates and more SNPs
 </blockquote>
 <p>The value may vary from <span class="math inline">\(0\)</span> (impossible), to <span class="math inline">\(1\)</span> (just as likely), and typically not far beyond <span class="math inline">\(10\)</span> (10x as likely). This quantification allows age differences to be used jointly with genetic information, which is mostly done in a conservative fashion (except when <code>UseAge=&#39;extra&#39;</code>): only when the focal relationship is the most likely both when considering only genetic data, and when considering genetic + age data, is the assignment made. ‘Most likely’ applies to <em>from the set of possible relationships</em>, i.e. those with an age prior value <span class="math inline">\(&gt;0\)</span>.</p>
 <p>For example, in datasets with only one or two ageclasses, it is worth contemplating whether or not avuncular relationships should be considered as alternatives to siblings. The behaviour can be changed by explicitly declaring generations as <code>Discrete</code> (avuncular cannot have age difference of 0), and/or by setting <code>MaxAgeParent</code>.</p>
-<p>You can find extensive details about the ageprior <a href="vignette-age.html">in this separate vignette</a>, including worked examples, mathematical framework, and full range of options.</p>
+<p>You can find extensive details about the ageprior <a href="https://CRAN.R-project.org/package=sequoia/vignettes/vignette-age.pdf">in this separate vignette</a>, including worked examples, mathematical framework, and full range of options.</p>
 </div>
 <div id="implementation" class="section level3" number="3.4.2">
 <h3><span class="header-section-number">3.4.2</span> Implementation</h3>
@@ -834,14 +834,14 @@ Figure 3.5: Sibship clustering of individuals A-D
 <li>It is clear the pair are mother and daughter (or grandmother – grand-granddaughter), but it is unclear which of the two is the (grand)mother, due to unknown birth year(s) and absence of a ‘complementary’ candidate father (and analogous for father-son);</li>
 <li>There is more than one plausible candidate (dummy) (grand)parents of one sex, all of which are more likely to be a parent than otherwise related, even when considered jointly. This includes the situation where true offspring are among the candidate parents due to unknown birth years.</li>
 </ol>
-<p>For more details, see <a href="sec:FAQlowAR">FAQ</a>.</p>
+<p>For more details, see <a href="#sec:FAQlowAR">FAQ</a>.</p>
 <p>Cause (1) has two common underlying causes, which again are not mutually exclusive:</p>
 <p>1a. Half-siblings, grandparent–grand-offspring and full avuncular pairs are genetically indistinguishable, even with perfect genetic data. Assignment of half-sibling pairs is only possible when grand-parental and avuncular relationships can be excluded based on the age-difference of the pair, or when both individuals already have a parent assigned (in which case the likelihoods do differ).
 1b. The SNP data is not informative enough to clearly distinguishing between parents and full siblings, between full and half siblings, between half siblings and cousins, etc.. The problem may be specific to a few pairs and due to the randomness of Mendelian segregation, or be widespread due to a low number of SNPs, low MAF, and/or high error rate.</p>
 </div>
 <div id="remedies" class="section level3" number="3.7.2">
 <h3><span class="header-section-number">3.7.2</span> Remedies</h3>
-<p>Sometimes it is possible to reduce the number of non-assigned parents in the pedigree by providing more life history data, removing SNPs with the highest error rates, or lowering the thresholds <code>Tfilter</code> and/or <code>Tassign</code>. The latter will reduce the probability of false negatives, but at the same time increase the probability for false positives. If inbreeding and double relationships are rare, using <code>Complx=&#39;simp&#39;</code> may also improve assignment (see <a href="sec:Complx">here</a>).</p>
+<p>Sometimes it is possible to reduce the number of non-assigned parents in the pedigree by providing more life history data, removing SNPs with the highest error rates, or lowering the thresholds <code>Tfilter</code> and/or <code>Tassign</code>. The latter will reduce the probability of false negatives, but at the same time increase the probability for false positives. If inbreeding and double relationships are rare, using <code>Complx=&#39;simp&#39;</code> may also improve assignment (see <a href="#sec:Complx">here</a>).</p>
 <p>Small adjustments may ‘get the snowball rolling’ (Figure <a href="#fig:ClusterMatPat">3.5</a>) and greatly increase assignments. Once a sibling pair is assigned, adding additional siblings to the cluster becomes progressively easier as it becomes more and more obvious whether an individual is related to all individuals in the sibship, or to none.</p>
 <p>There are functions in the package that may help identify whether there are un-assigned likely relatives in the dataset, and/or the probable cause of non-assignment of presumed relatives:</p>
 <ul>
@@ -1097,7 +1097,7 @@ Samples with a call rate below 5% are automatically excluded, but it is strongly
 </div>
 <div id="very-large-datasets" class="section level3" number="5.1.4">
 <h3><span class="header-section-number">5.1.4</span> Very large datasets</h3>
-<p>When the number of individuals is very large, it may be impossible to load the genotype data into R as it will exceed R’s memory limit. A stand-alone version of the algorithm underlying this R package does not suffer from this limitation, and is available as Fortran source code from <a href="https://github.com/JiscaH/sequoia/tree/master/Standalone">github</a>, where you can also find its manual. The standalone is not faster than the R package, as the bulk of the computations are done in Fortran regardless.</p>
+<p>When the number of individuals is very large, it may be impossible to load the genotype data into R as it will exceed R’s memory limit. A stand-alone version of the algorithm underlying this R package does not suffer from this limitation, and is available as Fortran source code from <a href="https://github.com/JiscaH/sequoia_notR">github</a>, where you can also find its manual. The standalone is not faster than the R package, as the bulk of the computations are done in Fortran regardless.</p>
 </div>
 </div>
 <div id="birth-years-sex" class="section level2" number="5.2">
@@ -1436,19 +1436,19 @@ Use age information in a permissive way: accept a proposed assignment if <span c
 <tbody>
 <tr class="odd">
 <td align="left">SNP</td>
-<td align="right">-374.0</td>
-<td align="right">-334.6</td>
-<td align="right">-327</td>
-<td align="right">-327.0</td>
-<td align="right">-327.0</td>
-<td align="right">-327.0</td>
-<td align="right">-333.6</td>
+<td align="right">-410.1</td>
+<td align="right">-344.4</td>
+<td align="right">-329.5</td>
+<td align="right">-329.5</td>
+<td align="right">-329.5</td>
+<td align="right">-328.4</td>
+<td align="right">-329.7</td>
 </tr>
 <tr class="even">
 <td align="left">Age</td>
 <td align="right">-0.4</td>
 <td align="right">-3.0</td>
-<td align="right">-3</td>
+<td align="right">-3.0</td>
 <td align="right">0.3</td>
 <td align="right">-0.3</td>
 <td align="right">-0.3</td>
@@ -1456,13 +1456,13 @@ Use age information in a permissive way: accept a proposed assignment if <span c
 </tr>
 <tr class="odd">
 <td align="left">SNP + Age</td>
-<td align="right">-374.3</td>
-<td align="right">-337.6</td>
-<td align="right">-330</td>
-<td align="right">-326.8</td>
-<td align="right">-327.4</td>
-<td align="right">-327.3</td>
-<td align="right">-333.6</td>
+<td align="right">-410.5</td>
+<td align="right">-347.4</td>
+<td align="right">-332.5</td>
+<td align="right">-329.2</td>
+<td align="right">-329.8</td>
+<td align="right">-328.7</td>
+<td align="right">-329.7</td>
 </tr>
 </tbody>
 </table>
@@ -1514,7 +1514,7 @@ Cluster half- and full-siblings and assign each cluster a dummy-parent; assign g
 </div>
 <div id="input-check" class="section level2" number="6.2">
 <h2><span class="header-section-number">6.2</span> Input check</h2>
-<p>SNP datasets are typically too large to easily spot any problems by simply looking at the data in a spreadsheet. There are many tools available to deal with genotype data and do proper quality control; the function <code>CheckGeno()</code> merely checks that the data are in the <a href="sec:GenoFormat">correct format</a> for <code>sequoia</code>, and that there are no SNPs or individuals with excessively many missing values.</p>
+<p>SNP datasets are typically too large to easily spot any problems by simply looking at the data in a spreadsheet. There are many tools available to deal with genotype data and do proper quality control; the function <code>CheckGeno()</code> merely checks that the data are in the <a href="#sec:GenoFormat">correct format</a> for <code>sequoia</code>, and that there are no SNPs or individuals with excessively many missing values.</p>
 <p>The function <code>SnpStats()</code> can be used to count the number of Mendelian errors per SNP. It is not automatically called by <code>sequoia()</code>, but excluding SNPs with exceptionally high genotyping error rates is recommended to improve accuracy of the inferred pedigree.</p>
 </div>
 <div id="check-for-duplicates" class="section level2" number="6.3">
@@ -1807,7 +1807,7 @@ Figure 7.3: Example plot from PlotRelPairs()
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="co"># dim2: classification: total (could-have-had-parent)/ match/ mismatch/ </span></span>
 <span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="co">#       P1only (no parent in Ped2)/ P2only</span></span>
 <span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="co"># dim3: dam/sire</span></span></code></pre></div>
-<p>See <a href>here</a> for a detailed walk-through of this example, and suggestions on how to trace the underlying cause of discrepancies between the newly-inferred genetic pedigree and an existing field pedigree.</p>
+<p>See <a href="https://CRAN.R-project.org/package=sequoia/vignettes/PedComp.html">here</a> for a detailed walk-through of this example, and suggestions on how to trace the underlying cause of discrepancies between the newly-inferred genetic pedigree and an existing field pedigree.</p>
 <p>In short, the main aim of checking the discrepancies is to figure out the underlying cause of each case:</p>
 <ul>
 <li>pedigree reconstruction error,</li>
@@ -1891,7 +1891,7 @@ Figure 7.3: Example plot from PlotRelPairs()
 </div>
 <div id="genomic-relatedness" class="section level3" number="7.3.2">
 <h3><span class="header-section-number">7.3.2</span> Genomic relatedness</h3>
-<p>In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one could compare the pairwise relatedness estimated from the pedigree(s) to a measure of genomic relatedness, estimated directly from the complete SNP data – which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using <a href="http://cnsgenomics.com/software/gcta/#MakingaGRM">GCTA</a>. Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.</p>
+<p>In absence of a previous pedigree, or when it is not obvious whether the previous or newly inferred pedigree is correct, one could compare the pairwise relatedness estimated from the pedigree(s) to a measure of genomic relatedness, estimated directly from the complete SNP data – which may be many more SNPs than used for pedigree reconstruction. Genomic relatedness can be estimated for example using <a href="https://yanglab.westlake.edu.cn/software/gcta/#MakingaGRM">GCTA</a>. Genomic relatedness will vary around the pedigree-based relatedness even for a perfect pedigree due to Mendelian variance, but outliers suggest pedigree errors.</p>
 <p>For example:</p>
 <div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read in output from GCTA</span></span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>Rel.snp <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;GT.grm.gz&quot;</span>)   </span>
@@ -2012,7 +2012,7 @@ source code.
 </div>
 <div id="sec:FAQlowAR" class="section level2" number="9.2">
 <h2><span class="header-section-number">9.2</span> Low assignment rate</h2>
-<p>See also <a href="sec:lowAR">key points</a>.</p>
+<p>See also <a href="#sec:lowAR">key points</a>.</p>
 <p>In many cases, assignment rate can be boosted without increasing the number of SNPs: by assuming a different genotyping error rate, providing sex or birth year information on more individuals, or fine-tuning the ageprior. Sometimes <em>reducing</em> the number of SNPs may increase assignment rate, by removing those with the highest error rate and/or SNPs in close LD.</p>
 <div id="not-enough-snps" class="section level3" number="9.2.1">
 <h3><span class="header-section-number">9.2.1</span> Not enough SNPs</h3>
