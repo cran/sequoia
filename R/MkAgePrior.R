@@ -333,26 +333,6 @@ MakeAgePrior <- function(Pedigree = NULL,
 
   RR <- c("M", "P", "FS", "MS", "PS")  # relatedness categories considered
 
-  MkAPdefault <- function(MinP, MaxP, Disc) {
-    AP <- matrix(1, max(MaxP)+2, 5,
-                 dimnames=list(0:(max(MaxP)+1), RR))
-    if(!is.null(Disc) && Disc) {  # always: MaxP[1]==MaxP[2]
-      AP[,] <- 0
-      AP[MaxP[1]+1, c("M","P")] <- 1
-      AP[1, c("FS","MS","PS")] <- 1
-
-    } else {
-      AP[,] <- 1
-      AP[1:MinP[1], "M"] <- 0
-      AP[1:MinP[2], "P"] <- 0
-      AP[(MaxP[1]+2):nrow(AP), "M"] <- 0
-      AP[(MaxP[2]+2):nrow(AP), "P"] <- 0
-      AP[(MaxP[1]-MinP[1]+2):nrow(AP), c("FS", "MS")] <- 0
-      AP[(MaxP[2]-MinP[2]+2):nrow(AP), c("FS", "PS")] <- 0
-    }
-    return( AP )
-  }
-	#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 	# return if no pedigree, no birthyears, or no parents ----
 	Ped <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=TRUE)
@@ -528,6 +508,7 @@ MakeAgePrior <- function(Pedigree = NULL,
     if (FSuseHS) {
       W.R["FS"] <- 1-exp(-lambdaNW * mean(c(NAK.R["FS"], min(NAK.R[c("MS", "PS")]))))
     }
+
     LR.RU.A.default <- MkAPdefault(MinP=MinAgePO,
                                    MaxP = pmax(MaxAgePO, MaxAgeParent, na.rm=TRUE),  # for input > pedigree-observed
                                    Disc=Discrete)
@@ -544,35 +525,11 @@ MakeAgePrior <- function(Pedigree = NULL,
   }
 
 
+
   # Smooth ----
   if (Smooth) {
-		#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    SmoothAP <- function(V, MinP) {
-      Front <- max(1, min(which(V > MinP)), na.rm=TRUE)
-      End <- min(max(which(V > MinP)), length(V), na.rm=TRUE)
-      lowMid <- rep(FALSE, length(V))
-      if (End - Front >= 2) {
-        for (i in c((Front+1) : (End-1))) {
-          lowMid[i] <- ifelse(V[i] <= MinP, TRUE,
-                          ifelse(V[i] / ((V[i-1] + V[i+1])/2) < 0.1, TRUE, FALSE))
-        }
-      }
-      W <- V
-      if (Front > 1 & W[Front] > 3*MinP)  					W[Front -1] <- MinP
-      if (End < length(V))   												W[End +1] <- W[End]/2
-			if ((End+1) < length(V) & W[End+1] > 3*MinP)  W[End+2] <- MinP
-      for (x in 1:3) {  # in case neighbouring lowMid's
-        for (i in seq_along(V)) {
-          if (lowMid[i]) {
-            W[i] <- (W[i-1] + W[i+1])/2
-          }
-        }
-      }
-      return( W )
-    }
-		#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    LR.RU.A <- apply(LR.RU.A, 2, SmoothAP, MinP = 0.001)
+    LR.RU.A <- apply(LR.RU.A, 2, SmoothAP, tiny = 0.001)
+    MaxAgePO <- MaxAgePO +2   # smoothed tail
   }
   LR.RU.A[1, c("M", "P")] <- 0
   LR.RU.A[is.na(LR.RU.A)] <- 0
@@ -591,8 +548,6 @@ MakeAgePrior <- function(Pedigree = NULL,
                    Flatten = Flatten,
                    lambdaNW = lambdaNW,
                    Smooth = Smooth)
-
-  if (Smooth)  MaxAgePO <- MaxAgePO +2   # smoothed tail
 
   OUT <- list(BirthYearRange = BYrange,
               MaxAgeParent = MaxAgePO,
@@ -619,6 +574,82 @@ MakeAgePrior <- function(Pedigree = NULL,
   }
 }
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' @title Make default 1/0 ageprior
+#'
+#' @description Create ageprior matrix based on min and max age of parents.
+#'
+#' @param MinP  Minimum age of dams, sires
+#' @param MaxP  Maximum age of dams, sires
+#' @param Disc  Discrete generations? TRUE/FALSE/NULL
+#'
+#' @keywords internal
+
+MkAPdefault <- function(MinP, MaxP, Disc) {
+  RR <- c("M", "P", "FS", "MS", "PS")
+  AP <- matrix(1, max(MaxP)+2, 5,
+               dimnames=list(0:(max(MaxP)+1), RR))
+  if(!is.null(Disc) && Disc) {  # always: MaxP[1]==MaxP[2]
+    AP[,] <- 0
+    AP[MaxP[1]+1, c("M","P")] <- 1
+    AP[1, c("FS","MS","PS")] <- 1
+
+  } else {
+    AP[,] <- 1
+    AP[1:MinP[1], "M"] <- 0
+    AP[1:MinP[2], "P"] <- 0
+    AP[(MaxP[1]+2):nrow(AP), "M"] <- 0
+    AP[(MaxP[2]+2):nrow(AP), "P"] <- 0
+    AP[(MaxP[1]-MinP[1]+2):nrow(AP), c("FS", "MS")] <- 0
+    AP[(MaxP[2]-MinP[2]+2):nrow(AP), c("FS", "PS")] <- 0
+  }
+  return( AP )
+}
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#' @title Smooth out dips in ageprior matrix
+#'
+#' @description ...
+#'
+#' @param V  column in ageprior matrix (vector); strictly positive
+#' @param tiny  smallest non-zero value in V
+#'
+#' @details Sets dips (<10\% of average of neighbouring ages) to the average of
+#'   the neighbouring ages, sets the age after the end (oldest observed age) to
+#'   LR(end)/2, and assigns a small value (0.001) to the ages before the front
+#'   (youngest observed age) and after the new end. Peaks are not smoothed out,
+#'   as these are less likely to cause problems than dips, and are more likely
+#'   to be genuine characteristics of the species.
+#'
+#' @keywords internal
+
+SmoothAP <- function(V, tiny=0.001) {
+  Front <- max(1, min(which(V > tiny)), na.rm=TRUE)
+  End <- min(max(which(V > tiny)), length(V), na.rm=TRUE)
+  lowMid <- rep(FALSE, length(V))
+  if (End - Front >= 2) {
+    for (i in c((Front+1) : (End-1))) {
+      lowMid[i] <- ifelse(V[i] <= tiny, TRUE,
+                      ifelse(V[i] / ((V[i-1] + V[i+1])/2) < 0.1, TRUE, FALSE))
+    }
+  }
+  W <- V
+  if (Front > 1 & W[Front] > 3*tiny)  					W[Front -1] <- tiny
+  if (End < length(V))   												W[End +1] <- W[End]/2
+  if ((End+1) < length(V) & W[End+1] > 3*tiny)  W[End+2] <- tiny
+  for (x in 1:3) {  # in case neighbouring lowMid's
+    for (i in seq_along(V)) {
+      if (lowMid[i]) {
+        W[i] <- (W[i-1] + W[i+1])/2
+      }
+    }
+  }
+  return( W )
+}
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -650,7 +681,6 @@ CountAgeDif <- function(BirthYear, BYrange = range(BirthYear)) {
 	A.cnt["0"] <- A.cnt["0"] -sum(!is.na(BYM[,1]))   # self
 	return( A.cnt )
 }
-
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

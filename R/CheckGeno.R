@@ -83,9 +83,9 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
   # basic checks ----
   if (is.null(GenoM)) stop("please provide 'GenoM'")
   if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
-  if (!all(GenoM %in% c(0,1,2,-9))) {
+  if (!all(GenoM %in% c(0,1,2,-1, -9))) {
     UniqueValues <- unique(c(GenoM))
-    InvalidValues <- UniqueValues[!UniqueValues %in% c(0,1,2,-9)]
+    InvalidValues <- UniqueValues[!UniqueValues %in% c(0,1,2,-1,-9)]
     stop(paste0("'GenoM' includes invalid values: ", "'",
                 paste(InvalidValues, collapse="', '"), "'"))
   }
@@ -137,7 +137,7 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     Excl[["ExcludedSnps-mono"]] <- which(SNPs.mono)
   }
 
-  SNPs.LotMissing <- apply(GenoM, 2, function(x) sum(x!=-9)) < nrow(GenoM)/2
+  SNPs.LotMissing <- apply(GenoM, 2, function(x) sum(x>=0)) < nrow(GenoM)/2
   if (any(SNPs.LotMissing)) {
     warn(ifelse("ExcludedSnps" %in% names(Excl), "In addition, there", "There"),
          " are ", sum(SNPs.LotMissing)," SNPs scored for <50% of individuals")
@@ -146,7 +146,7 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
 
 
   # Exclude low quality individuals ----
-  Lscored <- apply(GenoM, 1, function(x) sum(x!=-9))
+  Lscored <- apply(GenoM, 1, function(x) sum(x>=0))
   if (Strict) {
     Indiv.TooMuchMissing <- Lscored < ncol(GenoM)/20
   } else {
@@ -160,7 +160,7 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     GenoM <- GenoM[!Indiv.TooMuchMissing, ]
   }
 
-  Indiv.LotMissing <- apply(GenoM, 1, function(x) sum(x!=-9)) < ncol(GenoM)/5
+  Indiv.LotMissing <- apply(GenoM, 1, function(x) sum(x>=0)) < ncol(GenoM)/5
   if (any(Indiv.LotMissing)) {
     warn(ifelse("ExcludedIndiv" %in% names(Excl), "In addition, there", "There"),
          " are ", sum(Indiv.LotMissing)," individuals scored for <20% of SNPs,",

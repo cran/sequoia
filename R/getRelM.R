@@ -98,14 +98,6 @@ GetRelM <- function(Pedigree = NULL,
     if (!class(Pairs) %in% c("data.frame", "matrix"))  stop("Pairs should be a dataframe or matrix")
   }
 
-  # function inflate square matrix to larger square matrix with more IDs
-  inflate <- function(M, IDnew, na=NA) {
-    Mnew <- matrix(na, length(IDnew), length(IDnew), dimnames=list(IDnew, IDnew))
-    if (is.null(rownames(M)) & nrow(M)==ncol(M))  rownames(M) <- colnames(M)
-    Mnew[rownames(M), colnames(M)] <- M
-    Mnew
-  }
-
   if (!is.null(Pedigree)) {
     Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=FALSE)
     RelA <- GetRelA(Pedigree, GenBack = GenBack, patmat = patmat, List = (Return == 'List'))

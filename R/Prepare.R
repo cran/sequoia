@@ -378,3 +378,42 @@ CheckAP <- function(AgePrior) {
   return( AgePrior )
 }
 
+
+
+#=======================================================================
+#=======================================================================
+
+#' @title Check and recode mtSame matrix
+#'
+#' @description Recode to 1=different, 0=same
+#'
+#' @param mtSame matrix indicating whether individuals (might) have the same
+#'   mitochondrial haplotype (1),  or definitely not (0). Not all individuals
+#'   need to be included and order is not important, may not be square.
+#' @param gID rownames of `GenoM`
+#'
+#' @return  square gID x gID matrix indicating whether individuals have
+#'   definitely a different mitochondrial haplotype (1), or (possibly) the same
+#'   (0).
+#'
+#' @keywords internal
+
+mtSame2Dif <- function(mtSame = NULL, gID = NULL)
+{
+  if (is.null(gID))  stop('must provide gID')
+
+  if (is.null(mtSame)) {
+    mtDif <- matrix(0, length(gID), length(gID), dimnames=list(gID,gID))
+    return( mtDif )
+  }
+
+  if (!is.matrix(mtSame))  stop('mtSame must be a 0/1 matrix or NULL', call.=FALSE)
+  if (!all(mtSame %in% c(0,1,NA)))   stop('mtSame must be a 0/1 matrix or NULL', call.=FALSE)
+  if (!any(rownames(mtSame) %in% gID) | !any(colnames(mtSame) %in% gID)) {
+    stop('dimnames of mtSame do not match IDs in GenoM', call.=FALSE)
+  }
+
+  mtDif <- 1 - inflate(mtSame[rownames(mtSame) %in% gID, colnames(mtSame) %in% gID], gID, na=1)
+  mtDif[is.na(mtDif)] <- 0
+  return( mtDif )
+}

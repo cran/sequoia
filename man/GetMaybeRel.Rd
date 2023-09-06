@@ -86,13 +86,14 @@ sire role, default if at least 1 individual with sex=4), or "B" (no
 distinction between dam and sire role). Both of the latter deal with
 selfing.}
 
-\item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix.
-Details below. The error rate is presumed constant across SNPs, and
-missingness is presumed random with respect to actual genotype. Using
-\code{Err} >5\% is not recommended.}
+\item{Err}{estimated genotyping error rate, as a single number, length 3
+vector or 3x3 matrix; see details below. The error rate is presumed
+constant across SNPs, and missingness is presumed random with respect to
+actual genotype. Using \code{Err} >5\% is not recommended.}
 
-\item{ErrFlavour}{function that takes \code{Err} (single number) as input,
-and returns a 3x3 matrix of observed (columns) conditional on actual (rows)
+\item{ErrFlavour}{\strong{DEPRECATED, (use length 3 vector for \code{Err}
+instead)} function that takes \code{Err} (single number) as input, and
+returns a 3x3 matrix of observed (columns) conditional on actual (rows)
 genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
 'version1.1', referring to the sequoia version in which they were the
 default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}

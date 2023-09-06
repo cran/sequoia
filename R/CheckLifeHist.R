@@ -95,13 +95,15 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
 
 
   # check Sex ----
-  if (!all(LifeHistData$Sex %in% c(1,2,3,4,NA))) {
+  if (!all(LifeHistData$Sex %in% 1:4)) {
     sex_msg <- "LifeHistData column 'Sex' should be coded as 1=female, 2=male, 3/<NA>=unknown, 4=hermaphrodite"
     if (sum(LifeHistData$Sex %in% 1:4) < nrow(LifeHistData)/10) {   # <10% valid non-missing coding
       stop(sex_msg, call.=FALSE)
     } else {
-      warning(sex_msg, "\n These values are converted to <NA>/3: ", setdiff(LifeHistData$Sex, 1:4),
-              call.=FALSE, immediate=TRUE)
+      if (!all(LifeHistData$Sex %in% c(1,2,3,4,NA))) {
+        warning(sex_msg, "\n These values are converted to <NA>/3: ", setdiff(LifeHistData$Sex, 1:4),
+                call.=FALSE, immediate.=TRUE)
+      }
       LifeHistData$Sex[!LifeHistData$Sex %in% c(1:4)] <- 3
     }
   }

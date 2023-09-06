@@ -7,23 +7,31 @@
 ErrToM(Err = NA, flavour = "version2.0", Return = "matrix")
 }
 \arguments{
-\item{Err}{estimated genotyping error rate, as a single number or 3x3 or 4x4
-matrix. If a single number, an error model is used that aims to deal with
-scoring errors typical for SNP arrays. If a matrix, this should be the
-probability of observed genotype (columns) conditional on actual genotype
-(rows). Each row must therefore sum to 1. If \code{Return='function'}, this
-may be \code{NA}.}
+\item{Err}{estimated genotyping error rate, as a single number, or 3x3 or 4x4
+matrix, or length 3 vector. If a single number, an error model is used that
+aims to deal with scoring errors typical for SNP arrays. If a matrix, this
+should be the probability of observed genotype (columns) conditional on
+actual genotype (rows). Each row must therefore sum to 1. If
+\code{Return='function'}, this may be \code{NA}. If a vector, these are the
+probabilities (observed given actual) hom|other hom, het|hom, and hom|het.}
 
 \item{flavour}{matrix-generating function, or one of 'version2.0',
 'version1.3' (='SNPchip'), 'version1.1' (='version111'), referring to the
-sequoia version in which it was used as default. Ignored if \code{Err} is a
-matrix and \code{Return='matrix'} (in which case the matrix will only be
-checked for validity).}
+sequoia version in which it was used as default. Only used if \code{Err} is
+a single number.}
 
-\item{Return}{output, 'matrix' (always 3x3) or 'function'.}
+\item{Return}{output, 'matrix' (default), 'function', or 'vector'}
 }
 \value{
-Either a 3x3 matrix, or a function generating a 3x3 matrix.
+Depending on \code{Return}, either:
+ \itemize{
+   \item \code{'matrix'}: a 3x3 matrix, with probabilities of observed genotypes
+   (columns) conditional on actual (rows)
+   \item \code{'function'}: a function taking a single value \code{Err} as input, and
+   generating a 3x3 matrix
+   \item \code{'vector'}: a length 3 vector, with the probabilities (observed given
+     actual) hom|other hom, het|hom, and hom|het.
+ }
 }
 \description{
 Generate a matrix with the probabilities of observed genotypes
@@ -32,11 +40,11 @@ Generate a matrix with the probabilities of observed genotypes
  function).
 }
 \details{
-By default (\code{flavour} = "SNPchip"), \code{Err} is interpreted
-  as a locus-level error rate (rather than allele-level), and equals the
-  probability that an actual heterozygote is observed as either homozygote
-  (i.e., the probability that it is observed as AA = probability that
-  observed as aa = \code{Err}/2). The probability that one homozygote is
+By default (\code{flavour} = "version2.0"), \code{Err} is
+  interpreted as a locus-level error rate (rather than allele-level), and
+  equals the probability that an actual heterozygote is observed as either
+  homozygote (i.e., the probability that it is observed as AA = probability
+  that observed as aa = \code{Err}/2). The probability that one homozygote is
   observed as the other is (\code{Err}/2\eqn{)^2}.
 
 The inbuilt 'flavours' correspond to the presumed and simulated error
@@ -78,4 +86,49 @@ Pr(observed genotype (columns) | actual genotype (rows)):
  \strong{1}  \tab \eqn{E/2}       \tab \eqn{1-E}      \tab \eqn{E/2}    \cr
  \strong{2}  \tab \eqn{0}   \tab \eqn{E} \tab \eqn{1-E} \cr
 }
+
+When \code{Err} is a length 3 vector, or if \code{Return = 'vector'} these
+ are the following probabilities:
+\itemize{
+ \item hom|hom: an actual homozygote is observed as the other homozygote
+ \item het|hom: an actual homozygote is observed as heterozygote
+ \item hom|het: an actual heterozygote is observed as homozygote
+ }
+
+ and Pr(observed genotype (columns) | actual genotype (rows)) is then:
+\tabular{lccc}{
+            \tab \strong{0}       \tab \strong{1}   \tab \strong{2}  \cr
+ \strong{0} \tab \eqn{1-E_1-E_2} \tab \eqn{E_2}    \tab \eqn{E_1} \cr
+ \strong{1} \tab \eqn{E_3}        \tab \eqn{1-2E_3} \tab \eqn{E_3}   \cr
+ \strong{2} \tab \eqn{E_1}       \tab \eqn{E_2}    \tab \eqn{1-E_1-E_2} \cr
+}
+
+ The only assumption made is that the two alleles can be treated equally,
+ i.e. observing actual allele $A$ as $a$ is as likely as observing actual $a$
+ as $A$, and so e.g. P(obs=1|act=0) = P(obs=1|act=2).
+
+ When the SNPs are scored via sequencing (e.g. RADseq or DArTseq), the 3rd
+ error rate (hom|het) is typically considerably higher than the other two,
+ while for SNP arrays it tends to be similar to P(het|hom).
+}
+\examples{
+ErM <- ErrToM(Err = 0.05)
+ErM
+ErrToM(ErM, Return = 'vector')
+
+
+# use error matrix from Whalen, Gorjanc & Hickey 2018
+funE <- function(E) {
+ matrix(c(1-E*3/4, E/2, E/4,
+          E/4, 1-2*E/4, E/4,
+          E/4, E/2, 1-E*3/4),
+          3,3, byrow=TRUE)  }
+ErrToM(Err = 0.05, flavour = funE)
+# equivalent to:
+ErrToM(Err = c(0.05/4, 0.05/2, 0.05/4))
+
+}
+\seealso{
+\code{\link{EstEr}} to estimate genotyping error rate as a length 3
+ vector.
 }

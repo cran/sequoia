@@ -4,7 +4,7 @@
 \alias{SnpStats}
 \title{SNP Summary Statistics}
 \usage{
-SnpStats(GenoM, Pedigree = NULL, ErrFlavour = "version2.0", Plot = TRUE)
+SnpStats(GenoM, Pedigree = NULL, Duplicates = NULL, Plot = TRUE, ErrFlavour)
 }
 \arguments{
 \item{GenoM}{genotype matrix, in sequoia's format: 1 column per SNP, 1 row
@@ -12,15 +12,15 @@ per individual, genotypes coded as 0/1/2/-9, and row names giving individual
 IDs.}
 
 \item{Pedigree}{dataframe with 3 columns: ID - parent1 - parent2.
-Additional columns and non-genotyped individuals are ignored. Used to
-estimate the error rate.}
+Additional columns and non-genotyped individuals are ignored. Used to count
+Mendelian errors per SNP and (poorly) estimate the error rate.}
 
-\item{ErrFlavour}{function that takes the genotyping error rate \code{Err} as
-input, and returns a 3x3 matrix of observed (columns) conditional on actual
-(rows) genotypes, or choose from inbuilt ones as used in sequoia
-'version2.0', 'version1.3', or 'version1.1'. See \code{\link{ErrToM}}.}
+\item{Duplicates}{dataframe with pairs of duplicated samples}
 
 \item{Plot}{show histograms of the results?}
+
+\item{ErrFlavour}{DEPRECATED AND IGNORED. Was used to estimate
+\code{Err.hat}; see \code{\link{EstEr}}.}
 }
 \value{
 A matrix with a number of rows equal to the number of SNPs
@@ -29,13 +29,16 @@ A matrix with a number of rows equal to the number of SNPs
   homozygote is coded 2)}
 \item{Mis}{Proportion of missing calls}
 \item{HWE.p}{p-value from chi-square test for Hardy-Weinberg equilibrium}
-When a Pedigree is provided, there are 7 additional columns:
+
+When a Pedigree is provided, there are 8 additional columns:
 \item{n.dam, n.sire, n.pair}{Number of dams, sires, parent-pairs successfully
   genotyped for the SNP}
 \item{OHdam, OHsire}{Count of number of opposing homozygous cases}
-\item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases}
-\item{Err.hat}{Error rate, as estimated from the joined offspring-parent
-  (-parent) genotypes and the presumed error structure (\code{ErrFlavour})}
+\item{MEpair}{Count of Mendelian errors, includes opposing homozygous cases
+  when only one parent is genotyped}
+\item{n.dups, n.diff}{Number of duplicate pairs successfully genotyped for
+  the SNP; number of differences. The latter does not count cases where one
+  duplicate is not successfully genotyped at the SNP}
 }
 \description{
 Estimate allele frequency (AF), missingness and Mendelian
@@ -52,24 +55,6 @@ Calculation of these summary statistics can be done in PLINK, and
   allele in the dataset (MAF \eqn{\le 1/2N}) are considered fixed, and
   excluded.
 }
-\section{Estimated genotyping error}{
-
-The error rate is estimated from the number of opposing homozygous cases (OH,
-parent is AA and offspring is aa) Mendelian errors (ME, e.g. parents AA and
-aa, but offspring not Aa) in parent-parent-offspring trios, and OH cases for
-offspring with a single genotyped parent.
-
-The estimated error rates will not be as accurate as from duplicate samples.
-A single error in an individual with many offspring will be counted as many
-times, potentially resulting in non-sensical values of 'Err.hat' close to 1.
-On the other hand, errors in individuals without parents or offspring will
-not be counted at all. Moreover, a high error rate may interfere with
-pedigree reconstruction, and successful assignment will be biased towards
-parents with lower error count. Nonetheless, it may provide a ballpark
-estimate for the average error rate, which can be useful for subsequent
-(rerun of) pedigree reconstruction.
-}
-
 \examples{
 Genotypes <- SimGeno(Ped_HSg5, nSnp=100, CallRate = runif(100, 0.5, 0.8),
                      SnpError = 0.05)
@@ -81,5 +66,5 @@ SNPstats <- SnpStats(Genotypes, Pedigree=Ped_HSg5)
 \code{\link{GenoConvert}} to convert from various data formats;
   \code{\link{CheckGeno}} to check the data is in valid format for sequoia
   and exclude monomorphic SNPs etc., \code{\link{CalcOHLLR}} to calculate OH
-  & ME per individual.
+  & ME per individual; \code{\link{EstEr}} to estimate genotyping error rate.
 }

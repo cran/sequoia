@@ -2,7 +2,7 @@
 title: "Sequoia User Guide"
 subtitle: "Reconstruction of multi-generational pedigrees from SNP data"
 author: "Jisca Huisman ( jisca.huisman @ gmail.com )"
-date: "15 March 2023"
+date: "5 Sept 2023"
 output:
   bookdown::html_document2:
     base_format: rmarkdown::html_vignette
@@ -258,10 +258,6 @@ knitr::include_graphics(c("Errs-time-HSg5.png", "Errs-time-deer.png"))
 ### Error matrix
 Different genotyping methods are likely to have different error structures (Table \@ref(tab:ErrM)). Therefore, from version 2.0 sequoia allows fine-scale control over how potential genotyping errors are accounted for. An error matrix with the probability to observe genotype $G$ (columns), conditional on actual genotype $g$ (rows), can now be specified via parameter `ErrFlavour`. The current default (`version2.0`) is given in Table \@ref(tab:ErrM), and previous defaults are shown in the help file of `ErrToM()`. The slight differences between versions only have any consequences when the error rate is high ($>1%$). 
 
-During pedigree inference, the error rate is presumed equal across all SNPs. It is also assumed that none of the errors (or missingness) are due to heritable mutations.
-
-
-
 ```{r ErrM, echo=FALSE, eval=TRUE, results="asis"}
 ErrM <- matrix(c("$(1-E/2)^2$", "$E\\times(1-E/2)$", "$(E/2)^2$",
                  "$E/2$", "$1-E$", "$E/2$",
@@ -273,6 +269,14 @@ knitr::kable(ErrM,
              position="!hb")
 ```
 
+From version 2.7 onwards, it is also possible to specify the genotyping error structure as a length 3 vector, with probabilities (between brackets = current defaults):
+
+- hom|hom: an actual homozygote is observed as the other homozygote ($(E/2)^2$)
+- het|hom: an actual homozygote is observed as heterozygote ($E\\times(1-E/2)$)
+- hom|het: an actual heterozygote is observed as homozygote ($E/2$)
+
+
+During pedigree inference, the error rate is presumed equal across all SNPs. It is also assumed that none of the errors (or missingness) are due to heritable mutations.
 
 
 ### Estimate
@@ -396,6 +400,7 @@ There are functions in the package that may help identify whether there are un-a
 
 - `GetMaybeRel()` will identify any pairs that are likely to be 1st or 2nd degree relatives. It can do so as-is, or conditional on a (reconstructed) pedigree. It may also provide clues whether this is e.g. due to unknown birth years or an impossibility to tell the different 2nd degree relationships apart (TopRel = '2nd').
 - `CalcPairLL()` will return for a specified set of pairs the likelihoods to be parent-offspring, sibling, ... (Table \@ref(tab:rel7)). The pairs may be the output from `GetMaybeRel()`, or e.g. pairs of litter mates. This may e.g. show that it is unclear whether the pair are full or half siblings, but they are probably either one or those. Or it may show the pair are probably either half-siblings or 3rd degree relatives (half-avuncular, cousins, great-grandparent). The latter may be 'declared' half-siblings if the breeding scheme or field data (e.g. being litter mates) makes 3rd degree relatives highly unlikely. You can specify a pedigree and/or ageprior to condition on, and can include a pair multiple times with different age difference or focal relationship to explore their effects on the likelihoods and thereby the LLR. 
+- use of mitochondrial haplotype sharing data to distinguish between maternal and paternal relatives. See the mtDNA vignette for details. 
 
 
 \clearpage

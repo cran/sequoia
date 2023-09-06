@@ -335,7 +335,7 @@ GetMaybeRel <- function(GenoM = NULL,
     #~~~~~~~~
     CalcSnpdBoth <- function(Pairs, GenoM) {
       sapply(seq_along(Pairs[,1]), function(i, G=GenoM) {
-        sum(G[Pairs[i,1], ] != -9 & G[Pairs[i,2], ] != -9)
+        sum(G[Pairs[i,1], ] >=0 & G[Pairs[i,2], ] >=0)
       })
     }
     #~~~~~~~~

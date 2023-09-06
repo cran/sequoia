@@ -100,13 +100,14 @@ sire role, default if at least 1 individual with sex=4), or "B" (no
 distinction between dam and sire role). Both of the latter deal with
 selfing.}
 
-\item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix.
-Details below. The error rate is presumed constant across SNPs, and
-missingness is presumed random with respect to actual genotype. Using
-\code{Err} >5\% is not recommended.}
+\item{Err}{estimated genotyping error rate, as a single number, length 3
+vector or 3x3 matrix; see details below. The error rate is presumed
+constant across SNPs, and missingness is presumed random with respect to
+actual genotype. Using \code{Err} >5\% is not recommended.}
 
-\item{ErrFlavour}{function that takes \code{Err} (single number) as input,
-and returns a 3x3 matrix of observed (columns) conditional on actual (rows)
+\item{ErrFlavour}{\strong{DEPRECATED, (use length 3 vector for \code{Err}
+instead)} function that takes \code{Err} (single number) as input, and
+returns a 3x3 matrix of observed (columns) conditional on actual (rows)
 genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
 'version1.1', referring to the sequoia version in which they were the
 default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}
@@ -128,11 +129,12 @@ non-assignment, but will increase computational time.}
 \value{
 The \code{Pairs} dataframe including all optional columns listed
   above, plus the additional columns:
- \item{LL_xx}{Log10-Likelihood of this pair having relationship xx, with xx
-   being one of PO, FS, etc. as detailed below.}
+ \item{xx}{Log10-Likelihood of this pair having relationship xx, with xx
+   being the relationship abbreviations listed below.}
  \item{TopRel}{Abbreviation of most likely relationship}
- \item{LLR}{Likelihood ratio between most-likely and second most likely
-   relationships}
+ \item{LLR}{Log10-Likelihood ratio between most-likely and second most likely
+   relationships. Other LLRs, e.g. between most-likely and unrelated, can
+   easily be computed.}
 
 \strong{Relationship abbreviations:}
   \item{PO}{Parent - offspring}
@@ -184,6 +186,36 @@ The same pair may be included multiple times, e.g. with different
   \strong{Warning 2}: Conditioning on a \code{Pedigree} can make computation
   orders of magnitude slower.
 }
+\section{Why does it say 777 (impossible)?}{
+
+  This function uses the same machinery as \code{sequoia}, which will to save
+  time not calculate the likelihood when it is quickly obvious that the pair
+  cannot be related in the specified manner.
+
+  For PO (putative parent-offspring pairs) this is the case when:
+  \itemize{
+   \item the sex of the candidate parent, via \code{Pairs$Sex2} or
+    \code{LifeHistData}, does not match \code{Pairs$patmat}, which defaults
+    to 1 (maternal relatives, i.e. dam)
+  \item a dam is already assigned via \code{Pedigree} and \code{Pairs$dropPar1
+    ='none'}, and \code{Pairs$patmat = 1}
+  \item \code{Pairs$focal} is not 'U' (the default), and the OH count between the
+    two individuals exceeds MaxMismatchOH. This value can be found in
+    \code{SeqList$Specs}), and is calculated by \code{\link{CalcMaxMismatch}}
+  \item the age difference, either calculated from \code{LifeHistData} or
+    specified via \code{Pairs$AgeDif}, is impossible for a parent-offspring
+    pair according to the age prior. The latter can be specified via
+    \code{AgePrior}, or is taken from \code{SeqList}, or is calculated when
+    both \code{Pedigree} and \code{LifeHistData} are provided.
+    }
+
+ For FS (putative full siblings) this happens when e.g. ID1 has a dam
+ assigned which is not dropped (\code{Pairs$dropPar1='none'} or
+ \code{'sire'}), and the OH count between ID1's dam and ID2 exceeds
+ MaxMismatchOH. The easiest way to 'fix' this is by increasing the presumed
+ genotyping error rate.
+}
+
 \section{Double relationships & focal relationship}{
 
   Especially when Complex='full', not only the seven relationship

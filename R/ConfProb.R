@@ -37,6 +37,9 @@
 #'   set of parents (proportion set by \code{ParMis}) is mimicked to be
 #'   non-genotyped. In addition, SNPs are assumed to segregate independently.
 #'
+#'   An experimental version offering more fine-grained control is available at
+#'   https://github.com/JiscaH/sequoiaExtra .
+#'
 #' @section Object size:
 #'   The size in Kb of the returned list can become pretty big, as each of the
 #'   inferred pedigrees is included. When running \code{EstConf} many times for
@@ -132,7 +135,7 @@
 #'                                CallRate=0.8,     # from SnpStats()
 #'                                ParMis=c(0.39, 0.20)),  # calc'd above
 #'                args.seq = list(Err=5e-3, Module="par"),  # as in real run
-#'                nSim = 2,   # try-out, proper run >=20 (10 if huge pedigree)
+#'                nSim = 1,   # try-out, proper run >=20 (10 if huge pedigree)
 #'                nCores=1)
 #'
 #' # parent-pair confidence, per category (Genotyped/Dummy/None)
@@ -149,6 +152,12 @@
 #'                       sort=FALSE)  # (note: merge() messes up column order)
 #' head(Ped.withConf[Ped.withConf$dam.cat=="G", ])
 #'
+#' # save output summary
+#' \dontrun{
+#' conf_griff[['Note']] <- 'You could add a note'
+#' saveRDS(conf_grif[c('ConfProb','PedComp.fwd','RunParams','RunTime','Note')],
+#'    file = 'conf_200SNPs_Err005_Callrate80.RDS')
+#' }
 #'
 #' ## P(actual FS | inferred as FS) etc.
 #' PairL <- list()
@@ -160,13 +169,14 @@
 #'                              Return="Counts")
 #' }
 #' # P(actual relationship (Ped1) | inferred relationship (Ped2))
-#' PairA <- plyr::laply(PairL, function(M)
-#'                      sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
-#' PairRel.prop <- apply(PairA, 2:3, mean, na.rm=TRUE)  # mean across simulations
+#' PairRel.prop <- plyr::laply(PairL, function(M)
+#'     sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
+#' # if nSim>1: mean across simulations
+#' # PairRel.prop <- apply(PairRel.prop, 2:3, mean, na.rm=TRUE)
 #' round(PairRel.prop, 3)
 #' # or: P(inferred relationship | actual relationship)
-#' PairA2 <- plyr::laply(PairL, function(M)
-#'                       sweep(M, MARGIN='Ped1', STATS=rowSums(M), FUN="/"))
+#' PairRel.prop2 <- plyr::laply(PairL, function(M)
+#'    sweep(M, MARGIN='Ped1', STATS=rowSums(M), FUN="/"))
 #'
 #' @export
 
@@ -182,7 +192,7 @@ EstConf <- function(Pedigree = NULL,
 
   # check input ----
   if (is.null(Pedigree))  stop("Please provide Pedigree")
-  if (is.null(LifeHistData))  stop("Please provide LifeHistData")
+  if (is.null(LifeHistData))  warning("Running without LifeHistData")
   if (!is.null(args.sim) & !is.list(args.sim))  stop("args.sim should be a list or NULL")
   if (!is.null(args.seq) & !is.list(args.seq))  stop("args.seq should be a list or NULL")
   if (!is.wholenumber(nSim) || nSim<1 || length(nSim)>1)

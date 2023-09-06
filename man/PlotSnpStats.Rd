@@ -4,12 +4,10 @@
 \alias{PlotSnpStats}
 \title{plot SnpStats results}
 \usage{
-PlotSnpStats(OUT, Pedigree = NULL)
+PlotSnpStats(OUT)
 }
 \arguments{
 \item{OUT}{output from \code{SnpStats}}
-
-\item{Pedigree}{}
 }
 \value{
 plots

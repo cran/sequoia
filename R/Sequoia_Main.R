@@ -16,17 +16,8 @@
 #'   pedigree, and may have been assigned real or dummy parents themselves (i.e.
 #'   sibship-grandparents). A dummy parent is not assigned to singletons.
 #'
-#'   The genotyping error rate `Err` is by default at locus level, not allele
-#'   level: the probability to observe true homozygote \emph{aa} as heterozygote
-#'   \emph{Aa} is \eqn{\approx E}, and as alternate homozygote \emph{AA}
-#'   \eqn{(E/2)^2}; the probability to observe a true heterozygote as \emph{aa}
-#'   = the probability to observe it as \emph{AA} \eqn{= E/2}. This error
-#'   structure can be fully customised by providing a 3x3 matrix of observed
-#'   genotype (columns) conditional on actual genotype (rows) instead, see
-#'   \code{\link{ErrToM}} for examples.
-#'
 #'   Full explanation of the various options and interpretation of the output is
-#'   provided in the vignette and on the package website,
+#'   provided in the vignettes and on the package website,
 #'   https://jiscah.github.io/index.html .
 #'
 #' @param GenoM  numeric matrix with genotype data: One row per individual, and
@@ -69,15 +60,10 @@
 #'   NOTE: \emph{Until `MaxSibIter` is fully deprecated: if `MaxSibIter` differs
 #'   from the default (\code{42}), and `Module` equals the default
 #'   (\code{'ped'}), MaxSibIter overrides `Module`.}
-#' @param Err estimated genotyping error rate, as a single number or 3x3 matrix.
-#'   Details below. The error rate is presumed constant across SNPs, and
-#'   missingness is presumed random with respect to actual genotype. Using
-#'   \code{Err} >5\% is not recommended.
-#' @param ErrFlavour function that takes \code{Err} (single number) as input,
-#'   and returns a 3x3 matrix of observed (columns) conditional on actual (rows)
-#'   genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
-#'   'version1.1', referring to the sequoia version in which they were the
-#'   default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.
+#' @param Err estimated genotyping error rate, as a single number, length 3
+#'   vector or 3x3 matrix; see details below. The error rate is presumed
+#'   constant across SNPs, and missingness is presumed random with respect to
+#'   actual genotype. Using \code{Err} >5\% is not recommended.
 #' @param Tfilter threshold log10-likelihood ratio (LLR) between a proposed
 #'   relationship versus unrelated, to select candidate relatives. Typically a
 #'   negative value, related to the fact that unconditional likelihoods are
@@ -105,6 +91,11 @@
 #' @param args.AP list with arguments to be passed on to
 #'   \code{\link{MakeAgePrior}}, e.g. `Discrete` (non-overlapping generations),
 #'   `MinAgeParent`, `MaxAgeParent`.
+#' @param mtSame  \strong{NEW} matrix indicating whether individuals (might)
+#'   have the same mitochondrial haplotype (1), and may thus be matrilineal
+#'   relatives, or not (0). Row names and column names should match IDs in
+#'   `GenoM`. Not all individuals need to be included and order is not
+#'   important. Please report any issues. For details see the mtDNA vignette.
 #' @param CalcLLR  TRUE/FALSE; calculate log-likelihood ratios for all assigned
 #'   parents (genotyped + dummy; parent vs. otherwise related). Time-consuming
 #'   in large datasets. Can be done separately with \code{\link{CalcOHLLR}}.
@@ -120,10 +111,16 @@
 #'   the unavoidable default up to version 2.4.1. Otherwise only excluded are
 #'   (very nearly) monomorphic SNPs, SNPs scored for fewer than 2 individuals,
 #'   and individuals scored for fewer than 2 SNPs.
-#' @param MaxSibIter \strong{will be DEPRECATED, use \code{Module}} number of
-#'   iterations of sibship clustering, including assignment of grandparents to
-#'   sibships and avuncular relationships between sibships. Clustering continues
-#'   until convergence or until MaxSibIter is reached. Set to 0 for parentage
+#' @param ErrFlavour \strong{DEPRECATED, (use length 3 vector for \code{Err}
+#'   instead)} function that takes \code{Err} (single number) as input, and
+#'   returns a 3x3 matrix of observed (columns) conditional on actual (rows)
+#'   genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
+#'   'version1.1', referring to the sequoia version in which they were the
+#'   default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.
+#' @param MaxSibIter \strong{DEPRECATED, use \code{Module}} number of iterations
+#'   of sibship clustering, including assignment of grandparents to sibships and
+#'   avuncular relationships between sibships. Clustering continues until
+#'   convergence or until MaxSibIter is reached. Set to 0 for parentage
 #'   assignment only.
 #' @param MaxMismatch \strong{DEPRECATED AND IGNORED}. Now calculated
 #'   automatically using \code{\link{CalcMaxMismatch}}.
@@ -206,16 +203,28 @@
 #'    homozygotes, but the offspring not being a heterozygote. The offspring
 #'    being OH with both parents is counted as 2 errors.}
 #'
-#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
-#' @references Huisman, J. (2017) Pedigree reconstruction from SNP data:
-#'   Parentage assignment, sibship clustering, and beyond. Molecular Ecology
-#'   Resources 17:1009--1024.
+#' @section Genotyping error rate:
+#'   The genotyping error rate \code{Err} can be specified three different ways:
+#'   \itemize{
+#'    \item A single number, which is combined with \code{ErrFlavour} to create
+#'   a 3x3 matrix with the probabilities of observed genotype (columns)
+#'   conditional on actual genotype (rows). By default (\code{ErrFlavour} =
+#'   'version2.0'), \code{Err} is interpreted as the locus level error rate (as
+#'   opposed to allele level), e.g. the probability to observe a true
+#'   heterozygote \emph{Aa} as \emph{aa} (het -> hom) = the probability to
+#'   observe it as \emph{AA} \eqn{=E/2}. See \code{\link{ErrToM}} for details
+#'   and examples.
+#'   \item a 3x3 matrix, with the probabilities of observed genotype (columns)
+#'   conditional on actual genotype (rows)
+#'   \item a length 3 vector, with the probabilities to observe a actual
+#'   homozygote as the other homozygote, to observe a homozygote as
+#'   heterozygote, and to observe an actual heterozygote as homozygote (NEW from
+#'   version 2.6). This only assumes that the two alleles are equivalent with
+#'   respect to genotyping errors, i.e. $P(AA|aa) = P(aa|AA)$ and
+#'   $P(aa|Aa)=P(AA|Aa)$.
+#'   }
 #'
-#' @section Disclaimer:
-#' While every effort has been made to ensure that sequoia provides what it
-#' claims to do, there is absolutely no guarantee that the results provided are
-#' correct. Use of sequoia is entirely at your own risk.
 #'
 #' @section (Too) Few Assignments?:
 #' Possibly \code{Err} is much lower than the actual genotyping error rate.
@@ -238,14 +247,25 @@
 #'  All pairs of non-assigned but likely/definitely relatives can be found with
 #'  \code{\link{GetMaybeRel}}. For further information see the vignette.
 #'
+#' @section Disclaimer:
+#' While every effort has been made to ensure that sequoia provides what it
+#' claims to do, there is absolutely no guarantee that the results provided are
+#' correct. Use of sequoia is entirely at your own risk.
+#'
+#' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
+#'
+#' @references Huisman, J. (2017) Pedigree reconstruction from SNP data:
+#'   Parentage assignment, sibship clustering, and beyond. Molecular Ecology
+#'   Resources 17:1009--1024.
 #'
 #' @seealso
 #' \itemize{
 #'   \item \code{\link{GenoConvert}} to read in various data formats,
 #'   \item \code{\link{CheckGeno}}, \code{\link{SnpStats}} to calculate
 #'     missingness and allele frequencies,
-#'   \item \code{\link{SimGeno}}  to simulate SNP data from a pedigree
-#'  \item \code{\link{MakeAgePrior}} to estimate effect of age on relationships,
+#'   \item \code{\link{SimGeno}}  to simulate SNP data from a pedigree,
+#'   \item \code{\link{EstEr}} to estimate genotyping error rate,
+#'   \item \code{\link{MakeAgePrior}} to estimate effect of age on relationships,
 #'   \item \code{\link{GetMaybeRel}} to find pairs of potential relatives,
 #'   \item \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to visualise
 #'   results,
@@ -259,7 +279,7 @@
 #'   two pedigrees,
 #'   \item \code{\link{EstConf}} to estimate assignment errors,
 #'   \item \code{\link{writeSeq}} to save results,
-#'   \item vignette("sequoia") for detailed manual & FAQ.
+#'   \item \code{vignette("sequoia")} for detailed manual & FAQ.
 #' }
 #'
 #'
@@ -333,7 +353,6 @@ sequoia <- function(GenoM = NULL,
                     SeqList = NULL,
                     Module = "ped",
                     Err = 0.0001,
-                    ErrFlavour = "version2.0",
                     Tfilter = -2.0,
                     Tassign = 0.5,
                     MaxSibshipSize = 100,
@@ -342,10 +361,12 @@ sequoia <- function(GenoM = NULL,
                     Herm = "no",
                     UseAge = "yes",
                     args.AP = list(Flatten=NULL, Smooth=TRUE),
+                    mtSame = NULL,
                     CalcLLR = TRUE,
                     quiet = FALSE,
                     Plot = NULL,
                     StrictGenoCheck = TRUE,
+                    ErrFlavour = "version2.0",  # DEPRECATED
                     MaxSibIter = 42,  # DEPRECATED
                     MaxMismatch = NA,  # DEPRECATED
                     FindMaybeRel = FALSE)  # DEPRECATED
@@ -441,6 +462,8 @@ sequoia <- function(GenoM = NULL,
 
   utils::flush.console()
 
+  # check & reformat mitochondrial same/not matrix
+  mtDif <- mtSame2Dif(mtSame, gID = rownames(GenoM))
 
   # make list with parameter values (loose input or SeqList$Specs) ----
   if ("Specs" %in% names(SeqList)) {
@@ -525,7 +548,8 @@ sequoia <- function(GenoM = NULL,
 
     ParList <- SeqParSib(ParSib = "par", FortPARAM, GenoM,
                          LhIN=LifeHistData, AgePriors=AgePriors,
-                         Parents=PedParents, DumPfx = PARAM$DummyPrefix, quiet=quietR)
+                         Parents=PedParents, mtDif=mtDif,
+                         DumPfx = PARAM$DummyPrefix, quiet=quietR)
     if (Plot) {
       SummarySeq(ParList$PedigreePar, Panels="G.parents")
     }
@@ -556,9 +580,10 @@ sequoia <- function(GenoM = NULL,
                                           quiet = !(!quietR & Module=="ped")),
                                      args.AP)),
                            error = function(e) {
-                             message("AgePrior: error!")
-                             return(ParList)
+                             message("AgePrior error! \n", e)
+                             return(NA)
                            })
+    if (all(is.na(AgePriors)))  return(ParList)
 
   } else if ("AgePriors" %in% names(SeqList) & !"PedigreePar" %in% names(SeqList)) {
     if(!quietR)  message("using AgePriors in SeqList again")
@@ -577,8 +602,8 @@ sequoia <- function(GenoM = NULL,
     if(!quietR)  message("\n~~~ Full pedigree reconstruction ~~~")
     SibList <- SeqParSib(ParSib = "sib", FortPARAM, GenoM,
                          LhIN = LifeHistData, AgePriors = AgePriors,
-                         Parents = ParList$PedigreePar, DumPfx = PARAM$DummyPrefix,
-                         quiet = quietR)
+                         Parents = ParList$PedigreePar, mtDif=mtDif,
+                         DumPfx = PARAM$DummyPrefix, quiet = quietR)
     ParList <- ParList[names(ParList) != "AgePriorExtra"]  # else included 2x w same name
     if (Plot) {
       PlotAgePrior(SibList$AgePriorExtra)

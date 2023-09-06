@@ -86,7 +86,7 @@ PedPolish <- function(Pedigree,
   ValidNames <- list(Id = c("id", "iid", "off"),
                      Dam = c("dam", "mother", "mot", "mom", "mum", "mat"),
                      Sire = c("sire", "father", "fat", "dad", "pat"))
-  ColNums <- list(Id = 0, Dam = 0, Sire = 0)
+  ColNums <- list(Id = 1, Dam = 0, Sire = 0)
 
   for (p in c('Id', 'Dam', 'Sire')) {
     ColNums[[p]] <- which(tolower(names(Ped)) %in% ValidNames[[p]])  # exact match, ignore case
@@ -94,7 +94,8 @@ PedPolish <- function(Pedigree,
       ColNums[[p]] <- unlist(sapply(ValidNames[[p]], function(x) grep(x, names(Ped), ignore.case=TRUE)))
     }
   }
-  if (any(unlist(ColNums)) == 0) {
+  if (length(ColNums[['Id']])==0)   ColNums[['Id']] <- 1   # assume 1st column
+  if (any(sapply(ColNums, length)==0)) {
     stop("Pedigree column names not recognized. See ?PedPolish for valid names", call. = FALSE)
   }
   for (p in c('Id', 'Dam', 'Sire')) {

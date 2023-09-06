@@ -47,6 +47,16 @@ FacToNum <- function(x) as.numeric(as.character(x))
 
 
 #======================================================================
+# inflate square matrix to larger square matrix with more IDs
+inflate <- function(M, IDnew, na=NA) {
+  Mnew <- matrix(na, length(IDnew), length(IDnew), dimnames=list(IDnew, IDnew))
+  if (is.null(rownames(M)) & nrow(M)==ncol(M))  rownames(M) <- colnames(M)
+  Mnew[rownames(M), colnames(M)] <- M
+  Mnew
+}
+
+
+#======================================================================
 # function adapted from Examples from integer {base}
 is.wholenumber <- function(x, tol = .Machine$double.eps^0.5) {
   ifelse(!is.numeric(x) | !is.finite(x),

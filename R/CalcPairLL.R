@@ -65,11 +65,12 @@
 #'
 #' @return The \code{Pairs} dataframe including all optional columns listed
 #'   above, plus the additional columns:
-#'  \item{LL_xx}{Log10-Likelihood of this pair having relationship xx, with xx
-#'    being one of PO, FS, etc. as detailed below.}
+#'  \item{xx}{Log10-Likelihood of this pair having relationship xx, with xx
+#'    being the relationship abbreviations listed below.}
 #'  \item{TopRel}{Abbreviation of most likely relationship}
-#'  \item{LLR}{Likelihood ratio between most-likely and second most likely
-#'    relationships}
+#'  \item{LLR}{Log10-Likelihood ratio between most-likely and second most likely
+#'    relationships. Other LLRs, e.g. between most-likely and unrelated, can
+#'    easily be computed.}
 #'
 #' \strong{Relationship abbreviations:}
 #'   \item{PO}{Parent - offspring}
@@ -94,6 +95,35 @@
 #'   \item{888}{Already assigned in the provided pedigree (see \code{dropPar}
 #'     arguments)}
 #'   \item{999}{NA}
+#'
+#'
+#' @section Why does it say 777 (impossible)?:
+#'   This function uses the same machinery as \code{sequoia}, which will to save
+#'   time not calculate the likelihood when it is quickly obvious that the pair
+#'   cannot be related in the specified manner.
+#'
+#'   For PO (putative parent-offspring pairs) this is the case when:
+#'   \itemize{
+#'    \item the sex of the candidate parent, via \code{Pairs$Sex2} or
+#'     \code{LifeHistData}, does not match \code{Pairs$patmat}, which defaults
+#'     to 1 (maternal relatives, i.e. dam)
+#'   \item a dam is already assigned via \code{Pedigree} and \code{Pairs$dropPar1
+#'     ='none'}, and \code{Pairs$patmat = 1}
+#'   \item \code{Pairs$focal} is not 'U' (the default), and the OH count between the
+#'     two individuals exceeds MaxMismatchOH. This value can be found in
+#'     \code{SeqList$Specs}), and is calculated by \code{\link{CalcMaxMismatch}}
+#'   \item the age difference, either calculated from \code{LifeHistData} or
+#'     specified via \code{Pairs$AgeDif}, is impossible for a parent-offspring
+#'     pair according to the age prior. The latter can be specified via
+#'     \code{AgePrior}, or is taken from \code{SeqList}, or is calculated when
+#'     both \code{Pedigree} and \code{LifeHistData} are provided.
+#'     }
+#'
+#'  For FS (putative full siblings) this happens when e.g. ID1 has a dam
+#'  assigned which is not dropped (\code{Pairs$dropPar1='none'} or
+#'  \code{'sire'}), and the OH count between ID1's dam and ID2 exceeds
+#'  MaxMismatchOH. The easiest way to 'fix' this is by increasing the presumed
+#'  genotyping error rate.
 #'
 #'
 #' @section Double relationships & focal relationship:

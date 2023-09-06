@@ -283,7 +283,7 @@ CalcOHLLR <- function(Pedigree = NULL,
   NewCols <- data.frame(id = gID,
                         VtoM(TMP$lrrf, nc=3),
                         VtoM(TMP$ohrf, nc=3),
-                        SNPd.id = apply(GenoM, 1, function(x) sum(x!=-9)),
+                        SNPd.id = apply(GenoM, 1, function(x) sum(x>=0)),
                         VtoM(TMP$snpdboth, nc=2))
   names(NewCols) <- c("id", "LLRdam", "LLRsire", "LLRpair",
                       "OHdam", "OHsire", "MEpair",
