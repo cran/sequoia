@@ -9,12 +9,15 @@
 #'   (TRUE, default) or return the Pedigree, to see where the problem(s) occur.
 #'
 #' @return  A vector with the generation number for each individual, starting at
-#'   0 for founders. Offspring of G0 X G0 are G1, offfspring of G0 X G1 or G1 x
+#'   0 for founders. Offspring of G0 X G0 are G1, offspring of G0 X G1 or G1 x
 #'   G1 are G2, etc. \code{NA} indicates a pedigree loop where an individual is
 #'   its own ancestor (or that the pedigree has >1000 generations).
 #'
 #'   If no output name is specified, no results are returned, only an error
 #'   message when the pedigree contains a loop.
+#'
+#'   To get more details about a pedigree loop, you can use
+#'   https://github.com/JiscaH/sequoiaExtra/blob/main/find_pedigree_loop.R
 #'
 #' @seealso \code{\link{GetAncestors}, \link{GetDescendants}} to get all
 #'   ancestors resp. descendants of a specific individual (with a warning if it

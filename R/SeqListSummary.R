@@ -62,7 +62,8 @@
 #'   is a matrix with a number of rows equal to the maximum sibship size, and 3
 #'   columns, splitting by the type of parent: Genotyped, Dummy, or Observed.}
 #'
-#' @seealso \code{\link{sequoia}} for pedigree reconstruction and links to other
+#' @seealso \code{\link{PlotSeqSum}} to plot the output of this function;
+#'  \code{\link{sequoia}} for pedigree reconstruction and links to other
 #'   functions.
 #'
 #' @examples
@@ -308,7 +309,7 @@ SummarySeq <- function(SeqList = NULL,
 #'
 #' @export
 
-PlotSeqSum <- function(SeqSum, Pedigree, Panels="all", ask=TRUE)
+PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
 {
 
   PanelsIN <- Panels

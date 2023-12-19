@@ -309,6 +309,11 @@ claims to do, there is absolutely no guarantee that the results provided are
 correct. Use of sequoia is entirely at your own risk.
 }
 
+\section{Website}{
+
+https://jiscah.github.io/
+}
+
 \examples{
 # ===  EXAMPLE 1: simulated data  ===
 head(SimGeno_example[,1:10])

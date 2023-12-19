@@ -7,9 +7,13 @@ implicit none
 integer, intent(IN) :: nind, nsnp
 integer, intent(INOUT) :: genofr(nind*nsnp)
 double precision, intent(IN) :: eprobfr(nsnp*3*3), randomv(nsnp*nInd)
-integer :: Genos(nSnp, nInd), l, i, x, j, h
-double precision :: EProb(3,3,nSnp), p(3), r(nSnp, nInd)
+integer :: l, i, x, j, h
+integer, allocatable :: Genos(:,:)
+double precision :: EProb(3,3,nSnp), p(3)
+double precision, allocatable :: r(:,:)
 
+allocate(Genos(nSnp,nInd))
+allocate(r(nSnp, nInd))
 Genos = -9
 j = 0
 r = 0D0
@@ -50,5 +54,8 @@ do l=1, nSnp
     GenoFR(j) = x
   enddo
 enddo
+
+deallocate(Genos)
+deallocate(r)
 
 end subroutine MkErrors

@@ -4,7 +4,7 @@
 \alias{PlotSeqSum}
 \title{Plot Summary Overview of sequoia Output}
 \usage{
-PlotSeqSum(SeqSum, Pedigree, Panels = "all", ask = TRUE)
+PlotSeqSum(SeqSum, Pedigree = NULL, Panels = "all", ask = TRUE)
 }
 \arguments{
 \item{SeqSum}{list output from \code{\link{SummarySeq}}.}

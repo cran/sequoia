@@ -2,7 +2,7 @@
 #'
 #' @description Estimate the genotyping error rates in SNP data, based on a
 #'   pedigree and/or duplicates. Estimates probabilities (observed given
-#'   actual) hom|other hom, het|hom, and hom|het.
+#'   actual) hom|other hom, het|hom, and hom|het. THESE ARE APPROXIMATE VALUES!
 #'
 #' @param GenoM  Genotype matrix
 #' @param Pedigree  data.frame with columns id - dam - sire
@@ -32,7 +32,9 @@
 #'
 #'  Note that for \code{optim} a lower bound of 1e-6 and upper bound of 0.499
 #'  are used; if these values are returned this should be interpreted as
-#'  'inestimably small' and 'inestimably large', respectively.
+#'  'inestimably small' and 'inestimably large', respectively. PLEASE DO NOT USE
+#'  THESE VALUES AS INPUT IN SUBSEQUENT ANALYSIS BUT SUBSITUTE BY A SENSIBLE
+#'  VALUE!!
 #'
 #' @details The result should be interpreted as approximate, ballpark estimates!
 #' The estimated error rates from a pedigree will not be as accurate as from

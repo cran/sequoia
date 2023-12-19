@@ -1,3 +1,14 @@
+# sequoia 2.8
+- fixes bugs introduced since version 2.5, plus various other edits in source code to improve assignment rate
+- fix bug in `CalcMaxMismatch`: OH with both parents counts as 2 mismatches (was 1)
+
+
+# sequoia 2.7.3
+- fix bug causing some negative parental LLRs, and possibly some non-assignments
+- speed increase for lower call rates
+- add OutFormat 'ped' to `GenoConvert`, and fix bug with OutFormat 'col'
+
+
 # sequoia 2.7.2
 - change `EstConf` example to nSim=1 to ensure runtime < 5 sec to pass CRAN check
 

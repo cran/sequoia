@@ -90,6 +90,7 @@ sumry_grif$PedSummary
 
 }
 \seealso{
-\code{\link{sequoia}} for pedigree reconstruction and links to other
+\code{\link{PlotSeqSum}} to plot the output of this function;
+ \code{\link{sequoia}} for pedigree reconstruction and links to other
   functions.
 }

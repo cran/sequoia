@@ -178,8 +178,10 @@ subroutine ester_CalcLL(TotLL, PropObsAct)
   double precision, intent(OUT) :: TotLL, PropObsAct(0:2,0:2,nSnp)
   integer :: i, l
   double precision:: PrG_par(0:2), PrG_off(0:2), PrG_dup(0:2), PrG_act(0:2), &
-     LL(nSnp, nInd), CntObsAct(0:2,0:2,nSnp)  ! actual - observed - snp
+     CntObsAct(0:2,0:2,nSnp)  ! actual - observed - snp
+  double precision, allocatable :: LL(:,:)
   
+  allocate(LL(nSnp, nInd))
   LL = 0D0  
   CntObsAct = 0D0
   
@@ -214,6 +216,7 @@ subroutine ester_CalcLL(TotLL, PropObsAct)
     PropObsAct(:,:,l) = CntObsAct(:,:,l) / SUM(CntObsAct(:,:,l))
   enddo
   
+  deallocate(LL)
 
 end subroutine ester_CalcLL
 

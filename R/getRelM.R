@@ -203,6 +203,12 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
   nInd <- nrow(PedN$PedPar)
   nRel <- ifelse(GenBack == 1, 8, 19)
 
+  TMP <- .Fortran(getrel,
+                  nind = nInd,
+                  pedrf = as.integer(PedN$PedPar),
+                  nrel = as.integer(nRel),
+                  relv = integer(nInd * nInd * nRel) )
+
   Rels <- c("S", "M", "P", "O", "FS", "MHS", "PHS", "XHS")  # XHS: 'cross'-half-sibs
   RelsB <- c("S", "MP", "O", "FS", "HS")  # patmat = FALSE
   if (GenBack == 2) {
@@ -211,12 +217,6 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
     RelsB <- c(RelsB, "GP", "GO",
                "FA", "FN", "HA", "HN", "DFC1", "FC1")
   }
-
-  TMP <- .Fortran(getrel,
-                  nind = nInd,
-                  pedrf = as.integer(PedN$PedPar),
-                  nrel = as.integer(nRel),
-                  relv = integer(nInd * nInd * nRel) )
 
   if (List) {  # e.g. when very large pedigree --> relA object.size too large
 

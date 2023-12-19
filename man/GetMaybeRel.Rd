@@ -10,17 +10,17 @@ GetMaybeRel(
   Pedigree = NULL,
   LifeHistData = NULL,
   AgePrior = NULL,
-  ParSib = NULL,
   Module = "par",
   Complex = "full",
   Herm = "no",
   Err = 1e-04,
   ErrFlavour = "version2.0",
-  MaxMismatch = NA,
   Tassign = 0.5,
   Tfilter = -2,
   MaxPairs = 7 * nrow(GenoM),
-  quiet = FALSE
+  quiet = FALSE,
+  ParSib = NULL,
+  MaxMismatch = NA
 )
 }
 \arguments{
@@ -64,10 +64,6 @@ and included in the \code{\link{sequoia}} output. Affects which
 relationships are considered possible (only those where \eqn{P(A|R) / P(A)
 > 0}).}
 
-\item{ParSib}{either 'par' to check for putative parent-offspring pairs only,
-or 'sib' to check for all types of first and second degree relatives. This
-argument will be deprecated, please use \code{Module}.}
-
 \item{Module}{type of relatives to check for. One of
 \describe{
   \item{par}{parent - offspring pairs}
@@ -98,9 +94,6 @@ genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
 'version1.1', referring to the sequoia version in which they were the
 default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}
 
-\item{MaxMismatch}{\strong{DEPRECATED AND IGNORED}. Now calculated
-automatically using \code{\link{CalcMaxMismatch}}.}
-
 \item{Tassign}{minimum LLR required for acceptance of proposed relationship,
 relative to next most likely relationship. Higher values result in more
 conservative assignments. Must be zero or positive.}
@@ -114,6 +107,13 @@ non-assignment, but will increase computational time.}
 \item{MaxPairs}{the maximum number of putative pairs to return.}
 
 \item{quiet}{logical, suppress messages.}
+
+\item{ParSib}{\strong{DEPRECATED, use \code{Module}} either 'par' to check
+for putative parent-offspring pairs only, or 'sib' to check for all types
+of first and second degree relatives.}
+
+\item{MaxMismatch}{\strong{DEPRECATED AND IGNORED}. Now calculated
+automatically using \code{\link{CalcMaxMismatch}}.}
 }
 \value{
 A list with

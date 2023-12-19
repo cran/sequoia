@@ -258,6 +258,9 @@
 #'   Parentage assignment, sibship clustering, and beyond. Molecular Ecology
 #'   Resources 17:1009--1024.
 #'
+#' @section Website:
+#' https://jiscah.github.io/
+#'
 #' @seealso
 #' \itemize{
 #'   \item \code{\link{GenoConvert}} to read in various data formats,
@@ -435,6 +438,21 @@ sequoia <- function(GenoM = NULL,
   # keep non-genotyped IDs (for future reference); orderLH() called by SeqParSib()
   DupList <- ChkLH.L[c("DupLifeHistID", "NoLH")]
   LifeHistData <- ChkLH.L$LifeHistData   # duplicates removed, if any
+  if (!quietR) {
+    gID <- rownames(GenoM)
+    tbl_sex <- table(factor(LifeHistData$Sex[LifeHistData$ID %in% gID], levels=1:4))
+    message("There are ", tbl_sex['1'], " females, ", tbl_sex['2'], " males, ",
+            tbl_sex['3'], " individuals of unkwown sex, and ",
+            tbl_sex['4'], " hermaphrodites.")
+    range_Year <- matrix(NA,4,2, dimnames=list(c("BirthYear", "BY.min", "BY.max", 'Year.last'),
+                                            c('min', 'max')))
+    for (x in rownames(range_Year)) {
+      range_Year[x,] <- range(LifeHistData[,x][LifeHistData$ID %in% gID & LifeHistData[,x] >= 0])
+    }
+    message("Exact birth years are from ", range_Year[1,1], " to ", range_Year[1,2])
+    message("Birth year min/max are from ", min(range_Year[2:3,1], na.rm=TRUE), " to ",
+            max(range_Year[2:3,2], na.rm=TRUE))
+  }
 
   utils::flush.console()    # print all warnings thus far
 

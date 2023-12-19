@@ -4,9 +4,11 @@ implicit none
 integer, intent(IN) :: nind, nrel
 integer, intent(INOUT) :: relv(nind*nind*nrel)  ! 0/1 matrix
 integer, intent(IN) :: pedrf(nInd*2)
-integer :: ped(nInd, 2), rel(nInd, nInd, nrel)
 logical :: doGP 
 integer :: i, j, x, y, r, GPr(2,2)
+integer, allocatable :: ped(:,:), rel(:,:,:)
+
+
 
 ! relationships:
 ! 1 = self
@@ -38,6 +40,7 @@ GPr(2,1) = 11
 GPr(2,2) = 12
 
 ! fold pedigree
+allocate(ped(nInd,2))
 ped(:,1) = pedrf(1:nInd)
 ped(:,2) = pedrf((nInd+1) : (2*nInd))
 
@@ -47,6 +50,7 @@ else
   doGP = .TRUE.
 endif
 
+allocate(rel(nInd, nInd, nrel))
 rel = 0
 do i = 1, nInd
   rel(i,i,1) = 1   ! self
@@ -61,7 +65,7 @@ do i = 1, nInd
   endif
 enddo
 
-! sibs   TODO fill out rel(j,i,r)
+! sibs  
 do i = 1, nInd
   if (all(ped(i,:) == 0))  cycle
   
@@ -153,6 +157,9 @@ do r = 1,nrel
     enddo
   enddo
 enddo
+
+deallocate(ped)
+deallocate(rel)
 
 
 end subroutine getrel

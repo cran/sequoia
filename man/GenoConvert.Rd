@@ -33,7 +33,10 @@ Details.}
 matrix with genotypes in console (default); if NULL, write to
 'GenoForSequoia.txt' in current working directory.}
 
-\item{OutFormat}{as \code{InFormat}; only 'seq' and 'col' are implemented.}
+\item{OutFormat}{as \code{InFormat}; only 'seq', 'col', and 'ped' are
+implemented. For 'ped' also a sham .map file is created, so that the file
+can be read by PLINK. Only for 'ped' are extensions .ped & .map added to
+the specified OutFile filename.}
 
 \item{Missing}{vector with symbols interpreted as missing data. '0' is
 missing data for InFormats 'col' and 'ped' only.}

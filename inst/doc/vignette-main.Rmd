@@ -4,6 +4,13 @@ subtitle: "Reconstruction of multi-generational pedigrees from SNP data"
 author: "Jisca Huisman ( jisca.huisman @ gmail.com )"
 date: "5 Sept 2023"
 output:
+  bookdown::pdf_book:
+    extra_dependencies:
+    - amsmath
+    - amssymb
+    - graphicx
+    - subcaption
+    keep_tex: true
   bookdown::html_document2:
     base_format: rmarkdown::html_vignette
     toc: true
@@ -17,13 +24,6 @@ output:
         twitter: yes
         github: yes
     split_by: none
-  bookdown::pdf_book:
-    extra_dependencies:
-    - amsmath
-    - amssymb
-    - graphicx
-    - subcaption
-    keep_tex: true
 config:
   toc: yes
   toc_depth: 3
@@ -761,7 +761,7 @@ UA <- cbind("no" = c("Y", "Y", ""),
 rownames(UA) <- c("$LR_{age} > 0$", "$LLR_{SNP} > T_{assign}$", 
                   "$LLR_{SNP} + LLR_{age} > T_{assign}$")
 
-knitr::kable(UA, caption = "Parameter 'UseAge' (see text for definitions)", align='ccc', escape=FALSE, booktabs=TRUE, position="!h")
+knitr::kable(UA, caption = "Parameter 'UseAge' (see text for definitions)", align='ccc', escape=FALSE, booktabs=TRUE, position="!ht")
 ```
 
 
@@ -978,6 +978,11 @@ knitr::include_graphics("RelPlot-griffin.png")
 ```
 
 
+## Likely relatives {#sec:maybepar}
+During parentage assignment, occasionally pairs are encountered which genetically are more likely to be parent-offspring than unrelated, but which can not be assigned because the sex or age difference is unknown or incompatible, or because the LLR is just below the assignment threshold (e.g. about equally likely PO and FS). Similarly, during pedigree reconstruction not all pairs of almost-certainly-relatives can be assigned, e.g. because half-siblings, full avuncular and grandparent--grand-offspring cannot always be distinguished. Distinguishing different kinds of second degree relatives relies on either both individuals already having at least one parent assigned, or two out of three being impossible due to the age difference of the pair. When neither is the case, the output indicates '2nd' as most likely relationship, and the LLR is between being 2nd degree relatives versus the most likely of PO (parent-offspring), FS (full siblings), HA (3rd degree relative) or U (unrelated).
+
+These pairs can be identified by function `GetMaybeRel()` with as argument the genotype data and optionally any pedigree or a sequoia output list. It will also identify parent-parent-offspring trios which could not be assigned because the sex for both parents is unknown.
+
 
 ## Compare pedigrees {#sec:compPed}
 Often a (part) pedigree is already available to which one wants to compare the newly inferred pedigree, for example to field-observed mothers or a microsatellite-based pedigree. `PedCompare()` compares for each individual the assigned parents between the two pedigrees (match/mismatch), while `ComparePairs()` compares for each pair their relationship between the two pedigrees (e.g. full sibs vs half sibs). Both pedigrees may have genotyped as well as non-genotyped individuals. 
@@ -1148,7 +1153,7 @@ hexbin::hexVP.abline(hbp$plot.vp, a=0, b=1)
 ```
 
 
-```{r eval=TRUE, fig.cap="Relatedness hexbinplot example", out.width="80%", position="!h"}
+```{r eval=TRUE, fig.cap="Relatedness hexbinplot example", out.width="80%", position="!ht"}
 knitr::include_graphics("hexbin.png")
 ```
 
@@ -1159,7 +1164,7 @@ This function does not take separate FID and IID columns in the input pedigree, 
 
 
 
-# Hermaphrodites
+# Hermaphrodites {#sec:Herm}
 Hermaphrodites have been re-implemented in versions 2.2 and 2.3, and now also full pedigree reconstruction should work as expected. Selfing is fully supported, also when a selfing parent or its selfed offspring are non-genotyped, and the aim is to infer their genotyped relatives. 
 
 With hermaphrodites it is not self-evident whether an identified parent should be assigned as dam or as sire. Sex-linked markers are not implemented in `sequoia`, and sequential hermaphroditism (male until age $t$, and female after, or *v.v.*) is not the norm. 
@@ -1209,7 +1214,7 @@ In `SeqList[["DummyIDs"]]`, the offspring-as-dam and offspring-as-sire are shown
 One type of assignment error is unavoidable: if the true parent is unsampled and the product of selfing, a sampled grandparent will be indistinguishable from a parent. Similarly, when the true parent is sampled, but both the parent and the grandparent are the product of selfing, they are genetically nearly identical and often erroneously interchanged when birth year information is absent. 
 
 
-```{r parent-selfed, echo=FALSE, eval=TRUE, fig.cap="Two configurations with identical likelihoods", out.width="20%", fig.pos="!h", fig.align="center"} 
+```{r parent-selfed, echo=FALSE, eval=TRUE, fig.cap="Two configurations with identical likelihoods", out.width="20%", fig.pos="!ht", fig.align="center"} 
 knitr::include_graphics("selfed_parent.png")
 ```
 

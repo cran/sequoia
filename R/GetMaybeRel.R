@@ -18,9 +18,6 @@
 #'   and included in the \code{\link{sequoia}} output. Affects which
 #'   relationships are considered possible (only those where \eqn{P(A|R) / P(A)
 #'   > 0}).
-#' @param ParSib either 'par' to check for putative parent-offspring pairs only,
-#'   or 'sib' to check for all types of first and second degree relatives. This
-#'   argument will be deprecated, please use \code{Module}.
 #' @param Module type of relatives to check for. One of
 #'   \describe{
 #'     \item{par}{parent - offspring pairs}
@@ -31,6 +28,9 @@
 #'   be otherwise related.
 #' @param MaxPairs  the maximum number of putative pairs to return.
 #' @param quiet logical, suppress messages.
+#' @param ParSib \strong{DEPRECATED, use \code{Module}} either 'par' to check
+#'   for putative parent-offspring pairs only, or 'sib' to check for all types
+#'   of first and second degree relatives.
 #' @inheritParams sequoia
 #'
 #' @return A list with
@@ -140,17 +140,17 @@ GetMaybeRel <- function(GenoM = NULL,
                         Pedigree = NULL,
                         LifeHistData = NULL,
                         AgePrior = NULL,
-                        ParSib = NULL,
                         Module = "par",
                         Complex = "full",
                         Herm = "no",
                         Err = 0.0001,
                         ErrFlavour = "version2.0",
-                        MaxMismatch = NA,   # DEPRECATED
                         Tassign = 0.5,
                         Tfilter = -2.0,
                         MaxPairs =  7*nrow(GenoM),
-                        quiet = FALSE)
+                        quiet = FALSE,
+                        ParSib = NULL,  # DEPRECATED
+                        MaxMismatch = NA)   # DEPRECATED
 {
   on.exit(.Fortran(deallocall), add=TRUE)
 

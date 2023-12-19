@@ -10,7 +10,10 @@
 #' @param OutFile character string with name of converted file. If NA, return
 #'   matrix with genotypes in console (default); if NULL, write to
 #'   'GenoForSequoia.txt' in current working directory.
-#' @param OutFormat as \code{InFormat}; only 'seq' and 'col' are implemented.
+#' @param OutFormat as \code{InFormat}; only 'seq', 'col', and 'ped' are
+#'   implemented. For 'ped' also a sham .map file is created, so that the file
+#'   can be read by PLINK. Only for 'ped' are extensions .ped & .map added to
+#'   the specified OutFile filename.
 #' @param Missing vector with symbols interpreted as missing data. '0' is
 #'   missing data for InFormats 'col' and 'ped' only.
 #' @param sep vector with field separator strings that will be tried on
@@ -122,7 +125,7 @@ GenoConvert <- function(InData = NULL,
                                     c("0")[InFormat %in% c("col","ped")]),
                         sep = c(" ", "\t", ",", ";"),
                         header = NA,
-												IDcol = NA, #
+                        IDcol = NA, #
                         FIDcol = NA,
                         FIDsep = "__",
                         dropcol = NA,
@@ -156,9 +159,9 @@ GenoConvert <- function(InData = NULL,
   if (!InFormat %in% c("raw", "seq", "col", "ped", "single", "double")) {
     stop("invalid InFormat")
   }
-  if (OutFormat %in% c("raw", "ped", "single")) {
+  if (OutFormat %in% c("raw", "single")) {
     stop("OutFormat not (yet) implemented")
-  } else if (!OutFormat %in% c("seq", "col")) {
+  } else if (!OutFormat %in% c("seq", "col", "ped")) {
     stop("invalid OutFormat")
   }
 
@@ -167,32 +170,31 @@ GenoConvert <- function(InData = NULL,
 
   if (is.na(IDcol)) {
     IDcol <- ifelse(InFormat %in% c("raw", "ped"),
-                2,
-                ifelse(!is.null(InFile),
-                       1,
-                       ifelse("ID" %in% colnames(InData),
-                          which(colnames(InData) == "ID"),
-                          0)))    # rownames
+                    2,
+                    ifelse(!is.null(InFile),
+                           1,
+                           ifelse("ID" %in% colnames(InData),
+                                  which(colnames(InData) == "ID"),
+                                  0)))    # rownames
   }
   if (InFormat %in% c("raw", "ped")) {
     if(is.na(FIDcol))   FIDcol <- 1
     if(is.na(dropcol))  dropcol <- c(3:6)
   }
 
-  if (OutFormat == "seq" & is.null(OutFile)) {
+  if (OutFormat == "seq" & is.null(OutFile)) {  # NA=to console, NULL=to file
     OutFile <- "GenoForSequoia.txt"
 
   } else if (is.null(OutFile)) {
     stop("please provide 'OutFile'")
-
   }
-  if (interactive() & !quiet & !is.na(OutFile)) {
+  if (interactive() & !quiet & !(is.na(OutFile))) {
     if (file.exists(OutFile)) {
       ANS <- readline(prompt = paste("WARNING: ", OutFile, " will be overwritten.",
-                                     "Press <N> to abort, or any other key to continue."))
+                                     "\n Press <N> to abort, or any other key to continue."))
     } else {
       ANS <- readline(prompt = paste("Genotypes will be written to ", OutFile,
-                                     " . Press <N> to abort, or any other key to continue."))
+                                     " \n Press <N> to abort, or any other key to continue."))
     }
     if (substr(ANS, 1, 1) %in% c("N", "n")) stop()
   }
@@ -251,20 +253,20 @@ GenoConvert <- function(InData = NULL,
   for (misX in Missing) {
     if (any(GenoTmp == misX, na.rm=TRUE)) {
       GenoTmp <- array(gsub(misX, NA, GenoTmp, fixed=TRUE),
-                        dim=dim(GenoTmp))
+                       dim=dim(GenoTmp))
     }
   }
 
   if (InFormat %in% c("raw", "seq")) {
     if (any(!GenoTmp %in% c(0,1,2, NA))) {
       stop(paste("Unexpected value! When InFormat=", InFormat, ", genotypes should be coded as 0/1/2.\n",
-           "Choose InFormat='single' and/or different Missing, or check data."))
+                 "Choose InFormat='single' and/or different Missing, or check data."))
     }
   } else if (InFormat =="single") {
-     if(!all(nchar(GenoTmp)==2, na.rm=T)) {
-       stop(paste("Unexpected value! When InFormat='single', genotypes should be coded as 2 digits or characters.\n",
-                  "Choose InFormat='col' for 2-columns-per-SNP format, or check data."))
-     }
+    if(!all(nchar(GenoTmp)==2, na.rm=T)) {
+      stop(paste("Unexpected value! When InFormat='single', genotypes should be coded as 2 digits or characters.\n",
+                 "Choose InFormat='col' for 2-columns-per-SNP format, or check data."))
+    }
   }
 
   if (InFormat %in% c("col", "ped", "single", "double")) {  # A/C/T/G -> 0/1/2
@@ -299,8 +301,8 @@ GenoConvert <- function(InData = NULL,
 
     GenoTmp2 <- sapply(1:dim(GCA)[3], function(i) {
       apply(GCA[,,i], 2, function(x) ifelse(is.na(x[1]) | is.na(x[2]), NA,
-                                         ifelse(x[1] != x[2], 1,  # heterozygote
-                                            ifelse(x[1] == minorAllele[i], 2, 0))) ) } )
+                                            ifelse(x[1] != x[2], 1,  # heterozygote
+                                                   ifelse(x[1] == minorAllele[i], 2, 0))) ) } )
 
   } else {
     AllHom0 <- apply(GenoTmp, 2, function(x) all(na.exclude(x) == 0))
@@ -319,132 +321,160 @@ GenoConvert <- function(InData = NULL,
     GenoOUT[is.na(GenoOUT)] <- -9
     CheckGeno(GenoOUT, quiet=quiet, Return = "excl")  # returns invisibly
 
-  } else if (OutFormat == "col") {
+  } else if (OutFormat %in% c("col", "ped")) {
     dc <- list("0" = c(1,1), "1" = c(1,2), "2" = c(2,2), "-9" = c(0,0))
     GenoTmp2[is.na(GenoTmp2)] <- -9
     GenoA <- array(dim=c(nrow(GenoTmp2), 2, ncol(GenoTmp2)))
     for (i in 1:nrow(GenoTmp2)) {
-      GenoA[i,,] <- sapply(GenoTmp2[i,], function(z) dc[[z]])
+      GenoA[i,,] <- sapply(GenoTmp2[i,], function(z) dc[[as.character(z)]])
     }
     GenoOUT <- matrix(GenoA, nrow(GenoTmp2))
-    row.names(GenoOUT) <- IDs_geno
 
-#  } else {
-#    stop("OutFormat not implemented")  # caught above
+    if (OutFormat == "col") {
+      row.names(GenoOUT) <- IDs_geno
+
+    } else if (OutFormat == 'ped') {
+      FamOUT <- data.frame(FID = 0,
+                           IID = IDs_geno,
+                           sire = 0,
+                           dam = 0,
+                           sex = 0,
+                           pheno = 0)
+
+      MapOUT <- data.frame(chrom = 0,
+                           SNP = paste0('SNP', formatC(seq_len(ncol(GenoTmp2)), width=5, flag=0)),
+                           pos_cM = 0,
+                           pos_bp = 0)
+    }
+    #  } else {
+    #    stop("OutFormat not implemented")  # caught above
   }
 
-  if (!is.na(OutFile)) {
-    utils::write.table(GenoOUT, file = OutFile,
-              row.names = TRUE, col.names = FALSE, quote = FALSE)
-  } else {
-   return(GenoOUT)
+  if (!is.na(OutFile)) {  # output to file
+    if (OutFormat == 'ped') {
+      utils::write.table(cbind(FamOUT, GenoOUT),
+                         file = paste0(OutFile, ".ped"),
+                         row.names = FALSE, col.names = FALSE, quote = FALSE)
+      utils::write.table(MapOUT, file = paste0(OutFile, ".map"),
+                         row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+    } else {
+      utils::write.table(GenoOUT, file = OutFile,
+                         row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
+  } else {  # output to console. invisible() to only print if assigned
+    if (OutFormat == 'ped') {
+      invisible( list(ped = cbind(FamOUT, GenoOUT), map = MapOUT) )
+    } else {
+      invisible( GenoOUT )
+    }
   }
 }
 
 
 
-#######################################################################
-#######################################################################
+  #######################################################################
+  #######################################################################
 
-#' @title Extract Sex and Birth Year from PLINK File
-#'
-#' @description Convert the first six columns of a PLINK .fam, .ped or
-#'  .raw file into a three-column lifehistory file for sequoia. Optionally
-#'   FID and IID are combined.
-#'
-#' @details The first 6 columns of PLINK .fam, .ped and .raw files are by
-#' default FID - IID - father ID (ignored) - mother ID (ignored) - sex -
-#' phenotype.
-#'
-#' @param PlinkFile character string with name of genotype file to be converted.
-#' @param UseFID use the family ID column. The resulting ids (rownames of GenoM)
-#'   will be in the form FID__IID.
-#' @param SwapSex change the coding from PLINK default (1=male, 2=female) to
-#'   sequoia default (1=female, 2=male); any other numbers are set to NA.
-#' @param FIDsep characters inbetween FID and IID in composite-ID. By default a
-#'   double underscore is used, to avoid problems when some IIDs contain an
-#'   underscore. Only used when UseFID=TRUE.
-#' @param LifeHistData  dataframe with additional sex and birth year info. In
-#'   case of conflicts, LifeHistData takes priority, with a warning. If
-#'   UseFID=TRUE, IDs in LifeHistData are assumed to be already as FID__IID.
-#'
-#' @return A dataframe with id, sex and birth year, which can be used as input
-#'  for \code{\link{sequoia}}.
-#'
-#' @seealso \code{\link{GenoConvert}}, \code{\link{PedStripFID}} to reverse
-#'  \code{UseFID}.
-#'
-#' @examples
-#' \dontrun{
-#' # combine FID and IID in dataframe with additional sex & birth years
-#' ExtraLH$FID_IID <- paste(ExtraLH$FID, ExtraLH$IID, sep = "__")
-#' LH.new <- LHConvert(PlinkFile, UseFID = TRUE, FIDsep = "__",
-#'                     LifeHistData = ExtraLH)
-#' }
-#'
-#' @export
+  #' @title Extract Sex and Birth Year from PLINK File
+  #'
+  #' @description Convert the first six columns of a PLINK .fam, .ped or
+  #'  .raw file into a three-column lifehistory file for sequoia. Optionally
+  #'   FID and IID are combined.
+  #'
+  #' @details The first 6 columns of PLINK .fam, .ped and .raw files are by
+  #' default FID - IID - father ID (ignored) - mother ID (ignored) - sex -
+  #' phenotype.
+  #'
+  #' @param PlinkFile character string with name of genotype file to be converted.
+  #' @param UseFID use the family ID column. The resulting ids (rownames of GenoM)
+  #'   will be in the form FID__IID.
+  #' @param SwapSex change the coding from PLINK default (1=male, 2=female) to
+  #'   sequoia default (1=female, 2=male); any other numbers are set to NA.
+  #' @param FIDsep characters inbetween FID and IID in composite-ID. By default a
+  #'   double underscore is used, to avoid problems when some IIDs contain an
+  #'   underscore. Only used when UseFID=TRUE.
+  #' @param LifeHistData  dataframe with additional sex and birth year info. In
+  #'   case of conflicts, LifeHistData takes priority, with a warning. If
+  #'   UseFID=TRUE, IDs in LifeHistData are assumed to be already as FID__IID.
+  #'
+  #' @return A dataframe with id, sex and birth year, which can be used as input
+  #'  for \code{\link{sequoia}}.
+  #'
+  #' @seealso \code{\link{GenoConvert}}, \code{\link{PedStripFID}} to reverse
+  #'  \code{UseFID}.
+  #'
+  #' @examples
+  #' \dontrun{
+  #' # combine FID and IID in dataframe with additional sex & birth years
+  #' ExtraLH$FID_IID <- paste(ExtraLH$FID, ExtraLH$IID, sep = "__")
+  #' LH.new <- LHConvert(PlinkFile, UseFID = TRUE, FIDsep = "__",
+  #'                     LifeHistData = ExtraLH)
+  #' }
+  #'
+  #' @export
 
-LHConvert <- function(PlinkFile = NULL, UseFID = FALSE,
-                      SwapSex = TRUE, FIDsep="__", LifeHistData=NULL)
-{
-  if (is.null(PlinkFile)) stop("please provide 'InFile'")
-  if (!file.exists(PlinkFile)) stop("cannot find 'PlinkFile'")
-  if (UseFID & FIDsep %in% c("", " ", "\t", "\n")) stop("sep can not be whitespace")
-  if (!is.null(LifeHistData)) {
-    LHIN <- CheckLH(LifeHistData, sorted=FALSE)
-  }
-
-  ncol <- length(scan(PlinkFile, nlines=1, what="real", quiet=TRUE))
-  TMP <- scan(PlinkFile, skip=1, what=as.list(c(rep("character", 2), rep("numeric", 4),
-                             rep("NULL", ncol-6))), quiet=TRUE)
-
-  LH <- data.frame(id = TMP[[2]],
-                   Sex = TMP[[5]],
-                   BirthYear = TMP[[6]],
-                   stringsAsFactors=FALSE)
-  if (SwapSex) {
-    LH$Sex <- ifelse(LH$Sex==1, 2,
-                     ifelse(LH$Sex==2, 1,
-                            NA))
-  }
-
-  if (UseFID) {
-    IDX <- data.frame(id.old = TMP[[2]],
-                      id.new = paste(TMP[[1]], TMP[[2]], sep=FIDsep),
-                      stringsAsFactors=FALSE)
-    LH <- merge(LH, IDX, by.x="id", by.y="id.old", all.x=TRUE)
-    LH$id <- ifelse(!is.na(LH$id.new), LH$id.new, LH$id)
-    LH <- LH[, c("id", "Sex", "BirthYear")]
-  }
-
-  if (!is.null(LHIN)) {
-    names(LHIN) <- c("id", "Sex", "BirthYear")
-    LH$Sex[!LH$Sex %in% c(1,2)] <- NA
-    LHIN$Sex[!LHIN$Sex %in% c(1,2)] <- NA
-    LH$BirthYear[LH$BirthYear < 0] <- NA
-    LHIN$BirthYear[LHIN$BirthYear < 0] <- NA
-
-    chk <- merge(LH, LHIN, by="id")
-    n.sexmismatch <- sum(chk$Sex.x != chk$Sex.y, na.rm=T)
-    n.BYmismatch <- sum(chk$BirthYear.x != chk$BirthYear.y, na.rm=T)
-    if (n.sexmismatch > 0 & n.sexmismatch <= 10) {
-      these <- with(chk, id[which(!is.na(Sex.x) & !is.na(Sex.y) & Sex.x!=Sex.y)])
-      warning(paste("There are", n.sexmismatch, "sex mismatches: ",
-                    paste(these, collapse=", ")))
-    } else if (n.sexmismatch>10) {
-      warning(paste("There are", n.sexmismatch, "sex mismatches"))
-    }
-    if (n.BYmismatch > 0 & n.BYmismatch <= 10) {
-      these <- with(chk, id[which(!is.na(BirthYear.x) & !is.na(BirthYear.y) & BirthYear.x!=BirthYear.y)])
-      warning(paste("There are", n.BYmismatch, "birth year mismatches: ",
-                    paste(these, collapse=", ")))
-    } else if (n.BYmismatch>10) {
-      warning(paste("There are", n.BYmismatch, "BY mismatches"))
+  LHConvert <- function(PlinkFile = NULL, UseFID = FALSE,
+                        SwapSex = TRUE, FIDsep="__", LifeHistData=NULL)
+  {
+    if (is.null(PlinkFile)) stop("please provide 'InFile'")
+    if (!file.exists(PlinkFile)) stop("cannot find 'PlinkFile'")
+    if (UseFID & FIDsep %in% c("", " ", "\t", "\n")) stop("sep can not be whitespace")
+    if (!is.null(LifeHistData)) {
+      LHIN <- CheckLH(LifeHistData, sorted=FALSE)
     }
 
-    LH <- MergeFill(LH, LHIN, by="id", overwrite=TRUE, all=TRUE)
-  }
+    ncol <- length(scan(PlinkFile, nlines=1, what="real", quiet=TRUE))
+    TMP <- scan(PlinkFile, skip=1, what=as.list(c(rep("character", 2), rep("numeric", 4),
+                                                  rep("NULL", ncol-6))), quiet=TRUE)
 
-  LH
-}
+    LH <- data.frame(id = TMP[[2]],
+                     Sex = TMP[[5]],
+                     BirthYear = TMP[[6]],
+                     stringsAsFactors=FALSE)
+    if (SwapSex) {
+      LH$Sex <- ifelse(LH$Sex==1, 2,
+                       ifelse(LH$Sex==2, 1,
+                              NA))
+    }
+
+    if (UseFID) {
+      IDX <- data.frame(id.old = TMP[[2]],
+                        id.new = paste(TMP[[1]], TMP[[2]], sep=FIDsep),
+                        stringsAsFactors=FALSE)
+      LH <- merge(LH, IDX, by.x="id", by.y="id.old", all.x=TRUE)
+      LH$id <- ifelse(!is.na(LH$id.new), LH$id.new, LH$id)
+      LH <- LH[, c("id", "Sex", "BirthYear")]
+    }
+
+    if (!is.null(LHIN)) {
+      names(LHIN) <- c("id", "Sex", "BirthYear")
+      LH$Sex[!LH$Sex %in% c(1,2)] <- NA
+      LHIN$Sex[!LHIN$Sex %in% c(1,2)] <- NA
+      LH$BirthYear[LH$BirthYear < 0] <- NA
+      LHIN$BirthYear[LHIN$BirthYear < 0] <- NA
+
+      chk <- merge(LH, LHIN, by="id")
+      n.sexmismatch <- sum(chk$Sex.x != chk$Sex.y, na.rm=T)
+      n.BYmismatch <- sum(chk$BirthYear.x != chk$BirthYear.y, na.rm=T)
+      if (n.sexmismatch > 0 & n.sexmismatch <= 10) {
+        these <- with(chk, id[which(!is.na(Sex.x) & !is.na(Sex.y) & Sex.x!=Sex.y)])
+        warning(paste("There are", n.sexmismatch, "sex mismatches: ",
+                      paste(these, collapse=", ")))
+      } else if (n.sexmismatch>10) {
+        warning(paste("There are", n.sexmismatch, "sex mismatches"))
+      }
+      if (n.BYmismatch > 0 & n.BYmismatch <= 10) {
+        these <- with(chk, id[which(!is.na(BirthYear.x) & !is.na(BirthYear.y) & BirthYear.x!=BirthYear.y)])
+        warning(paste("There are", n.BYmismatch, "birth year mismatches: ",
+                      paste(these, collapse=", ")))
+      } else if (n.BYmismatch>10) {
+        warning(paste("There are", n.BYmismatch, "BY mismatches"))
+      }
+
+      LH <- MergeFill(LH, LHIN, by="id", overwrite=TRUE, all=TRUE)
+    }
+
+    LH
+  }
 

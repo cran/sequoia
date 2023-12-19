@@ -92,7 +92,7 @@ UA <- cbind("no" = c("Y", "Y", ""),
 rownames(UA) <- c("$LR_{age} > 0$", "$LLR_{SNP} > T_{assign}$", 
                   "$LLR_{SNP} + LLR_{age} > T_{assign}$")
 
-knitr::kable(UA, caption = "Parameter 'UseAge' (see text for definitions)", align='ccc', escape=FALSE, booktabs=TRUE, position="!h")
+knitr::kable(UA, caption = "Parameter 'UseAge' (see text for definitions)", align='ccc', escape=FALSE, booktabs=TRUE, position="!ht")
 
 ## ----griffin-useAge-1, echo=TRUE, eval=TRUE-----------------------------------
 data(Ped_griffin, SeqOUT_griffin, package="sequoia")
@@ -187,9 +187,9 @@ cor(Rped.both$R.ped.new, Rped.both$R.ped.old, use="pairwise.complete")
 plot(Rped.both$R.ped.old, Rped.both$R.ped.new, pch=16, cex=0.3,
      xlab = 'R (old ped)', ylab = 'R (new ped)')
 
-## ----eval=TRUE, fig.cap="Relatedness hexbinplot example", out.width="80%", position="!h"----
+## ----eval=TRUE, fig.cap="Relatedness hexbinplot example", out.width="80%", position="!ht"----
 knitr::include_graphics("hexbin.png")
 
-## ----parent-selfed, echo=FALSE, eval=TRUE, fig.cap="Two configurations with identical likelihoods", out.width="20%", fig.pos="!h", fig.align="center"----
+## ----parent-selfed, echo=FALSE, eval=TRUE, fig.cap="Two configurations with identical likelihoods", out.width="20%", fig.pos="!ht", fig.align="center"----
 knitr::include_graphics("selfed_parent.png")
 

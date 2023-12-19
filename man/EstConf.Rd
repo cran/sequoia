@@ -139,6 +139,14 @@ The confidence probability is taken as the number of correct
   statistics for each run rather than the full output.
 }
 
+\section{Errors}{
+
+  If you have a large pedigree and try to run this function on multiple
+  cores, you may run into "Cannot allocate vector of size ..." errors or even
+  unexpected crashes: there is not enough computer memory for each separate
+  run. Try reducing `nCores`.
+}
+
 \examples{
 # estimate proportion of parents that are genotyped (= 1 - ParMis)
 sumry_grif <- SummarySeq(SeqOUT_griffin, Plot=FALSE)
@@ -150,9 +158,9 @@ props <- sweep(tmp, MARGIN='parentCat', STATS = rowSums(tmp), FUN = '/')
 # Example for parentage assignment only
 conf_grif <- EstConf(Pedigree = SeqOUT_griffin$Pedigree,
                LifeHistData = SeqOUT_griffin$LifeHist,
-               args.sim = list(nSnp = 200,   # no. in actual data, or what-if
+               args.sim = list(nSnp = 150,   # no. in actual data, or what-if
                                SnpError = 5e-3,  # best estimate, or what-if
-                               CallRate=0.8,     # from SnpStats()
+                               CallRate=0.9,     # from SnpStats()
                                ParMis=c(0.39, 0.20)),  # calc'd above
                args.seq = list(Err=5e-3, Module="par"),  # as in real run
                nSim = 1,   # try-out, proper run >=20 (10 if huge pedigree)
@@ -180,6 +188,7 @@ saveRDS(conf_grif[c('ConfProb','PedComp.fwd','RunParams','RunTime','Note')],
 }
 
 ## P(actual FS | inferred as FS) etc.
+\dontrun{
 PairL <- list()
 for (i in 1:length(conf_grif$Pedigree.inferred)) {  # nSim
   cat(i, "\t")
@@ -189,14 +198,22 @@ for (i in 1:length(conf_grif$Pedigree.inferred)) {  # nSim
                              Return="Counts")
 }
 # P(actual relationship (Ped1) | inferred relationship (Ped2))
-PairRel.prop <- plyr::laply(PairL, function(M)
-    sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
-# if nSim>1: mean across simulations
-# PairRel.prop <- apply(PairRel.prop, 2:3, mean, na.rm=TRUE)
+PairRel.prop.A <- plyr::laply(PairL, function(M)
+                     sweep(M, MARGIN='Ped2', STATS=colSums(M), FUN="/"))
+PairRel.prop <- apply(PairRel.prop.A, 2:3, mean, na.rm=TRUE) #avg across sims
 round(PairRel.prop, 3)
 # or: P(inferred relationship | actual relationship)
 PairRel.prop2 <- plyr::laply(PairL, function(M)
    sweep(M, MARGIN='Ped1', STATS=rowSums(M), FUN="/"))
+}
+
+\dontrun{
+# confidence probability vs. sibship size
+source('https://raw.githubusercontent.com/JiscaH/sequoiaExtra/main/conf_vs_sibsize.R')
+conf_grif_nOff <- Conf_by_nOff(conf_grif)
+conf_grif_nOff['conf',,'GD',]
+conf_grif_nOff['N',,'GD',]
+}
 
 }
 \seealso{

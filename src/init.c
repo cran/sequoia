@@ -131,10 +131,10 @@ static R_NativePrimitiveArgType eType[] = {
 
 
 static R_NativePrimitiveArgType relType[] = {
-  INTSXP,
-  INTSXP,
-  INTSXP,
-  INTSXP,
+  INTSXP,  // nInd
+  INTSXP,  // PedRF
+  INTSXP,  // nRel
+  INTSXP,  // RelV
 };
 
 static R_NativePrimitiveArgType esterType[] = {
@@ -201,7 +201,7 @@ static const R_FortranMethodDef FortranEntries[] = {
 };
 
 
-void attribute_visible R_init_sequoia(DllInfo *info)  // attribute_visible -> error
+void attribute_visible R_init_sequoia(DllInfo *info)  
 {
   R_registerRoutines(info,
                      NULL,          // .C
@@ -209,5 +209,5 @@ void attribute_visible R_init_sequoia(DllInfo *info)  // attribute_visible -> er
                      FortranEntries, // .Fortran
                      NULL);         // .External
   R_useDynamicSymbols(info, FALSE);
-	R_forceSymbols(info, TRUE);  //available from R 3.0.0
+	R_forceSymbols(info, TRUE);  
 }
