@@ -21,8 +21,7 @@
 #'   Mendelian errors per SNP and (poorly) estimate the error rate.
 #' @param Duplicates  dataframe with pairs of duplicated samples
 #' @param Plot  show histograms of the results?
-#' @param ErrFlavour  DEPRECATED AND IGNORED. Was used to estimate
-#'   \code{Err.hat}; see \code{\link{EstEr}}.
+#' @param ErrFlavour DEPRECATED AND IGNORED. Was used to estimate \code{Err.hat}
 #'
 #' @return A matrix with a number of rows equal to the number of SNPs
 #'  (=number of columns of GenoM), and when no Pedigree is provided 2 columns:
@@ -44,7 +43,7 @@
 #' @seealso  \code{\link{GenoConvert}} to convert from various data formats;
 #'   \code{\link{CheckGeno}} to check the data is in valid format for sequoia
 #'   and exclude monomorphic SNPs etc., \code{\link{CalcOHLLR}} to calculate OH
-#'   & ME per individual; \code{\link{EstEr}} to estimate genotyping error rate.
+#'   & ME per individual.
 #'
 #' @examples
 #' Genotypes <- SimGeno(Ped_HSg5, nSnp=100, CallRate = runif(100, 0.5, 0.8),

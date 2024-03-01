@@ -9,6 +9,7 @@ GetRelM(
   Pairs = NULL,
   GenBack = 1,
   patmat = FALSE,
+  directed = TRUE,
   Return = "Matrix",
   Pairs_suffix = "?"
 )
@@ -26,6 +27,14 @@ avuncular and first cousins.}
 
 \item{patmat}{logical, distinguish between paternal versus maternal relative
 pairs? For avuncular pairs, the distinction is never made.}
+
+\item{directed}{logical, distinguish between e.g. ID1=offspring, ID2=mother
+('M') and ID1=mother, ID2=offspring ('O')? Defaults to TRUE; if FALSE both
+are are scored as 'PO', as are father-offspring pairs, and all
+grandparent-- grand-offspring pairs are scored as 'GPO', and avuncular
+pairs as 'FNA' and 'HNA'. Not (currently) compatible with \code{patmat}.
+When \code{Return}='List', each pair is included twice (as ID1-ID2 &
+ID2-ID1)}
 
 \item{Return}{'Matrix', 'Array', or 'List'. 'Matrix' returns an N x N matrix
 with the closest relationship between each pair. 'Array' returns an N x N x
@@ -96,7 +105,8 @@ Double relationships are ignored when \code{Return='Matrix'}, but
   other functions.
 }
 \examples{
-Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
+Rel.griffin <- GetRelM(Ped_griffin, directed=FALSE)  # few categories
+Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)  # many cat.
 table(as.vector(Rel.griffin))
 # turning matrix into vector first makes table() much faster
 PlotRelPairs(Rel.griffin)

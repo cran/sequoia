@@ -60,10 +60,17 @@
 #'   NOTE: \emph{Until `MaxSibIter` is fully deprecated: if `MaxSibIter` differs
 #'   from the default (\code{42}), and `Module` equals the default
 #'   (\code{'ped'}), MaxSibIter overrides `Module`.}
-#' @param Err estimated genotyping error rate, as a single number, length 3
-#'   vector or 3x3 matrix; see details below. The error rate is presumed
-#'   constant across SNPs, and missingness is presumed random with respect to
-#'   actual genotype. Using \code{Err} >5\% is not recommended.
+#' @param Err estimated genotyping error rate, as a single number, or a length 3
+#'   vector with P(hom|hom), P(het|hom), P(hom|het), or a 3x3 matrix. See
+#'   details below. The error rate is presumed constant across SNPs, and
+#'   missingness is presumed random with respect to actual genotype. Using
+#'   \code{Err} >5\% is not recommended, and \code{Err} >10\% strongly
+#'   discouraged.
+#' @param ErrFlavour function that takes \code{Err} (single number) as input,
+#'   and returns a length 3 vector or 3x3 matrix, or choose from inbuilt options
+#'   'version2.9', 'version2.0', 'version1.3', or 'version1.1', referring to the
+#'   sequoia version in which they were the default. Ignored if \code{Err} is a
+#'   vector or matrix. See \code{\link{ErrToM}} for details.
 #' @param Tfilter threshold log10-likelihood ratio (LLR) between a proposed
 #'   relationship versus unrelated, to select candidate relatives. Typically a
 #'   negative value, related to the fact that unconditional likelihoods are
@@ -111,12 +118,6 @@
 #'   the unavoidable default up to version 2.4.1. Otherwise only excluded are
 #'   (very nearly) monomorphic SNPs, SNPs scored for fewer than 2 individuals,
 #'   and individuals scored for fewer than 2 SNPs.
-#' @param ErrFlavour \strong{DEPRECATED, (use length 3 vector for \code{Err}
-#'   instead)} function that takes \code{Err} (single number) as input, and
-#'   returns a 3x3 matrix of observed (columns) conditional on actual (rows)
-#'   genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
-#'   'version1.1', referring to the sequoia version in which they were the
-#'   default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.
 #' @param MaxSibIter \strong{DEPRECATED, use \code{Module}} number of iterations
 #'   of sibship clustering, including assignment of grandparents to sibships and
 #'   avuncular relationships between sibships. Clustering continues until
@@ -207,24 +208,20 @@
 #' @section Genotyping error rate:
 #'   The genotyping error rate \code{Err} can be specified three different ways:
 #'   \itemize{
-#'    \item A single number, which is combined with \code{ErrFlavour} to create
-#'   a 3x3 matrix with the probabilities of observed genotype (columns)
-#'   conditional on actual genotype (rows). By default (\code{ErrFlavour} =
-#'   'version2.0'), \code{Err} is interpreted as the locus level error rate (as
-#'   opposed to allele level), e.g. the probability to observe a true
-#'   heterozygote \emph{Aa} as \emph{aa} (het -> hom) = the probability to
-#'   observe it as \emph{AA} \eqn{=E/2}. See \code{\link{ErrToM}} for details
-#'   and examples.
+#'    \item A single number, which is combined with \code{ErrFlavour} by
+#'      \code{\link{ErrToM}} to create a length 3 vector (next item). By
+#'      default (\code{ErrFlavour} = 'version2.9'), P(hom|hom)=$(E/2)^2$,
+#'      P(het|hom)=$E-(E/2)^2$, P(hom|het)=$E/2$.
+#'   \item a length 3 vector (NEW from version 2.6), with the probabilities to
+#'     observe a actual homozygote as the other homozygote (hom|hom), to observe
+#'     a homozygote as heterozygote (het|hom), and to observe an actual
+#'     heterozygote as homozygote (hom|het). This assumes that the two alleles
+#'     are equivalent with respect to genotyping errors, i.e. $P(AA|aa) =
+#'     P(aa|AA)$, $P(aa|Aa)=P(AA|Aa)$, and $P(aA|aa)=P(aA|AA)$.
 #'   \item a 3x3 matrix, with the probabilities of observed genotype (columns)
-#'   conditional on actual genotype (rows)
-#'   \item a length 3 vector, with the probabilities to observe a actual
-#'   homozygote as the other homozygote, to observe a homozygote as
-#'   heterozygote, and to observe an actual heterozygote as homozygote (NEW from
-#'   version 2.6). This only assumes that the two alleles are equivalent with
-#'   respect to genotyping errors, i.e. $P(AA|aa) = P(aa|AA)$ and
-#'   $P(aa|Aa)=P(AA|Aa)$.
+#'     conditional on actual genotype (rows). Only needed when the assumption
+#'     in the previous item does not hold. See \code{\link{ErrToM}} for details.
 #'   }
-#'
 #'
 #' @section (Too) Few Assignments?:
 #' Possibly \code{Err} is much lower than the actual genotyping error rate.
@@ -245,7 +242,9 @@
 #'    data
 #'  }
 #'  All pairs of non-assigned but likely/definitely relatives can be found with
-#'  \code{\link{GetMaybeRel}}. For further information see the vignette.
+#'  \code{\link{GetMaybeRel}}. For a method to do pairwise 'assignments', see
+#'  https://jiscah.github.io/articles/pairLL_classification.html ; for further
+#'  information, see the vignette.
 #'
 #' @section Disclaimer:
 #' While every effort has been made to ensure that sequoia provides what it
@@ -267,7 +266,6 @@
 #'   \item \code{\link{CheckGeno}}, \code{\link{SnpStats}} to calculate
 #'     missingness and allele frequencies,
 #'   \item \code{\link{SimGeno}}  to simulate SNP data from a pedigree,
-#'   \item \code{\link{EstEr}} to estimate genotyping error rate,
 #'   \item \code{\link{MakeAgePrior}} to estimate effect of age on relationships,
 #'   \item \code{\link{GetMaybeRel}} to find pairs of potential relatives,
 #'   \item \code{\link{SummarySeq}} and \code{\link{PlotAgePrior}} to visualise
@@ -418,6 +416,7 @@ sequoia <- function(GenoM = NULL,
 
 
   # Check genotype matrix ----
+  GenoM[is.na(GenoM)] <- -9
   Excl <- CheckGeno(GenoM, quiet=quietR, Plot=Plot, Return = "excl",
                     Strict = StrictGenoCheck, DumPrefix=DummyPrefix)
   if ("ExcludedSnps" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
@@ -442,15 +441,17 @@ sequoia <- function(GenoM = NULL,
     gID <- rownames(GenoM)
     tbl_sex <- table(factor(LifeHistData$Sex[LifeHistData$ID %in% gID], levels=1:4))
     message("There are ", tbl_sex['1'], " females, ", tbl_sex['2'], " males, ",
-            tbl_sex['3'], " individuals of unkwown sex, and ",
+            tbl_sex['3'], " individuals of unknown sex, and ",
             tbl_sex['4'], " hermaphrodites.")
     range_Year <- matrix(NA,4,2, dimnames=list(c("BirthYear", "BY.min", "BY.max", 'Year.last'),
                                             c('min', 'max')))
     for (x in rownames(range_Year)) {
-      range_Year[x,] <- range(LifeHistData[,x][LifeHistData$ID %in% gID & LifeHistData[,x] >= 0])
+      range_Year[x,] <- suppressWarnings(
+        range(LifeHistData[,x][LifeHistData$ID %in% gID & LifeHistData[,x] >= 0]))
     }
     message("Exact birth years are from ", range_Year[1,1], " to ", range_Year[1,2])
-    message("Birth year min/max are from ", min(range_Year[2:3,1], na.rm=TRUE), " to ",
+    if (any(is.finite(range_Year[2:3,])))
+      message("Birth year min/max are from ", min(range_Year[2:3,1], na.rm=TRUE), " to ",
             max(range_Year[2:3,2], na.rm=TRUE))
   }
 

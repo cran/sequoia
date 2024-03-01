@@ -22,8 +22,8 @@ choose from inbuilt ones as used in sequoia 'version2.0', 'version1.3', or
 
 \item{qntl}{quantile of binomial distribution to be used as the maximum, of
 individual-level probability. For a desired dataset-level probability
-quantile \eqn{Q}, use \eqn{qntl = Q^(1/N)}, where \eqn{N} is the number of
-individuals.}
+quantile \eqn{Q}, use \code{qntl}\eqn{= Q^{(1/N)}}, where \eqn{N} is
+the number of individuals.}
 }
 \value{
 A vector with three integers:

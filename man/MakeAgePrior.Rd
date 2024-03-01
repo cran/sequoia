@@ -31,7 +31,9 @@ offspring. It may include individuals not in the pedigree, and not all
 individuals in the pedigree need to be in LifeHistData.}
 
 \item{MinAgeParent}{minimum age of a parent, a single number (min across
-dams and sires) or a vector of length two (dams, sires). Defaults to 1.}
+dams and sires) or a vector of length two (dams, sires). Defaults to 1.
+When there is a conflict with the minimum age in the pedigree, the pedigree
+takes precedent.}
 
 \item{MaxAgeParent}{maximum age of a parent, a single number (max across
 dams and sires) or a vector of length two (dams, sires). If NULL, it will
@@ -186,7 +188,10 @@ Estimate probability ratios \eqn{P(R|A) / P(R)} for age
  If the age distribution of assigned parents does not capture the maximum
  possible age of parents, it is advised to specify \code{MaxAgeParent} for
  one or both sexes. Not doing so may hinder subsequent assignment of both
- dummy parents and grandparents. Not compatible with \code{Smooth}.
+ dummy parents and grandparents. Not compatible with \code{Smooth}. If the
+ largest age difference in the pedigree is larger than the specified
+ \code{MaxAgeParent}, the pedigree takes precedent (i.e. the largest of the
+ two is used).
 
  @section grandparents & avuncular
  The agepriors for grand-parental and avuncular pairs is calculated from

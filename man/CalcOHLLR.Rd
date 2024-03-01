@@ -73,17 +73,18 @@ except 'CalcLLR' and 'AgePriors=FALSE'. The list elements  `LifeHist',
 `AgePriors', and `ErrM' are also used if present, and override the
 corresponding input parameters.}
 
-\item{Err}{estimated genotyping error rate, as a single number, length 3
-vector or 3x3 matrix; see details below. The error rate is presumed
-constant across SNPs, and missingness is presumed random with respect to
-actual genotype. Using \code{Err} >5\% is not recommended.}
+\item{Err}{estimated genotyping error rate, as a single number, or a length 3
+vector with P(hom|hom), P(het|hom), P(hom|het), or a 3x3 matrix. See
+details below. The error rate is presumed constant across SNPs, and
+missingness is presumed random with respect to actual genotype. Using
+\code{Err} >5\% is not recommended, and \code{Err} >10\% strongly
+discouraged.}
 
-\item{ErrFlavour}{\strong{DEPRECATED, (use length 3 vector for \code{Err}
-instead)} function that takes \code{Err} (single number) as input, and
-returns a 3x3 matrix of observed (columns) conditional on actual (rows)
-genotypes, or choose from inbuilt options 'version2.0', 'version1.3', or
-'version1.1', referring to the sequoia version in which they were the
-default. Ignored if \code{Err} is a matrix. See \code{\link{ErrToM}}.}
+\item{ErrFlavour}{function that takes \code{Err} (single number) as input,
+and returns a length 3 vector or 3x3 matrix, or choose from inbuilt options
+'version2.9', 'version2.0', 'version1.3', or 'version1.1', referring to the
+sequoia version in which they were the default. Ignored if \code{Err} is a
+vector or matrix. See \code{\link{ErrToM}} for details.}
 
 \item{Tassign}{minimum LLR required for acceptance of proposed relationship,
 relative to next most likely relationship. Higher values result in more

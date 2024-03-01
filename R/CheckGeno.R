@@ -83,6 +83,7 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
   # basic checks ----
   if (is.null(GenoM)) stop("please provide 'GenoM'")
   if (!is.matrix(GenoM)) stop("'GenoM' should be a numeric matrix")
+  GenoM[is.na(GenoM)] <- -9
   if (!all(GenoM %in% c(0,1,2,-1, -9))) {
     UniqueValues <- unique(c(GenoM))
     InvalidValues <- UniqueValues[!UniqueValues %in% c(0,1,2,-1,-9)]
@@ -97,14 +98,15 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     stop("'GenoM' has no rownames, these should be the individual IDs")
   if (any(duplicated(rownames(GenoM))))
     stop("'GenoM' has duplicate IDs. Please exclude or rename these samples,",
-         " or run GenoConvert with UseFID=TRUE.")
+         " or run GenoConvert() with UseFID=TRUE.")
   if (any(grepl(" ", rownames(GenoM))))
-    stop("GenoM rownames must not include spaces")
+    stop("GenoM IDs (rownames) must not include spaces")
 
   DP <- sapply(DumPrefix, function(x) ifelse(nchar(x)==1, paste0(x,"0"), x))
   for (i in seq_along(DumPrefix)) {
     if (any(substr(rownames(GenoM),1,nchar(DP[i]))==DP[i])) {
-      stop("DummyPrefix must not occur in GenoM rownames")
+      stop("GenoM IDs (rownames) may not start with Dummy prefix+0,",
+           " use argument DummyPrefix to change them (current: ", DP[1], ', ', DP[2], ")")
     }
   }
 

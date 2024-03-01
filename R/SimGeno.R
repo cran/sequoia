@@ -16,7 +16,8 @@
 #'   dam - sire, additional columns are ignored.
 #' @param nSnp  number of SNPs to simulate.
 #' @param ParMis  single number or vector length two with proportion of parents
-#'   with fully missing genotype. Ignored if CallRate is a named vector.
+#'   with fully missing genotype. Ignored if CallRate is a named vector. NOTE:
+#'   default changed from 0.4 (up to version 2.8.5) to 0 (from version 2.9).
 #' @param MAF  either a single number with minimum minor allele frequency, and
 #'   allele frequencies will be sampled uniformly between this minimum and 0.5,
 #'   OR a vector with minor allele frequency at each locus. In both cases, this
@@ -28,12 +29,15 @@
 #'   ignored, and individuals in the pedigree (as id or as parent) not included
 #'   in this vector are presumed non-genotyped.
 #' @param SnpError  either a single value which will be combined with
-#'   \code{ErrorFM}, or a length 3 vector with probabilities (observed given
+#'   \code{ErrorFV}, or a length 3 vector with probabilities (observed given
 #'   actual) hom|other hom, het|hom, and hom|het; OR a vector or 3XnSnp matrix
 #'   with the genotyping error rate(s) for each SNP.
+#' @param ErrorFV  function taking the error rate (scalar) as argument and
+#'   returning a length 3 vector with hom->other hom, hom->het, het->hom.
 #' @param ErrorFM  function taking the error rate (scalar) as argument and
 #'   returning a 3x3 matrix with probabilities that actual genotype i (rows) is
-#'   observed as genotype j (columns). See below for details
+#'   observed as genotype j (columns). See below for details. To use, set
+#'   \code{ErrorFV = NULL}
 #' @param ReturnStats in addition to the genotype matrix, return the input
 #'   parameters and mean & quantiles of MAF, error rate and call rates.
 #' @param quiet suppress messages.
@@ -101,7 +105,7 @@
 #' @seealso The wrapper \code{\link{EstConf}} for repeated simulation and
 #'   pedigree reconstruction; \code{\link{MkGenoErrors}} for fine control over
 #'   the distribution of genotyping errors in simulated data;
-#'   \code{\link{EstEr}} to estimate genotyping error rate.
+#'   \code{\link{ErrToM}} for more information about genotyping error patterns.
 #'
 #' @author Jisca Huisman, \email{jisca.huisman@gmail.com}
 #'
@@ -121,6 +125,9 @@
 #' Geno_B <- SimGeno(Pedigree = Ped_HSg5, nSnp = 100, ParMis = 0.2,
 #'                  SnpError = c(0.01, 0.04, 0.1))
 #'
+#' Geno_C <- SimGeno(Pedigree = Ped_griffin, nSnp=200, ParMis=0, CallRate=0.6,
+#'                   SnpError = 0.05, ErrorFV=function(E) c(E/10, E/10, E))
+#'
 #' # genotype matrix with duplicated samples:
 #' Dups_grif <- data.frame(ID1 = c('i006_2001_M', 'i021_2002_M', 'i064_2004_F'))
 #' Dups_grif$ID2 <- paste0(Dups_grif$ID1, '_2')
@@ -139,20 +146,22 @@
 
 SimGeno <- function(Pedigree,
                     nSnp = 400,
-                    ParMis = 0.4,
+                    ParMis = c(0,0),
                     MAF = 0.3,
                     CallRate = 0.99,
                     SnpError = 5e-4,
-                    ErrorFM = "version2.0",
+                    ErrorFV = function(E) c((E/2)^2, E-(E/2)^2, E/2),  # hom|hom, het|hom, hom|het
+                    ErrorFM = NULL,
 					          ReturnStats = FALSE,
 					          quiet = FALSE)
 {
   if (missing(Pedigree)) stop("please provide a pedigree to simulate from")
 
   # unavoidable partial matching when 'Err' is specified instead of 'SnpError'
-  if (is.numeric(ErrorFM)) {
-    SnpError <- ErrorFM
-    ErrorFM <- "version2.0"   # problem doesn't occur when 'ErrorFM' specified; restore default
+  if (is.numeric(ErrorFV)) {
+    SnpError <- ErrorFV
+    # problem doesn't occur when 'ErrorFV' specified; restore default
+    ErrorFV <- function(E) c((E/2)^2, E-(E/2)^2, E/2)
   }
 
   #================================
@@ -258,33 +267,9 @@ SimGeno <- function(Pedigree,
   NotSampled <- which(apply(SGeno, 1, function(x) all(x<0)))
 
   if (any(ParMis>0) & is.null(names((CallRate)))==1) {
-    if (length(na.exclude(intersect(Ped[,2], Ped[,3]))) >0) {
-      if (ParMis[1] != ParMis[2]) {
-        stop("With hermaphrodites, 'ParMis' must be equal for dams & sires")
-#      } else if (!quiet) {
-#        message("detected hermaphrodites ... ")
-      }
-      IsParent <- which(Ped[,1] %in% Ped[,2] | Ped[,1] %in% Ped[,3])
-      if (round(length(IsParent)*ParMis[1]) > 0) {
-        NotSampled <- c(NotSampled,
-                        sample(IsParent, round(length(IsParent)*ParMis[1]),
-                               replace=FALSE) )
-      }
-
-    } else {
-
-      for (p in 1:2) {
-        if (ParMis[p]>0) {
-          IsParent <- which(Ped[,1] %in% Ped[,p+1])
-        }
-        if (round(length(IsParent)*ParMis[p]) > 0) {
-          NotSampled <- c(NotSampled,
-                          sample(IsParent, round(length(IsParent)*ParMis[p]),
-                                 replace=FALSE) )
-        }
-      }
-    }
+    NotSampled <- c(SelectNotSampled(Ped, ParMis), NotSampled)
   }
+
   if (length(NotSampled)>0) {
     SGeno <- SGeno[-NotSampled, ]
     SGeno.actual <- SGeno.actual[-NotSampled, ]
@@ -326,57 +311,61 @@ SimGeno <- function(Pedigree,
 #'
 #' @param SGeno  matrix with genotype data in Sequoia's format: 1 row per
 #'   individual, 1 column per SNP, and genotypes coded as 0/1/2.
-#' @param CallRate either a single number for the mean call rate (genotyping
-#'   success), OR a vector with the call rate at each SNP, OR a named vector
-#'   with the call rate for each individual. In the third case, ParMis is
-#'   ignored, and individuals in the pedigree (as id or parent) not included in
-#'   this vector are presumed non-genotyped.
-#' @param SnpError  either a single value which will be combined with \code{ErrorFM},
-#'    or a length 3 vector with  hom->other hom, hom->het, het-hom error rates;
-#'     OR a vector or 3XnSnp matrix with the genotyping error rate(s) for each SNP.
-#' @param ErrorFM  function taking the error rate (scalar) as argument and
-#'   returning a 4x4 or 3x3 matrix with probabilities that actual genotype i
-#'   (rows) is observed as genotype j (columns).
 #' @param Error.shape first shape parameter (alpha) of beta-distribution of
 #'   per-SNP error rates. A higher value results in a flatter distribution.
 #' @param CallRate.shape as Error.shape, for per-SNP call rates.
+#' @param WithLog  Include dataframe in output with which datapoints have been
+#'    edited, with columns id - SNP - actual (original, input) - observed
+#'    (edited, output).
+#' @inheritParams SimGeno
 #'
 #' @return  The input genotype matrix, with some genotypes replaced, and some
-#'   set to missing (-9).
+#'   set to missing (-9). If \code{WithLog=TRUE}, a list with 3 elements: GenoM,
+#'   Log, and Counts_actual (genotype counts in input, to allow double checking
+#'   of simulated genotyping error rate).
 #'
 #' @export
 
 MkGenoErrors <- function(SGeno,
                          CallRate = 0.99,
-                         SnpError = c((5e-4/2)^2, 5e-4/2, 5e-4*(1-5e-4/2)),
-                         ErrorFM = function(E) {
-                           matrix(c(1-E-(E/2)^2, E, (E/2)^2,
-                                    E/2, 1-E, E/2,
-                                    (E/2)^2, E, 1-E-(E/2)^2),
-                                  3,3, byrow=TRUE) },
+                         SnpError = 5e-4,
+                         ErrorFV = function(E) c((E/2)^2, E-(E/2)^2, E/2),  # hom|hom, het|hom, hom|het
+                         ErrorFM = NULL,
                          Error.shape=0.5,
-                         CallRate.shape=1)
+                         CallRate.shape=1,
+                         WithLog = FALSE)
 {
+  SGeno_orig <- SGeno
   nSnp <- ncol(SGeno)
   nInd <- nrow(SGeno)
 
   #~~~~~~~~~
   if (any(SnpError >0)) {
-    if (length(SnpError) %in% c(1, nSnp)) {
+    # function to create beta distributed error rates across SNPs
+    rbeta_fun <- function(e) rbeta(nSnp, shape1=Error.shape, shape2=Error.shape*(1/e -1))
+    if (length(SnpError) %in% c(1, nSnp) & !is.null(ErrorFV)) {
+      if (length(SnpError) == 1) {
+        SnpError <- ErrorFV(SnpError)
+      } else {
+        SnpError <- sapply(SnpError, ErrorFV)
+      }
+    }
+    if (length(SnpError) %in% c(3, 3*nSnp)) {
+      if (length(SnpError)==3) {
+        Err_per_SNP <- sapply(SnpError, rbeta_fun)
+      } else if (length(SnpError) == 3*nSnp) {
+        Err_per_SNP <- t(SnpError)
+      }
+      Act2Obs <- plyr::aaply(Err_per_SNP, .margins=1, .fun=ErV2M)
+
+    } else if (length(SnpError) %in% c(1, nSnp)) {
+      if (is.null(ErrorFM))  stop('please provide either ErrorFV or ErrorFM, or SnpError as a length-3 vector')
       if (length(SnpError)==1) {
-        El <- rbeta(nSnp, shape1=Error.shape, shape2=Error.shape*(1/SnpError -1))
-      } else if (length(SnpError) == ncol(SGeno)) {
+        El <- rbeta_fun(SnpError)
+      } else {
         El <- SnpError
       }
       Act2Obs <- plyr::laply(El, ErrorFM)
-
-    } else if (length(SnpError) %in% c(3, 3*nSnp)) {
-      if (length(SnpError)==3) {
-        Err_per_SNP <- sapply(SnpError, function(e) rbeta(nSnp, shape1=Error.shape, shape2=Error.shape*(1/e -1)))
-      } else if (length(SnpError) == 3*ncol(SGeno)) {
-        Err_per_SNP <- SnpError
-      }
-      Act2Obs <- plyr::aaply(Err_per_SNP, .margins=1, .fun=ErV2M)
 
     } else {
       stop("length of SnpError should equal 1, 3, nSnp, or be a matrix of 3 by number of SNPs")
@@ -416,9 +405,20 @@ MkGenoErrors <- function(SGeno,
   }
 
   #~~~~~~~~~
-  return( SGeno )
+  if (WithLog) {
+    dif <- which(SGeno != SGeno_orig, arr.ind=TRUE)
+    edit_log <- data.frame(id_index = dif[,1],
+                           id_name = rownames(SGeno_orig)[dif[,1]],
+                           snp_index = dif[,2],
+                           actual = factor(SGeno_orig[dif], levels=c(-9,0,1,2)),
+                           observed = factor(SGeno[dif], levels=c(-9,0,1,2)))
+    return(list(GenoM = SGeno, Log = edit_log,
+                Counts_actual = table(factor(SGeno_orig, levels=c(-9,0,1,2)))))
+  } else {
+  #~~~~~~~~~
+    return( SGeno )
+  }
 }
-
 
 #=============================================================================
 #' @title Fortran Simulate Genotyping Errors
@@ -438,11 +438,11 @@ MkGenoErrors <- function(SGeno,
 DoErrors <- function(SGeno, Act2Obs) {
    dnames <- dimnames(SGeno)
    # Generate random numbers to determine which SNPs are erroneous (r < p)
-   # random number generation by Fortran not allowed: F90 not always supported  
+   # random number generation by Fortran not allowed: F90 not always supported
    # + may interfere with other pkgs
-   
+
    randomV <- runif(n=nrow(SGeno)*ncol(SGeno), min=0, max=1)
-   
+
    TMP <- .Fortran(mkerrors,
                    nind = as.integer(nrow(SGeno)),
                    nsnp = as.integer(ncol(SGeno)),
@@ -454,22 +454,37 @@ DoErrors <- function(SGeno, Act2Obs) {
 
 
 #=============================================================================
+#' @title select non-genotyped parents
+#'
+#' @param Ped  pedigree, after PedPolish()
+#' @param ParMis single number or vector length two with proportion of parents
+#'   with fully missing genotype
+#'
+#' @return vector with genotype matrix row numbers of non-sampled individuals
+#'
+#' @keywords internal
 
-# vector -> matrix Pr(observed genotype (columns) | actual genotype (rows)):
-ErV2M <- function(ErV, CallRate=NULL)
-{
-  if (is.null(CallRate)) {
-    ErrM <- matrix(NA, 3,3, dimnames = list(act=0:2, obs=0:2))
+SelectNotSampled <- function(Ped, ParMis) {
+  if (length(na.exclude(intersect(Ped[,2], Ped[,3]))) >0) {
+    if (ParMis[1] != ParMis[2]) {
+      stop("With hermaphrodites, 'ParMis' must be equal for dams & sires")
+    }
+    IsParent <- which(Ped[,1] %in% Ped[,2] | Ped[,1] %in% Ped[,3])
+    if (round(length(IsParent)*ParMis[1]) > 0) {
+      NotSampled <- sample(IsParent, round(length(IsParent)*ParMis[1]), replace=FALSE)
+    }
+
   } else {
-    ErrM <- matrix(NA, 3,4, dimnames = list(act=0:2, obs=-1:2))
-  }
-  ErrM['0', c('0','1','2')] <- c(1-ErV[1]-ErV[2],  ErV[2],  ErV[1])
-  ErrM['1', c('0','1','2')] <- c(ErV[3],  1-2*ErV[3],  ErV[3])
-  ErrM['2', c('0','1','2')] <- c(ErV[1],  ErV[2],  1-ErV[1]-ErV[2])
 
-  if (!is.null(CallRate)) {
-    ErrM[,c('0','1','2')] <- ErrM[,c('0','1','2')] * CallRate
-    ErrM[,'-1'] <- 1 - CallRate
+    for (p in 1:2) {
+      if (ParMis[p]>0) {
+        IsParent <- which(Ped[,1] %in% Ped[,p+1])
+      }
+      if (round(length(IsParent)*ParMis[p]) > 0) {
+        NotSampled <- sample(IsParent, round(length(IsParent)*ParMis[p]), replace=FALSE)
+      }
+    }
   }
-  return( ErrM )
+
+  return(NotSampled)
 }

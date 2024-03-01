@@ -7,13 +7,12 @@
 MkGenoErrors(
   SGeno,
   CallRate = 0.99,
-  SnpError = c((5e-04/2)^2, 5e-04/2, 5e-04 * (1 - 5e-04/2)),
-  ErrorFM = function(E) {
-     matrix(c(1 - E - (E/2)^2, E, (E/2)^2, E/2, 1 - E, E/2,
-    (E/2)^2, E, 1 - E - (E/2)^2), 3, 3, byrow = TRUE)
- },
+  SnpError = 5e-04,
+  ErrorFV = function(E) c((E/2)^2, E - (E/2)^2, E/2),
+  ErrorFM = NULL,
   Error.shape = 0.5,
-  CallRate.shape = 1
+  CallRate.shape = 1,
+  WithLog = FALSE
 )
 }
 \arguments{
@@ -23,25 +22,36 @@ individual, 1 column per SNP, and genotypes coded as 0/1/2.}
 \item{CallRate}{either a single number for the mean call rate (genotyping
 success), OR a vector with the call rate at each SNP, OR a named vector
 with the call rate for each individual. In the third case, ParMis is
-ignored, and individuals in the pedigree (as id or parent) not included in
-this vector are presumed non-genotyped.}
+ignored, and individuals in the pedigree (as id or as parent) not included
+in this vector are presumed non-genotyped.}
 
-\item{SnpError}{either a single value which will be combined with \code{ErrorFM},
-or a length 3 vector with  hom->other hom, hom->het, het-hom error rates;
- OR a vector or 3XnSnp matrix with the genotyping error rate(s) for each SNP.}
+\item{SnpError}{either a single value which will be combined with
+\code{ErrorFV}, or a length 3 vector with probabilities (observed given
+actual) hom|other hom, het|hom, and hom|het; OR a vector or 3XnSnp matrix
+with the genotyping error rate(s) for each SNP.}
+
+\item{ErrorFV}{function taking the error rate (scalar) as argument and
+returning a length 3 vector with hom->other hom, hom->het, het->hom.}
 
 \item{ErrorFM}{function taking the error rate (scalar) as argument and
-returning a 4x4 or 3x3 matrix with probabilities that actual genotype i
-(rows) is observed as genotype j (columns).}
+returning a 3x3 matrix with probabilities that actual genotype i (rows) is
+observed as genotype j (columns). See below for details. To use, set
+\code{ErrorFV = NULL}}
 
 \item{Error.shape}{first shape parameter (alpha) of beta-distribution of
 per-SNP error rates. A higher value results in a flatter distribution.}
 
 \item{CallRate.shape}{as Error.shape, for per-SNP call rates.}
+
+\item{WithLog}{Include dataframe in output with which datapoints have been
+edited, with columns id - SNP - actual (original, input) - observed
+(edited, output).}
 }
 \value{
 The input genotype matrix, with some genotypes replaced, and some
-  set to missing (-9).
+  set to missing (-9). If \code{WithLog=TRUE}, a list with 3 elements: GenoM,
+  Log, and Counts_actual (genotype counts in input, to allow double checking
+  of simulated genotyping error rate).
 }
 \description{
 Generate errors and missing values in a (simulated) genotype

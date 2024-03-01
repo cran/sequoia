@@ -5706,8 +5706,7 @@ do l=1, nSnp
       PrY(y) = SUM(AKA2P(x,y,:) * PrC(y) * PrMC)
     enddo
     do w=1,3
-      PrW(w) = SUM(PrB(w) * AKA2P(w,x,:) * PrPB(:,3-k))
-                          
+      PrW(w) = SUM(PrB(w) * AKA2P(w,x,:) * PrPB(:,3-k))                         
     enddo
     PrX(x) = SUM(PrA * AKAP(:,x,l)) * SUM(PrW) * PrPB(x,k) * SUM(PrY)
   enddo

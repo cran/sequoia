@@ -1,4 +1,17 @@
-# sequoia 2.8
+# sequoia 2.9.0
+- fix bug in ` MkGenoErrors` (used by `SimGeno`) causing about 3x too many hom|hom errors when `SnpError` is a single value: first beta-distributed per-SNP genotyping error rates 
+  $E_l$ were generated, and then $(E_l/2)^2$ calculated. Now the single value is 
+  by default first morphed into a length 3 vector (hom|hom, het|hom, hom|het), and three 
+  beta distributions are generated. 
+- adds log to `MkGenoErrors`
+- `SimGeno` ParMis default changed from 0.4 to 0
+- default genotyping pattern slightly changed to ensure the probability a homozyogote 
+does not have a genotyping error is identical to a heterozygote (see `ErrToM`).
+- Beta-version of `EstEr` (estimation of genotyping errors) removed due to inaccurate 
+estimations and misuse. Will (probably) be re-implemented in a future version. 
+
+
+# sequoia 2.8.3
 - fixes bugs introduced since version 2.5, plus various other edits in source code to improve assignment rate
 - fix bug in `CalcMaxMismatch`: OH with both parents counts as 2 mismatches (was 1)
 

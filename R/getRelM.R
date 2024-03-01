@@ -12,6 +12,13 @@
 #'   avuncular and first cousins.
 #' @param patmat  logical, distinguish between paternal versus maternal relative
 #'   pairs? For avuncular pairs, the distinction is never made.
+#' @param directed logical, distinguish between e.g. ID1=offspring, ID2=mother
+#'   ('M') and ID1=mother, ID2=offspring ('O')? Defaults to TRUE; if FALSE both
+#'   are are scored as 'PO', as are father-offspring pairs, and all
+#'   grandparent-- grand-offspring pairs are scored as 'GPO', and avuncular
+#'   pairs as 'FNA' and 'HNA'. Not (currently) compatible with \code{patmat}.
+#'   When \code{Return}='List', each pair is included twice (as ID1-ID2 &
+#'   ID2-ID1)
 #' @param Return  'Matrix', 'Array', or 'List'. 'Matrix' returns an N x N matrix
 #'   with the closest relationship between each pair. 'Array' returns an N x N x
 #'   R array with for each of the R considered relationships whether it exists
@@ -77,7 +84,8 @@
 #'   between two pedigrees; \code{\link{PlotRelPairs}}.
 #'
 #' @examples
-#' Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)
+#' Rel.griffin <- GetRelM(Ped_griffin, directed=FALSE)  # few categories
+#' Rel.griffin <- GetRelM(Ped_griffin, patmat=TRUE, GenBack=2)  # many cat.
 #' table(as.vector(Rel.griffin))
 #' # turning matrix into vector first makes table() much faster
 #' PlotRelPairs(Rel.griffin)
@@ -88,6 +96,7 @@ GetRelM <- function(Pedigree = NULL,
                     Pairs = NULL,
                     GenBack = 1,
                     patmat = FALSE,
+                    directed = TRUE,
                     Return = "Matrix",
                     Pairs_suffix = '?')
 {
@@ -97,10 +106,12 @@ GetRelM <- function(Pedigree = NULL,
     if (Return != "Matrix")  stop("When providing Pairs, Return must be 'Matrix'")
     if (!class(Pairs) %in% c("data.frame", "matrix"))  stop("Pairs should be a dataframe or matrix")
   }
+  if (!directed & patmat)  stop('directed=FALSE not compatible with patmat=TRUE')
 
   if (!is.null(Pedigree)) {
     Pedigree <- PedPolish(Pedigree, ZeroToNA=TRUE, NullOK=FALSE)
-    RelA <- GetRelA(Pedigree, GenBack = GenBack, patmat = patmat, List = (Return == 'List'))
+    RelA <- GetRelA(Pedigree, GenBack = GenBack, patmat = patmat, directed=directed,
+                    List = (Return == 'List'))
 
     if (Return == "Matrix" ) {
       rel.i <- which(RelA == 1, arr.ind=TRUE)
@@ -146,11 +157,11 @@ GetRelM <- function(Pedigree = NULL,
   RelM.pairs.i <- inflate(RelM.pairs, IDs, na='X')
 
   # priority of relationships (close -> distant)
-  # RelRank <- c("S", "M", "P", "MP", "O", "PO?",
-               # "FS","FS?", "MHS", "PHS", "HS", "HS?",
-               # "MGM", "MGF", "PGM", "PGF", "GP", "GO","GP?",
-               # "FA", "FN", "FA?", "2nd?", "HA", "HN","HA?",
-               # "DFC1", "FC1", "XX?", "Q?", "U", "X")
+  RelRank <- c("S", "M", "P", "MP", "O", 'PO', "PO?",
+               "FS","FS?", "MHS", "PHS", "HS", "HS?",
+               "MGM", "MGF", "PGM", "PGF", "GP", "GO", 'GPO', "GP?",
+               "FA", "FN", 'FNA', "FA?", "2nd?", "HA", "HN", 'HNA', "HA?",
+               "DFC1", "FC1", "XX?", "Q?", "U", "X")
   used_rels <- unique(c(RelM.ped.i, RelM.pairs.i))
   rel_lvls <- c(intersect(RelRank, used_rels), setdiff(used_rels, RelRank))
 
@@ -179,6 +190,7 @@ GetRelM <- function(Pedigree = NULL,
 #'   avuncular and first cousins.
 #' @param patmat  logical, distinguish between paternal versus maternal relative
 #'   pairs? For avuncular pairs, the distinction is never made.
+#' @param directed logical, distinguish between 'O' vs 'P' or group into 'PO' ?
 #' @param List logical, return a list instead of the default array
 #'
 #' @return a 3D array indicating if the pair has the specified relationship (1)
@@ -195,7 +207,8 @@ GetRelM <- function(Pedigree = NULL,
 #'
 #' @keywords internal
 
-GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
+GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, directed=TRUE,
+                    List = FALSE)
 {
   if (is.null(Ped))  stop("Please provide Pedigree")
 
@@ -211,11 +224,13 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
 
   Rels <- c("S", "M", "P", "O", "FS", "MHS", "PHS", "XHS")  # XHS: 'cross'-half-sibs
   RelsB <- c("S", "MP", "O", "FS", "HS")  # patmat = FALSE
+  RelsC <- c("S", "PO","FS","HS")
   if (GenBack == 2) {
     Rels <- c(Rels, "MGM", "MGF", "PGM", "PGF", "GO",
               "FA", "FN", "HA", "HN", "DFC1", "FC1")
     RelsB <- c(RelsB, "GP", "GO",
                "FA", "FN", "HA", "HN", "DFC1", "FC1")
+    RelsC <- c(RelsC, "GPO", "FNA", "HNA", "DFC1", "FC1")
   }
 
   if (List) {  # e.g. when very large pedigree --> relA object.size too large
@@ -238,6 +253,15 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
       }
       RelL <- RelL[ RelsB ]
     }
+    if (!directed) {
+      RelL[['PO']] <- rbind(RelL[['MP']], RelL[['O']])
+      if (GenBack == 2) {
+        RelL[['GPO']] <- rbind(RelL[['GP']], RelL[['GO']])
+        RelL[['FNA']] <- rbind(RelL[['FA']], RelL[['FN']])
+        RelL[['HNA']] <- rbind(RelL[['HA']], RelL[['HN']])
+      }
+      RelL <- RelL[ RelsC ]
+    }
 
     return( RelL )
 
@@ -245,7 +269,6 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
 
     RelA <- array(TMP$relv, dim = c(nInd, nInd, nRel),
                   dimnames = list(ID1 = Ped[,1], ID2 = Ped[,1], Rel = Rels) )
-
 
     if (!patmat) {   # combine maternal & paternal relatives
       RelA.B <- array(0, dim = c(nInd, nInd, length(RelsB)),
@@ -260,6 +283,19 @@ GetRelA <- function(Ped = NULL, GenBack = 1, patmat = TRUE, List = FALSE)
         RelA.B[,,r] <- RelA[,,r]
       }
       RelA <- RelA.B
+    }
+    if (!directed) {
+      RelA.C <- array(0, dim = c(nInd, nInd, length(RelsC)),
+                      dimnames=list(Ped$id, Ped$id, RelsC))
+      RelA.C[,,"PO"] <- RelA[,,"MP"] | RelA[,,"O"]
+      for (r in c('S','FS','HS')) RelA.C[,,r] <- RelA[,,r]
+      if (GenBack == 2) {
+        RelA.C[,,'GPO'] <- RelA[,,'GP'] | RelA[,,'GO']
+        RelA.C[,,'FNA'] <- RelA[,,'FA'] | RelA[,,'FN']
+        RelA.C[,,'HNA'] <- RelA[,,'HA'] | RelA[,,'HN']
+        for (r in c("DFC1", "FC1"))  RelA.C[,,r] <- RelA[,,r]
+      }
+      RelA <- RelA.C
     }
 
     return( RelA )

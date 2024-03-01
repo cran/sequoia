@@ -19,8 +19,7 @@ Mendelian errors per SNP and (poorly) estimate the error rate.}
 
 \item{Plot}{show histograms of the results?}
 
-\item{ErrFlavour}{DEPRECATED AND IGNORED. Was used to estimate
-\code{Err.hat}; see \code{\link{EstEr}}.}
+\item{ErrFlavour}{DEPRECATED AND IGNORED. Was used to estimate \code{Err.hat}}
 }
 \value{
 A matrix with a number of rows equal to the number of SNPs
@@ -66,5 +65,5 @@ SNPstats <- SnpStats(Genotypes, Pedigree=Ped_HSg5)
 \code{\link{GenoConvert}} to convert from various data formats;
   \code{\link{CheckGeno}} to check the data is in valid format for sequoia
   and exclude monomorphic SNPs etc., \code{\link{CalcOHLLR}} to calculate OH
-  & ME per individual; \code{\link{EstEr}} to estimate genotyping error rate.
+  & ME per individual.
 }

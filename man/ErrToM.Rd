@@ -4,7 +4,7 @@
 \alias{ErrToM}
 \title{Generate Genotyping Error Matrix}
 \usage{
-ErrToM(Err = NA, flavour = "version2.0", Return = "matrix")
+ErrToM(Err = NA, flavour = "version2.9", Return = "matrix")
 }
 \arguments{
 \item{Err}{estimated genotyping error rate, as a single number, or 3x3 or 4x4
@@ -15,12 +15,13 @@ actual genotype (rows). Each row must therefore sum to 1. If
 \code{Return='function'}, this may be \code{NA}. If a vector, these are the
 probabilities (observed given actual) hom|other hom, het|hom, and hom|het.}
 
-\item{flavour}{matrix-generating function, or one of 'version2.0',
-'version1.3' (='SNPchip'), 'version1.1' (='version111'), referring to the
-sequoia version in which it was used as default. Only used if \code{Err} is
-a single number.}
+\item{flavour}{vector-generating or matrix-generating function, or one of
+'version2.9', 'version2.0', 'version1.3' (='SNPchip'), 'version1.1'
+(='version111'), referring to the sequoia version in which it was used as
+default. Only used if \code{Err} is a single number.}
 
-\item{Return}{output, 'matrix' (default), 'function', or 'vector'}
+\item{Return}{output, 'matrix' (default), 'vector', 'function'
+(matrix-generating), or 'v_function' (vector-generating)}
 }
 \value{
 Depending on \code{Return}, either:
@@ -34,13 +35,18 @@ Depending on \code{Return}, either:
  }
 }
 \description{
-Generate a matrix with the probabilities of observed genotypes
+Make a vector or matrix specifying the genotyping error
+  pattern, or a function to generate such a vector/matrix from a single
+  value Err.
+
+
+with the probabilities of observed genotypes
   (columns) conditional on actual genotypes (rows), or return a function to
   generate such matrices (using a single value Err as input to that
  function).
 }
 \details{
-By default (\code{flavour} = "version2.0"), \code{Err} is
+By default (\code{flavour} = "version2.9"), \code{Err} is
   interpreted as a locus-level error rate (rather than allele-level), and
   equals the probability that an actual heterozygote is observed as either
   homozygote (i.e., the probability that it is observed as AA = probability
@@ -51,9 +57,29 @@ The inbuilt 'flavours' correspond to the presumed and simulated error
 structures, which have changed with sequoia versions. The most appropriate
 error structure will depend on the genotyping platform; 'version0.9' and
 'version1.1' were inspired by SNP array genotyping while 'version1.3' and
-'version2.0' are intended to be more general.
+'version2.0' are intended to be more general. All the flavours assume that
+the two alleles $A$ and $a$ are equivalent, i.e. that $P(AA|aa) = P(aa|AA)$,
+$P(aa|Aa)=P(AA|Aa)$, and $P(aA|aa)=P(aA|AA)$.
 
-Pr(observed genotype (columns) | actual genotype (rows)):
+\tabular{lccc}{
+ \strong{version} \tab \strong{hom|hom} \tab \strong{het|hom} \tab
+\strong{hom|het} \cr
+ \strong{2.9}  \tab \eqn{(E/2)^2} \tab \eqn{E-(E/2)^2} \tab \eqn{E/2} \cr
+ \strong{2.0}  \tab \eqn{(E/2)^2} \tab \eqn{E(1-E/2)}  \tab \eqn{E/2} \cr
+ \strong{1.3}  \tab \eqn{(E/2)^2} \tab \eqn{E}   \tab \eqn{E/2} \cr
+ \strong{1.1}  \tab \eqn{E/2}     \tab \eqn{E/2} \tab \eqn{E/2} \cr
+ \strong{0.9}  \tab \eqn{0}       \tab \eqn{E}   \tab \eqn{E/2} \cr
+}
+
+or in matrix form, Pr(observed genotype (columns) | actual genotype (rows)):
+
+\emph{version2.9:}
+\tabular{lccc}{
+    \tab \strong{0} \tab \strong{1} \tab \strong{2} \cr
+ \strong{0}  \tab \eqn{1-E} \tab \eqn{E -(E/2)^2} \tab \eqn{(E/2)^2} \cr
+ \strong{1}  \tab \eqn{E/2}       \tab \eqn{1-E}      \tab \eqn{E/2}    \cr
+ \strong{2}  \tab \eqn{(E/2)^2}   \tab \eqn{E -(E/2)^2} \tab \eqn{1-E} \cr
+}
 
 \emph{version2.0:}
 \tabular{lccc}{
@@ -127,8 +153,4 @@ ErrToM(Err = 0.05, flavour = funE)
 # equivalent to:
 ErrToM(Err = c(0.05/4, 0.05/2, 0.05/4))
 
-}
-\seealso{
-\code{\link{EstEr}} to estimate genotyping error rate as a length 3
- vector.
 }

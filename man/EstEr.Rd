@@ -2,7 +2,7 @@
 % Please edit documentation in R/EstEr.R
 \name{EstEr}
 \alias{EstEr}
-\title{Estimate genotyping error rate}
+\title{Estimate genotyping error rate (REMOVED; will be re-implemented)}
 \usage{
 EstEr(
   GenoM,
@@ -68,6 +68,6 @@ genotyping errors.
 \examples{
 GenoX <- SimGeno(Ped_griffin, nSnp=400, SnpError=c(0.01,0.07, 0.1),
                 ParMis=0.1, CallRate=0.9)
-EstEr(GenoM=GenoX, Pedigree=Ped_griffin)
+# EstEr(GenoM=GenoX, Pedigree=Ped_griffin)
 
 }
