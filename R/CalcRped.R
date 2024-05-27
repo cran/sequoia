@@ -18,7 +18,7 @@ CalcRped <- function(Pedigree, OUT="DF")
     stop("'OUT' must be 'M' (matrix) or 'DF' (data.frame)")
 
   if (!requireNamespace("kinship2", quietly = TRUE)) {
-    if (interactive())  message("Installing pkg 'kinship2'... ")
+    if (interactive())  cli::cli_alert_info("Installing package {.pkg kinship2}... ")
     utils::install.packages("kinship2")
   }
 

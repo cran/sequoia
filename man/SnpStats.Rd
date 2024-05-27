@@ -4,7 +4,14 @@
 \alias{SnpStats}
 \title{SNP Summary Statistics}
 \usage{
-SnpStats(GenoM, Pedigree = NULL, Duplicates = NULL, Plot = TRUE, ErrFlavour)
+SnpStats(
+  GenoM,
+  Pedigree = NULL,
+  Duplicates = NULL,
+  Plot = TRUE,
+  quiet = TRUE,
+  ErrFlavour
+)
 }
 \arguments{
 \item{GenoM}{genotype matrix, in sequoia's format: 1 column per SNP, 1 row
@@ -18,6 +25,8 @@ Mendelian errors per SNP and (poorly) estimate the error rate.}
 \item{Duplicates}{dataframe with pairs of duplicated samples}
 
 \item{Plot}{show histograms of the results?}
+
+\item{quiet}{suppress messages}
 
 \item{ErrFlavour}{DEPRECATED AND IGNORED. Was used to estimate \code{Err.hat}}
 }

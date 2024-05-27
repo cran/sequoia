@@ -20,9 +20,10 @@
 #'   provided in the vignettes and on the package website,
 #'   https://jiscah.github.io/index.html .
 #'
-#' @param GenoM  numeric matrix with genotype data: One row per individual, and
-#'   one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
-#'   \code{\link{GenoConvert}}.
+#' @param GenoM  numeric matrix with genotype data: One row per individual,
+#'   one column per SNP, coded as 0, 1, 2, missing values as a negative number
+#'   or NA. You can reformat data with \code{\link{GenoConvert}}, or use other
+#'   packages to get it into a genlight object and then use \code{as.matrix}.
 #' @param LifeHistData data.frame with up to 6 columns:
 #'  \describe{
 #'  \item{ID}{max. 30 characters long}
@@ -367,7 +368,7 @@ sequoia <- function(GenoM = NULL,
                     quiet = FALSE,
                     Plot = NULL,
                     StrictGenoCheck = TRUE,
-                    ErrFlavour = "version2.0",  # DEPRECATED
+                    ErrFlavour = "version2.9",
                     MaxSibIter = 42,  # DEPRECATED
                     MaxMismatch = NA,  # DEPRECATED
                     FindMaybeRel = FALSE)  # DEPRECATED
@@ -388,35 +389,39 @@ sequoia <- function(GenoM = NULL,
     Module <- cut(MaxSibIter,
                   breaks= c(-Inf, -9, -1, 0, Inf),
                   labels = c("pre", "dup", "par", "ped"))
-    if (!quietR)  message("NOTE: 'MaxSibIter' will be deprecated in the future, ",
-      "please consider using 'Module' instead")
+    if (!quietR)  cli::cli_alert_warning(c("`MaxSibIter` will be deprecated, ",
+      "please use `Module` instead"))
   } else {
     Module <- factor(Module, levels = c("pre", "dup", "par", "ped"))
     if (is.na(Module))  stop("'Module'  must be 'pre', 'dup', 'par', or 'ped'")
   }
 
   if (FindMaybeRel)
-    warning("'FindMaybeRel' has been deprecated and is ignored,",
-            "instead run GetMaybeRel() afterwards", immediate.=TRUE)
+    cli::cli_alert_warning(c("`FindMaybeRel` has been deprecated and is ignored,",
+            "instead run `GetMaybeRel()` afterwards"))
   if (!is.na(MaxMismatch))
-    warning("'MaxMismatch' has been deprecated and is ignored,",
-            "now calculated automatically via CalcMaxMismatch()", immediate.=TRUE)
+    cli::cli_alert_warning(c("`MaxMismatch` has been deprecated and is ignored,",
+            "now calculated automatically via `CalcMaxMismatch()`"))
 
   if (!is.null(LifeHistData) & !inherits(LifeHistData, 'data.frame'))
-    stop("LifeHistData must be a data.frame or NULL")
+    stop("`LifeHistData` must be a data.frame or NULL")
   if (!is.null(SeqList) & !inherits(SeqList, 'list'))
-    stop("SeqList must be a list or NULL")
+    stop("`SeqList` must be a list or `NULL`")
 
   if (!is.null(SeqList)) {
     SeqList_names <- c("Specs", "ErrM", "args.AP", "AgePriors", "LifeHist",
                        "PedigreePar", "MaxSibIter")
-    if (!any(names(SeqList) %in% SeqList_names) | any(is.na(names(SeqList))) )
-      stop("You seem to have misspelled one or more names of elements of SeqList")
+    if (!any(names(SeqList) %in% SeqList_names) | any(is.na(names(SeqList))) ) {
+      cli::cli_alert_danger("You seem to have misspelled one or more names of elements of `SeqList`:")
+      cli::cli_li(setdiff(names(SeqList), SeqList_names))
+      stop("Please correct `SeqList` names")
+    }
   }
 
 
   # Check genotype matrix ----
   GenoM[is.na(GenoM)] <- -9
+  if (!quietR) cli::cli_alert_info("Checking input data ...")
   Excl <- CheckGeno(GenoM, quiet=quietR, Plot=Plot, Return = "excl",
                     Strict = StrictGenoCheck, DumPrefix=DummyPrefix)
   if ("ExcludedSnps" %in% names(Excl))  GenoM <- GenoM[, -Excl[["ExcludedSnps"]]]
@@ -426,42 +431,49 @@ sequoia <- function(GenoM = NULL,
 
   # Check life history data ----
   if ("LifeHist" %in% names(SeqList)) {
-    if (!quietR)  message("using LifeHistData in SeqList")
+    if (!quietR)  cli::cli_alert_info("using `LifeHistData` in `SeqList`")
     LifeHistData <- SeqList$LifeHist
   } else if (is.null(LifeHistData) & Module != "dup") {
-    warning("no LifeHistData provided, expect lower assignment rate\n",
-            immediate.=TRUE)
+    cli::cli_alert_warning("no `LifeHistData` provided, expect lower assignment rate")
   }
   ChkLH.L <- CheckLH(LifeHistData, gID = rownames(GenoM),  sorted=FALSE,
                      returnDups = TRUE)
   # keep non-genotyped IDs (for future reference); orderLH() called by SeqParSib()
-  DupList <- ChkLH.L[c("DupLifeHistID", "NoLH")]
+  OUT_LH <- ChkLH.L[c("DupLifeHistID", "NoLH")]
   LifeHistData <- ChkLH.L$LifeHistData   # duplicates removed, if any
+
   if (!quietR) {
+    cli::cli_h3("Among genotyped individuals: ___")
     gID <- rownames(GenoM)
     tbl_sex <- table(factor(LifeHistData$Sex[LifeHistData$ID %in% gID], levels=1:4))
-    message("There are ", tbl_sex['1'], " females, ", tbl_sex['2'], " males, ",
-            tbl_sex['3'], " individuals of unknown sex, and ",
-            tbl_sex['4'], " hermaphrodites.")
+    cli::cli_alert_info(c("There are {tbl_sex['1']} females, {tbl_sex['2']} males, ",
+            "{tbl_sex['3']} of unknown sex, and {tbl_sex['4']} hermaphrodites."))
     range_Year <- matrix(NA,4,2, dimnames=list(c("BirthYear", "BY.min", "BY.max", 'Year.last'),
                                             c('min', 'max')))
     for (x in rownames(range_Year)) {
       range_Year[x,] <- suppressWarnings(
         range(LifeHistData[,x][LifeHistData$ID %in% gID & LifeHistData[,x] >= 0]))
     }
-    message("Exact birth years are from ", range_Year[1,1], " to ", range_Year[1,2])
+    if (any(is.finite(range_Year[1,])))
+      cli::cli_alert_info("Exact birth years are from {range_Year[1,1]} to {range_Year[1,2]}")
     if (any(is.finite(range_Year[2:3,])))
-      message("Birth year min/max are from ", min(range_Year[2:3,1], na.rm=TRUE), " to ",
-            max(range_Year[2:3,2], na.rm=TRUE))
+      cli::cli_alert_info(c("Birth year min/max are from {min(range_Year[2:3,1], na.rm=TRUE)} to ",
+            "{max(range_Year[2:3,2], na.rm=TRUE)}"))
+    if (all(!is.finite(range_Year)))
+      cli::cli_alert_info("All birth years are unknown")
+    if (any(is.finite(range_Year[4,])))
+      cli::cli_alert_info("`Year.Last` are from {range_Year[4,1]} to {range_Year[4,2]}")
+    cli::cli_text("___\n")
   }
 
   utils::flush.console()    # print all warnings thus far
 
   # Check/make ageprior ----
   if ("AgePriors" %in% names(SeqList)) {
-    if(!quietR)  message("using AgePriors in SeqList")
+    if(!quietR)  cli::cli_alert_info("using `AgePriors` in `SeqList`")
     AgePriors <- CheckAP( SeqList[["AgePriors"]] )
   } else {
+    if(!quietR)  cli::cli_alert_info("Calling `MakeAgePrior()` ...")
     AgePriors <- do.call(MakeAgePrior, c(list(Pedigree = SeqList[["PedigreePar"]],
                     LifeHistData = LifeHistData[LifeHistData$ID %in% rownames(GenoM),],
                                               Plot = Plot,
@@ -472,7 +484,7 @@ sequoia <- function(GenoM = NULL,
 
   # Check Pedigree ----
   if ("PedigreePar" %in% names(SeqList) & Module != "dup") {
-    if (!quietR)  message("using PedigreePar in SeqList")
+    if (!quietR)  cli::cli_alert_info("using `PedigreePar` in `SeqList`")
     PedParents <- PedPolish(SeqList[["PedigreePar"]], gID = rownames(GenoM),
                             ZeroToNA = TRUE, DropNonSNPd = TRUE)
   } else {
@@ -526,12 +538,12 @@ sequoia <- function(GenoM = NULL,
 
   # hermaprhodites ----
   if (any(LifeHistData$Sex==4, na.rm=TRUE) && PARAM$Herm == "no") {  #!grepl("herm", PARAM$Complex)) {
-    if (!quietR) message("\nDetected hermaphrodites (sex=4), changing Herm to 'A'\n")
+    if (!quietR) cli::cli_alert_warning("Detected hermaphrodites (sex=4), changing `Herm` to 'A'")
 #    PARAM$Complex <- "herm"
     PARAM$Herm <- "A"
   }
   if (PARAM$Herm == "B" && any(LifeHistData$Sex %in% c(1,2)))
-    warning("Results may be inconsistent when combining Herm='B' with known-sex individuals")
+     cli::cli_alert_warning("Results may be inconsistent when combining `Herm='B'` with known-sex individuals")
 
 
   # check parameter values ----
@@ -544,14 +556,13 @@ sequoia <- function(GenoM = NULL,
 
   # @@ 2 @@ Duplicate check ----
   if (Module != "pre") {
-    if(!quietR)  message("\n~~~ Duplicate check ~~~")
-    DupList <- c(DuplicateCheck(GenoM, FortPARAM, quiet=quietR),
-                 DupList)  # from CheckLH()
+    if(!quietR)  message(cli::col_green("\n~~~ Duplicate check ~~~"))
+    DupList <- DuplicateCheck(GenoM, FortPARAM, quiet=quietR)
     utils::flush.console()
-    if ("DupGenoID" %in% names(DupList)) {  # fatal error
+    if ("DupGenoID" %in% names(DupList)) {  # fatal error  (message by duplicateCheck())
       return(DupList)
     } else if (length(DupList)==0 & !quietR) {
-      message("No duplicates found")
+      cli::cli_alert_success("No potential duplicates found")
     }
   } else DupList <- NULL
   utils::flush.console()
@@ -560,9 +571,9 @@ sequoia <- function(GenoM = NULL,
   # @@ 3 @@ Parentage assignment ----
   if (Module == "par"  | (Module  == "ped" & is.null(PedParents))) {
     if(!quietR & Module == "par" & !is.null(PedParents)) {
-      message("\n~~~ Parentage assignment with pedigree-prior ~~~")  # only sensible with Herm=A or B (?)
+      message(cli::col_green("\n~~~ Parentage assignment with pedigree-prior ~~~"))  # only sensible with Herm=A or B (?)
     } else if(!quietR) {
-      message("\n~~~ Parentage assignment ~~~")
+      message(cli::col_green("\n~~~ Parentage assignment ~~~"))
     }
 
     ParList <- SeqParSib(ParSib = "par", FortPARAM, GenoM,
@@ -570,7 +581,7 @@ sequoia <- function(GenoM = NULL,
                          Parents=PedParents, mtDif=mtDif,
                          DumPfx = PARAM$DummyPrefix, quiet=quietR)
     if (Plot) {
-      SummarySeq(ParList$PedigreePar, Panels="G.parents")
+      SummarySeq(ParList, Panels="G.parents")
     }
 
   } else if (Module != "dup" & "PedigreePar" %in% names(SeqList)) {  # don't include for 'dup'; confusing.
@@ -583,7 +594,7 @@ sequoia <- function(GenoM = NULL,
   # check that PedigreePar is a valid pedigree (no indiv is its own ancestor)
   W <- tryCatch.W.E(getGenerations(ParList$PedigreePar, StopIfInvalid=FALSE))$warning
   if (!is.null(W)) {
-    if (Module=="ped")  warning("Cancelling full pedigree reconstruction.")
+    if (Module=="ped")  cli::cli_alert_danger("Cancelling full pedigree reconstruction.")
   }
 
 
@@ -605,7 +616,7 @@ sequoia <- function(GenoM = NULL,
     if (all(is.na(AgePriors)))  return(ParList)
 
   } else if ("AgePriors" %in% names(SeqList) & !"PedigreePar" %in% names(SeqList)) {
-    if(!quietR)  message("using AgePriors in SeqList again")
+    if(!quietR)  cli::cli_alert_info("using `AgePriors` in `SeqList` again")
   }
 
   if (nrow(AgePriors) != PARAM$nAgeClasses) {
@@ -618,25 +629,21 @@ sequoia <- function(GenoM = NULL,
   if (Module == "ped" & is.null(W)) {
     if (!all(apply(AgePriors, 2, function(x) any(x > 0))))
       stop("AgePriors error: some relationships are impossible for all age differences")
-    if(!quietR)  message("\n~~~ Full pedigree reconstruction ~~~")
+    if(!quietR)  message(cli::col_green("\n~~~ Full pedigree reconstruction ~~~"))
     SibList <- SeqParSib(ParSib = "sib", FortPARAM, GenoM,
                          LhIN = LifeHistData, AgePriors = AgePriors,
                          Parents = ParList$PedigreePar, mtDif=mtDif,
                          DumPfx = PARAM$DummyPrefix, quiet = quietR)
     ParList <- ParList[names(ParList) != "AgePriorExtra"]  # else included 2x w same name
-    if (Plot) {
-      PlotAgePrior(SibList$AgePriorExtra)
-      SummarySeq(SibList$Pedigree, Panels="G.parents")
-    }
   } else SibList <- NULL
-
 
   #=====================
   # Output ----
 
-  if (!quietR & Module %in% c('par', 'ped')) {
-    message('Possibly not all ', c(par = 'parents', ped = 'relatives')[as.character(Module)],
-    ' were assigned, consider running GetMaybeRel() conditional on this pedigree to check')
+  if (quiet=='verbose' & Module %in% c('par', 'ped')) {
+    cli::cli_alert_info("You can use `SummarySeq()` for pedigree details, and `EstConf()` for confidence estimates")
+    cli::cli_alert_info(paste('Possibly not all', c(par = 'parents', ped = 'relatives')[as.character(Module)],
+    'were assigned, consider running `GetMaybeRel()` conditional on this pedigree to check'), wrap=TRUE)
   }
 
   OUT <- list()
@@ -649,10 +656,17 @@ sequoia <- function(GenoM = NULL,
     OUT[["args.AP"]] <- args.AP
   }
   if (length(Excl)>0)  OUT <- c(OUT, Excl)
+  if (length(OUT_LH)>0)  OUT <- c(OUT, OUT_LH)
   OUT[["AgePriors"]] <- AgePriors
   OUT[["LifeHist"]] <- LifeHistData
   if (as.numeric(Module) > 1)  OUT <- c(OUT, DupList)
   if (as.numeric(Module) > 2)  OUT <- c(OUT, ParList)
   if (as.numeric(Module) > 3)  OUT <- c(OUT, SibList)
+
+  if (Plot & Module == "ped" & is.null(W)) {
+    PlotAgePrior(OUT$AgePriorExtra)
+    SummarySeq(OUT, Panels="G.parents")
+  }
+
   return(OUT)
 }

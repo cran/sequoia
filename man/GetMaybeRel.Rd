@@ -14,7 +14,7 @@ GetMaybeRel(
   Complex = "full",
   Herm = "no",
   Err = 1e-04,
-  ErrFlavour = "version2.0",
+  ErrFlavour = "version2.9",
   Tassign = 0.5,
   Tfilter = -2,
   MaxPairs = 7 * nrow(GenoM),
@@ -24,9 +24,10 @@ GetMaybeRel(
 )
 }
 \arguments{
-\item{GenoM}{numeric matrix with genotype data: One row per individual, and
-one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
-\code{\link{GenoConvert}}.}
+\item{GenoM}{numeric matrix with genotype data: One row per individual,
+one column per SNP, coded as 0, 1, 2, missing values as a negative number
+or NA. You can reformat data with \code{\link{GenoConvert}}, or use other
+packages to get it into a genlight object and then use \code{as.matrix}.}
 
 \item{SeqList}{list with output from \code{\link{sequoia}}.
 \code{SeqList$Pedigree} is used if present, and \code{SeqList$PedigreePar}

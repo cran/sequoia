@@ -70,7 +70,8 @@
 #' @param nCores number of computer cores to use. If \code{>1}, package
 #'   \pkg{parallel} is used. Set to NULL to use all but one of the available
 #'   cores, as detected by \code{parallel::detectCores()} (using all cores tends
-#'   to freeze up your computer).
+#'   to freeze up your computer). With large datasets, the amount of computer
+#'   memory may be the limiting factor for the number of cores you can use.
 #' @param quiet suppress messages. \code{TRUE} runs \code{SimGeno} and
 #'   \code{sequoia} quietly, \code{'very'} also suppresses other messages and
 #'   the iteration counter when \code{nCores=1} (there is no iteration counter
@@ -206,7 +207,7 @@ EstConf <- function(Pedigree = NULL,
 
   # check input ----
   if (is.null(Pedigree))  stop("Please provide Pedigree")
-  if (is.null(LifeHistData))  warning("Running without LifeHistData")
+  if (is.null(LifeHistData))  cli::cli_alert_warning("Running without `LifeHistData`")
   if (!is.null(args.sim) & !is.list(args.sim))  stop("args.sim should be a list or NULL")
   if (!is.null(args.seq) & !is.list(args.seq))  stop("args.seq should be a list or NULL")
   if (!is.wholenumber(nSim) || nSim<1 || length(nSim)>1)
@@ -238,9 +239,9 @@ EstConf <- function(Pedigree = NULL,
 
   if (!quiet.EC) {
     if (ParSib == "par") {
-      message("Simulating parentage assignment only ...")
+      cli::cli_alert_info("Simulating parentage assignment only ...")
     } else {
-      message("Simulating full pedigree reconstruction ...")
+      cli::cli_alert_info("Simulating full pedigree reconstruction ...")
     }
   }
 
@@ -252,7 +253,7 @@ EstConf <- function(Pedigree = NULL,
   if (is.null(nCores) || nCores>1) {
     if (!requireNamespace("parallel", quietly = TRUE)) {
       if (interactive() & !quiet.EC) {
-        message("Installing pkg 'parallel' to speed things up... ")
+        cli::cli_alert_info("Installing package {.pkg parallel} to speed things up... ")
       }
       utils::install.packages("parallel")
     }
@@ -261,13 +262,12 @@ EstConf <- function(Pedigree = NULL,
       nCores <- maxCores -1
     } else if (nCores > maxCores) {
       nCores <- maxCores
-      warning("Reducing 'nCores' to ", maxCores, ", as that's all you have",
-              immediate.=TRUE)
+      cli::cli_alert_warning("Reducing {.code nCores} to {maxCores}, as that's all you have")
     }
     if (nCores > nSim) {
       nCores <- nSim
     }
-    if (!quiet.EC)  message("Using ", nCores, " out of ", maxCores, " cores")
+    if (!quiet.EC)  cli::cli_alert_info("Using {nCores} out of {maxCores} cores")
   }
 
 

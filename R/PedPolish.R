@@ -100,7 +100,7 @@ PedPolish <- function(Pedigree,
   }
   for (p in c('Id', 'Dam', 'Sire')) {
     if (length(ColNums[[p]]) > 1) {
-      warning('Found >1 possible ', p, ' column, using ', names(Ped)[ ColNums[[p]][1] ])
+      cli::cli_alert_info('Found >1 possible {p} column, using {.field {names(Ped)[ ColNums[[p]][1] ]}}')
       ColNums[[p]] <- ColNums[[p]][1]
     }
   }
@@ -115,9 +115,9 @@ PedPolish <- function(Pedigree,
   if (!is.null(gID)) {
     n.shared.ids <- length(intersect(Ped[,1], as.character(gID)))
     if (n.shared.ids==0) {
-      stop("GenoM and ", PedName, " do not share any common individuals", call. = FALSE)
+      stop("`GenoM` and `", PedName, "` do not share any common individuals", call. = FALSE)
     } else if (n.shared.ids < length(gID)/10 && n.shared.ids < nrow(Ped)) {
-      warning("GenoM and ", PedName, " share few common individuals", call. = FALSE)
+      cli::cli_alert_warning("`GenoM` and `{PedName}` share few common individuals")
     }
   }
 

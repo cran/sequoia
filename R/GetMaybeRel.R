@@ -144,7 +144,7 @@ GetMaybeRel <- function(GenoM = NULL,
                         Complex = "full",
                         Herm = "no",
                         Err = 0.0001,
-                        ErrFlavour = "version2.0",
+                        ErrFlavour = "version2.9",
                         Tassign = 0.5,
                         Tfilter = -2.0,
                         MaxPairs =  7*nrow(GenoM),
@@ -163,9 +163,9 @@ GetMaybeRel <- function(GenoM = NULL,
     }
   }
   if (!Module %in% c("par", "ped"))  stop("'Module' must be 'par' or 'ped'")
-  if(!quiet)  message("Searching for non-assigned ",
+  if(!quiet)  cli::cli_alert_info(paste0("Searching for non-assigned ",
                       c(par="parent-offspring", ped="relative")[Module], " pairs ...",
-                      " (Module = ", Module, ")")
+                      " (Module = ", Module, ")"))
 
 
   # unpack SeqList ----
@@ -180,7 +180,7 @@ GetMaybeRel <- function(GenoM = NULL,
 ## SeqList$Pedigree takes precedent for this function only.
       if (x %in% names(SeqList)) {
         if (x == "PedigreePar" & "Pedigree" %in% names(SeqList))  next
-        if (!quiet)  message("using ", x, " in SeqList")
+        if (!quiet) cli::cli_alert_info("using {x} in SeqList")
         assign(NewName[x], SeqList[[x]])
       }
     }
@@ -194,6 +194,14 @@ GetMaybeRel <- function(GenoM = NULL,
 
   Pedigree <- PedPolish(Pedigree, gID, DropNonSNPd = FALSE,
                         NullOK = TRUE)   # OK if no pedigree
+  if (!quiet) {
+    if (is.null(Pedigree)) {
+      cli::cli_alert_info("Not conditioning on any pedigree")
+    } else {
+      N <- c(i=nrow(Pedigree), d=sum(!is.na(Pedigree$dam)), s=sum(!is.na(Pedigree$sire)))
+      cli::cli_alert_info("Conditioning on pedigree with {N['i']} individuals, {N['d']} dams and {N['s']} sires")
+    }
+  }
 
   LH <- CheckLH(LifeHistData, gID, sorted=TRUE)
 
@@ -206,7 +214,7 @@ GetMaybeRel <- function(GenoM = NULL,
 
   # Specs / param ----
   if ("Specs" %in% names(SeqList)) {
-    if(!quiet)  message("settings in SeqList$Specs will overrule input parameters")
+    if(!quiet)  cli::cli_alert_info("settings in SeqList$Specs will overrule input parameters")
     SeqList$Specs$Module <- Module
     PARAM <- SpecsToParam(SeqList$Specs, SeqList$ErrM, ErrFlavour,
                           dimGeno = dim(GenoM), Module, MaxPairs, quiet)  # overrule values in SeqList
@@ -244,7 +252,7 @@ GetMaybeRel <- function(GenoM = NULL,
   utils::flush.console()
 
   if (any(LifeHistData$Sex==4) && PARAM$Herm == "no") {  #!grepl("herm", PARAM$Complex)) {
-    if (!quiet) message("detected hermaphrodites (sex=4), changing Herm to 'A'")
+    if (!quiet) cli::cli_alert_warning("detected hermaphrodites (sex=4), changing Herm to 'A'")
 #    PARAM$Complex <- "herm"
     PARAM$Herm <- "A"
   }
@@ -356,8 +364,8 @@ GetMaybeRel <- function(GenoM = NULL,
       nRel <- 0
       nPO <- 0
     }
-    message("Found ", nPO, " likely parent-offspring pairs, and ",
-            nRel - nPO, " other non-assigned pairs of possible relatives")
+    cli::cli_alert_success(c("Found {nPO} likely parent-offspring pairs, ",
+            "and {nRel-nPO}, other non-assigned pairs of possible relatives"))
   }
 
   #=========================
@@ -372,7 +380,7 @@ GetMaybeRel <- function(GenoM = NULL,
     for (k in 1:3) trios[, k] <- NumToID(trios[, k], k-1, gID, NULL)
     trios$SNPd.id.parent1 <- CalcSnpdBoth(trios[, c("id", "parent1")], GenoM)
     trios$SNPd.id.parent2 <- CalcSnpdBoth(trios[, c("id", "parent2")], GenoM)
-    if (quiet<1)   message("Found ", nrow(trios), " parent-parent-offspring trios")
+    if (quiet<1)   cli::cli_alert_success("Found {nrow(trios)} parent-parent-offspring trios")
   } else  trios <- NULL
 
   if (Module == "par") {

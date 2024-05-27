@@ -69,7 +69,8 @@ knitr::kable(LH,
 
 ## ----argsAP, eval=TRUE--------------------------------------------------------
 SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5, Module='par',
-                  args.AP = list(Discrete = TRUE))
+                  args.AP = list(Discrete = TRUE), quiet=TRUE)
+PlotAgePrior(SeqOUT$AgePriors)
 
 ## ----DoubleRels, echo=FALSE, eval=TRUE, results="asis"------------------------
 DR <- rbind(PO = c("--", "--", "Y", "Y","","Y","","","", "Y"),

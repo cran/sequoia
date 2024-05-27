@@ -45,7 +45,8 @@ actual) hom|other hom, het|hom, and hom|het; OR a vector or 3XnSnp matrix
 with the genotyping error rate(s) for each SNP.}
 
 \item{ErrorFV}{function taking the error rate (scalar) as argument and
-returning a length 3 vector with hom->other hom, hom->het, het->hom.}
+returning a length 3 vector with hom->other hom, hom->het, het->hom. May be
+an 'ErrFlavour', e.g. 'version2.9'.}
 
 \item{ErrorFM}{function taking the error rate (scalar) as argument and
 returning a 3x3 matrix with probabilities that actual genotype i (rows) is
@@ -105,9 +106,9 @@ For founders, i.e. individuals with no
   into a 3x3 error matrix is fully flexible and specified via \code{ErrorFM};
   see \code{link{ErrToM}} for details.
 
-  The default values of \code{SnpError=5e-4} and \code{ErrorFM='version2.0'}
-  correspond to the length 3 vector \code{c((5e-4/2)^2, 5e-4/2,
-  5e-4*(1-5e-4/2))}.
+  The default values of \code{SnpError=5e-4} and \code{ErrorFM='version2.9'}
+  correspond to the length 3 vector \code{c((5e-4/2)^2, 5e-4*(1-5e-4/2),
+  5e-4/2)}.
 
   A beta-distribution is used to simulate variation in the error rate between
   SNPs, the shape parameter of this distribution can be specified via

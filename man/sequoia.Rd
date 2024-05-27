@@ -23,16 +23,17 @@ sequoia(
   quiet = FALSE,
   Plot = NULL,
   StrictGenoCheck = TRUE,
-  ErrFlavour = "version2.0",
+  ErrFlavour = "version2.9",
   MaxSibIter = 42,
   MaxMismatch = NA,
   FindMaybeRel = FALSE
 )
 }
 \arguments{
-\item{GenoM}{numeric matrix with genotype data: One row per individual, and
-one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
-\code{\link{GenoConvert}}.}
+\item{GenoM}{numeric matrix with genotype data: One row per individual,
+one column per SNP, coded as 0, 1, 2, missing values as a negative number
+or NA. You can reformat data with \code{\link{GenoConvert}}, or use other
+packages to get it into a genlight object and then use \code{as.matrix}.}
 
 \item{LifeHistData}{data.frame with up to 6 columns:
  \describe{

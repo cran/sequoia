@@ -12,7 +12,7 @@ CalcOHLLR(
   AgePrior = FALSE,
   SeqList = NULL,
   Err = 1e-04,
-  ErrFlavour = "version2.0",
+  ErrFlavour = "version2.9",
   Tassign = 0.5,
   Tfilter = -2,
   Complex = "full",
@@ -25,9 +25,10 @@ CalcOHLLR(
 non-genotyped individuals, which will be treated as dummy individuals. If
 provided, any pedigree in \code{SeqList} is ignored.}
 
-\item{GenoM}{numeric matrix with genotype data: One row per individual, and
-one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
-\code{\link{GenoConvert}}.}
+\item{GenoM}{numeric matrix with genotype data: One row per individual,
+one column per SNP, coded as 0, 1, 2, missing values as a negative number
+or NA. You can reformat data with \code{\link{GenoConvert}}, or use other
+packages to get it into a genlight object and then use \code{as.matrix}.}
 
 \item{CalcLLR}{calculate log-likelihood ratios for all assigned parents
 (genotyped + dummy/non-genotyped; parent vs. otherwise related). If

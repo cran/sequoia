@@ -33,7 +33,8 @@
 #'   actual) hom|other hom, het|hom, and hom|het; OR a vector or 3XnSnp matrix
 #'   with the genotyping error rate(s) for each SNP.
 #' @param ErrorFV  function taking the error rate (scalar) as argument and
-#'   returning a length 3 vector with hom->other hom, hom->het, het->hom.
+#'   returning a length 3 vector with hom->other hom, hom->het, het->hom. May be
+#'   an 'ErrFlavour', e.g. 'version2.9'.
 #' @param ErrorFM  function taking the error rate (scalar) as argument and
 #'   returning a 3x3 matrix with probabilities that actual genotype i (rows) is
 #'   observed as genotype j (columns). See below for details. To use, set
@@ -75,9 +76,9 @@
 #'   into a 3x3 error matrix is fully flexible and specified via \code{ErrorFM};
 #'   see \code{link{ErrToM}} for details.
 #'
-#'   The default values of \code{SnpError=5e-4} and \code{ErrorFM='version2.0'}
-#'   correspond to the length 3 vector \code{c((5e-4/2)^2, 5e-4/2,
-#'   5e-4*(1-5e-4/2))}.
+#'   The default values of \code{SnpError=5e-4} and \code{ErrorFM='version2.9'}
+#'   correspond to the length 3 vector \code{c((5e-4/2)^2, 5e-4*(1-5e-4/2),
+#'   5e-4/2)}.
 #'
 #'   A beta-distribution is used to simulate variation in the error rate between
 #'   SNPs, the shape parameter of this distribution can be specified via
@@ -152,8 +153,8 @@ SimGeno <- function(Pedigree,
                     SnpError = 5e-4,
                     ErrorFV = function(E) c((E/2)^2, E-(E/2)^2, E/2),  # hom|hom, het|hom, hom|het
                     ErrorFM = NULL,
-					          ReturnStats = FALSE,
-					          quiet = FALSE)
+                    ReturnStats = FALSE,
+                    quiet = FALSE)
 {
   if (missing(Pedigree)) stop("please provide a pedigree to simulate from")
 
@@ -171,9 +172,9 @@ SimGeno <- function(Pedigree,
   params <- list('ParMis' = ParMis, 'MAF' = MAF,
                  'SnpError' = SnpError, 'CallRate' = CallRate)
   ValidLength <- list('ParMis' = c(1,2),
-  'MAF' = c(1, nSnp),
-  'SnpError' = c(1,3,nSnp,3*nSnp),
-  'CallRate' = c(1, nSnp))
+                      'MAF' = c(1, nSnp),
+                      'SnpError' = c(1,3,nSnp,3*nSnp),
+                      'CallRate' = c(1, nSnp))
 
   for (p in seq_along(params)) {
     if (is.null(params[[p]]) | all(is.na(params[[p]]))) {
@@ -209,7 +210,7 @@ SimGeno <- function(Pedigree,
   # check & prep ===
   Ped <- sequoia::PedPolish(Pedigree, ZeroToNA=TRUE)
   nInd <- nrow(Ped)
-  if (any(round(Q*nInd) %in% c(0,1)))  warning("some simulated SNPs have fixed alleles")
+  if (any(round(Q*nInd) %in% c(0,1)))  cli::cli_alert_warning("some simulated SNPs have fixed alleles")
 
 
   #================================
@@ -380,7 +381,7 @@ MkGenoErrors <- function(SGeno,
   #~~~~~~~~~
   if (any(CallRate <1)) {
     CRtype <- ifelse(length(CallRate)==1, "mean",
-                ifelse(!is.null(names(CallRate)), "Indiv", "SNP"))
+                     ifelse(!is.null(names(CallRate)), "Indiv", "SNP"))
     MisX <- matrix(FALSE, nInd, nSnp)
 
     if (CRtype == "Indiv") {
@@ -415,7 +416,7 @@ MkGenoErrors <- function(SGeno,
     return(list(GenoM = SGeno, Log = edit_log,
                 Counts_actual = table(factor(SGeno_orig, levels=c(-9,0,1,2)))))
   } else {
-  #~~~~~~~~~
+    #~~~~~~~~~
     return( SGeno )
   }
 }
@@ -436,20 +437,20 @@ MkGenoErrors <- function(SGeno,
 #' @keywords internal
 
 DoErrors <- function(SGeno, Act2Obs) {
-   dnames <- dimnames(SGeno)
-   # Generate random numbers to determine which SNPs are erroneous (r < p)
-   # random number generation by Fortran not allowed: F90 not always supported
-   # + may interfere with other pkgs
+  dnames <- dimnames(SGeno)
+  # Generate random numbers to determine which SNPs are erroneous (r < p)
+  # random number generation by Fortran not allowed: F90 not always supported
+  # + may interfere with other pkgs
 
-   randomV <- runif(n=nrow(SGeno)*ncol(SGeno), min=0, max=1)
+  randomV <- runif(n=nrow(SGeno)*ncol(SGeno), min=0, max=1)
 
-   TMP <- .Fortran(mkerrors,
-                   nind = as.integer(nrow(SGeno)),
-                   nsnp = as.integer(ncol(SGeno)),
-                   genofr = as.integer(SGeno),
-                   eprobfr = as.double(Act2Obs),
-                   randomv = as.double(randomV))
-   return( matrix(TMP$genofr, nrow(SGeno), ncol(SGeno), dimnames=dnames) )
+  TMP <- .Fortran(mkerrors,
+                  nind = as.integer(nrow(SGeno)),
+                  nsnp = as.integer(ncol(SGeno)),
+                  genofr = as.integer(SGeno),
+                  eprobfr = as.double(Act2Obs),
+                  randomv = as.double(randomV))
+  return( matrix(TMP$genofr, nrow(SGeno), ncol(SGeno), dimnames=dnames) )
 }
 
 
@@ -476,12 +477,14 @@ SelectNotSampled <- function(Ped, ParMis) {
 
   } else {
 
+    NotSampled <- NULL
     for (p in 1:2) {
       if (ParMis[p]>0) {
         IsParent <- which(Ped[,1] %in% Ped[,p+1])
       }
       if (round(length(IsParent)*ParMis[p]) > 0) {
-        NotSampled <- sample(IsParent, round(length(IsParent)*ParMis[p]), replace=FALSE)
+        NotSampled <- c(NotSampled,
+                        sample(IsParent, round(length(IsParent)*ParMis[p]), replace=FALSE))
       }
     }
   }

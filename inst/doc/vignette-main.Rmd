@@ -2,7 +2,7 @@
 title: "Sequoia User Guide"
 subtitle: "Reconstruction of multi-generational pedigrees from SNP data"
 author: "Jisca Huisman ( jisca.huisman @ gmail.com )"
-date: "5 Sept 2023"
+date: "17 May 2024"
 output:
   bookdown::pdf_book:
     extra_dependencies:
@@ -11,6 +11,7 @@ output:
     - graphicx
     - subcaption
     keep_tex: true
+    keep_md: true
   bookdown::html_document2:
     base_format: rmarkdown::html_vignette
     toc: true
@@ -36,6 +37,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
   %\VignetteKeyword{pedigree}
   %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteDepends{knitr,rmarkdown,data.table}
 ---
 
 ```{r setup, include=FALSE}
@@ -99,7 +101,7 @@ It is often prudent to first do a quick partial run to check for duplicates and 
 # read in genotype data if already coded as 0/1/2, with missing=-9:
 Geno <- as.matrix(read.csv("mydata.csv", header=FALSE, row.names=1))
 CheckGeno(Geno)
-# or read in from several other input formats (not .vcf (yet)):
+# or read in from several other input formats (incl. vcf):
 Geno <- GenoConvert(InFile = "mydata.ped", InFormat="ped")
 #
 # read in lifehistory data: ID-Sex-birthyear, column names ignored
@@ -185,7 +187,7 @@ but can be changed via parameters `Err` and `ErrFlavour`.
 ## Likelihoods
 Assignments are based on the likelihods for all different possible relationships between a pair, calculated conditional on all assignments made up onto that point. If the focal relationship is more likely than all alternatives (by a margin `Tassign`), the assignment is made. 
 
-The relationships are condensed into seven categories (Table \@ref(tab:rel7)). Under the default settings (`Complx='full'`), these also include their combinations (see section Unusual relationships](#sec:WeirdRels)), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male. 
+The relationships are condensed into seven categories (Table \@ref(tab:rel7)). Under the default settings (`Complx='full'`), these also include their combinations (see section [Unusual relationships](#sec:WeirdRels)), e.g. a pair may be both paternal half-siblings and maternal aunt/niece if they were produced by a mother-daughter pair mating with the same male. 
 
 ```{r rel7, echo=FALSE, eval=TRUE, results="asis"}
 knitr::kable(cbind(" "= c("PO", "FS", "HS", "GP", "FA", "HA", "U"),
@@ -653,7 +655,8 @@ To minimise such pedigree errors where parent and offspring are flipped the wron
 When running `sequoia()`, you can pass arguments to `MakeAgePrior()` via `args.AP`. For example, when you are sure generations do not overlap, you can specify this via `MakeAgePrior()`'s argument `Discrete`:
 ```{r argsAP, eval=TRUE}
 SeqOUT <- sequoia(GenoM = SimGeno_example, LifeHistData = LH_HSg5, Module='par',
-                  args.AP = list(Discrete = TRUE))
+                  args.AP = list(Discrete = TRUE), quiet=TRUE)
+PlotAgePrior(SeqOUT$AgePriors)
 ```
 
 Or you can specify that the maximum age of (non-genotyped) parents exceeds the observed age range among SNP-genotyped parent-offspring pairs in `PedigreePar`:
@@ -804,12 +807,113 @@ SeqOUTX <- sequoia(GenoM = Geno,
 
 # Running `sequoia()`
 
-## `Module` (`MaxSibIter`)
-Most datasets initially contain imperfections. Pedigree reconstruction can be a useful tool in quality control, to find outliers with many Mendelian errors among e.g. known mother--offspring pairs (sample mislabeling?) or among SNPs (poor quality SNPs to be excluded). 
+First all input is checked, and by default (see [`Module`](#sec:Module)) this is followed by assignment of genotyped parents to genotyped offspring, and then by full pedigree reconstruction.
+
+## console output
+You can toggle the amount of runtime information provided with parameter `quiet`,
+with options `TRUE`, `FALSE` (default), and `verbose` (extra details). With `verbose`, 
+you see output similar to this:
+
+```{r, eval=FALSE, purl=FALSE}
+SeqOUT <- sequoia(GenoM = Geno_griffin,  LifeHistData = LH_griffin, Plot=FALSE, quiet='verbose')
+```
+
+```
+## i Checking input data ...
+## v Genotype matrix looks OK! There are  142  individuals and  400  SNPs.
+## 
+## -- Among genotyped individuals: ___
+## i There are 66 females, 76 males, 0 of unknown sex, and 0 hermaphrodites.
+## i Exact birth years are from 2001 to 2010
+## ___
+## i Calling `MakeAgePrior()` ...
+## i Ageprior: Flat 0/1, overlapping generations, MaxAgeParent = 10,10
+## 
+## ~~~ Duplicate check ~~~
+## v No potential duplicates found
+## 
+## ~~~ Parentage assignment ~~~
+##     Time |  R |       Step |   progress |  dams | sires |   Total LL 
+## -------- | -- | ---------- | ---------- | ----- | ----- | ----------
+## 14:45:50 |  0 | count OH   | .......... | 
+## 14:45:50 |  0 | initial    |            |     0 |     0 |   -23820.2 
+## 14:45:50 |  1 | parents    | .......... |    65 |    79 |   -19499.2 
+## 14:45:51 |  2 | parents    | .......... |    65 |    79 |   -19499.2 
+## 14:45:52 | 99 | est byears |            | 
+## 14:45:52 | 99 | calc LLR   | .......... |
+## v assigned 65 dams and 79 sires to 142 individuals
+## i Ageprior: Pedigree-based, overlapping generations, smoothed, MaxAgeParent = 5,5
+## 
+## ~~~ Full pedigree reconstruction ~~~
+##     Time |  R |       Step |   progress |  dams | sires |   Total LL 
+## -------- | -- | ---------- | ---------- | ----- | ----- | ----------
+## 14:45:52 |  0 | count OH   | .......... | 
+## 14:45:52 |  0 | initial    |            |    65 |    79 |   -19499.2 
+## 14:45:52 |  0 | ped check  | .......... |    65 |    79 |   -19499.2 
+## 14:45:52 |  1 | find pairs | .......... |    65 |    79 |   -19499.2 
+## 14:45:53 |  1 | clustering | .......... |    94 |    88 |   -18761.7 
+## 14:45:53 |  1 | merging    | .......... |    94 |    88 |   -18761.7 
+## 14:45:53 |  1 | P of sibs  | .......... |    94 |    88 |   -18761.7 
+## 14:45:53 |  1 | find/check | .......... |    94 |    88 |   -18766.8 
+## 14:45:58 |  2 | find pairs | .......... |    94 |    88 |   -18766.8 
+## 14:45:58 |  2 | clustering | .......... |    94 |    88 |   -18766.8 
+## 14:45:58 |  2 | merging    | .......... |    94 |    88 |   -18766.8 
+## 14:45:58 |  2 | P of sibs  | .......... |    94 |    88 |   -18766.8 
+## 14:45:58 |  2 | GP Hsibs   | .......... |    94 |    88 |   -18654.9 
+## 14:45:59 |  2 | find/check | .......... |    94 |    88 |   -18644.4 
+(...)
+## 14:46:08 |  5 | P of sibs  | .......... |   107 |   101 |   -18164.4 
+## 14:46:08 |  5 | GP Hsibs   | .......... |   107 |   101 |   -18164.4 
+## 14:46:08 |  5 | GP Fsibs   | .......... |   107 |   101 |   -18164.4 
+## 14:46:08 |  5 | find/check | .......... |   106 |   101 |   -18181.4 
+## 14:46:09 | 99 | est byears |            | 
+## 14:46:09 | 99 | calc LLR   | .......... |
+## v assigned 123 dams and 122 sires to 142 + 28 individuals (real + dummy)
+## i You can use `SummarySeq()` for pedigree details, and `EstConf()` for confidence estimates
+## i Possibly not all relatives were assigned, consider running `GetMaybeRel()`
+## conditional on this pedigree to check
+```
+
+where `R` is the round number - this is not like MCMC iterations, but rather each round builds upon the previous. 
+
+### step
+`step` describes the various elements within each full pedigree reconstruction round, as well as the preparation & closing steps:
+
+* **count OH** (R=0): Count number of opposing homozygous loci between all pairs of individuals
+* **initial** (R=0):  Initial status; for `par` this assumes all individuals are unrelated, for `ped` this is the parents assigned during the `par` module. 
+* **parents** (`Module='par'`): Assignment of genotyped parents to genotyped offspring
+* **est byears** (R=99): Estimate birth year ranges for individuals with unknown birth year in the input `LifeHistData`, as well as for dummy individuals (when `Module='ped'`).
+* **calc LLR** (R=99): Calculate for each assigned parent & parent-pair the likelihood ratio to be parent-offspring with the focal individual vs otherwise related, conditional on the rest of the pedigree. 
+* **ped check** (R=0): Check input pedigree: are all assignments genetically likely (LLR > `T_assign`) and are age differences compliant with the provided ageprior matrix? Unlikely and impossible assignments are dropped. 
+
+For `Module='ped'` (some are skipped during the 1st and 2nd round):
+
+* **find pairs**: find pairs of likely full and half siblings
+* **clustering**: cluster these pairs into full-sibling and maternal and paternal half-sibling clusters
+* **GP pairs**: assign grandparent-grandoffspring pairs (both individuals genotyped)
+* **merging**: check if any maternal (paternal) half-sibships should be merged
+* **P of sibs**: check if the dummy parent of any half-sibship can be replaced by a real, genotyped individual (e.g. one with unknown sex or birth year, or poorly genotyped)
+* **GP Hsibs**: assign grandparents (real & dummy) to half-sibships
+* **GP Fsibs**: assign grandparents (real & dummy) to full-sibships
+* **find/check**: for each individual, see if a (dummy) parent can now be assigned. If a parent was assigned this round, double check it. 
+
+### dams, sires
+The number of dams & sires assigned to genotyped individuals at the end of the step. For brevity, the number of parents assigned to dummy individuals (i.e. grandparents of sibships) is not included. Note that the final message ('assigned 123 dams and 122 sires to 142 + 28 individuals (real + dummy)') *does* include parents assigned to dummy individuals. 
+
+
+### Total LL
+The total likelihood (last column) should go steadily from the initial value (how well are the genetic data explained as random, independent draws from a population to HWE) towards zero (all genetic data perfectly explained by the reconstructed pedigree). It is normal for it to not change during some steps (no change made to the pedigree), and it can decrease a bit during the 'find/check' step (not confident in an earlier made assignment after all, conditional on how the rest of the pedigree looks now). 
+
+However, if you see the likelihood zigzag up & down again and the program keeps on running, something is wrong. It can be that there are several mutually exclusive pedigree configurations with nearly equal likelihood, and the algorithm gets stuck cycling between them. This can especially happen with poor quality/quantity of genetic data. Sometimes it can get unstuck by changing input parameter values (`Err`, `T_assign`) or by providing additional information (YearLast in LifeHistData, more informative ageprior). Sometimes it may simply mean `sequoia` is not the right tool for your dataset, and you require an MCMC based program (which, I think, are not yet available for complex multi-generational pedigrees...).
+
+
+
+## `Module` {#sec:Module} 
+Most datasets initially contain imperfections. Pedigree reconstruction can be a useful tool in quality control, to find outliers with many Mendelian errors among e.g. known mother--offspring pairs (sample mislabelling?) or among SNPs (poor quality SNPs to be excluded). 
 
 To speed up iterative quality control, it is possible to run `sequoia()` only up to a certain point, use the output thus far to, as necessary, exclude SNPs, exclude/relabel samples, or adjust input parameters, and re-run again from the start or resume from the last point. 
 
-There are three possible intermediate stopping points, plus the final end point, each named after the last '`Module`' that is run:
+There are three possible intermediate stopping points, plus the final end point, each named after the last '`Module`' [^m] that is run:
 
   1. **`'pre'`**: Input check  
   check that the genotype data, life history data and input parameters are in a valid format, create `'Specs'` element of output list
@@ -821,17 +925,7 @@ There are three possible intermediate stopping points, plus the final end point,
   4. **`'ped'`**: full pedigree reconstruction  
   Cluster half- and full-siblings and assign each cluster a dummy-parent; assign grandparents to sibships and singletons. 
 
-
-### `MaxSibIter`  {#sec:MaxSibIter}
-Up to sequoia version 2.0, `MaxSibIter` was used to switch between these options, with numeric values  
-
-  * $-9$ only input check  
-  * $-1$ also check for duplicates  
-  * $0$ also do parentage assignment  
-  * $x>0$ also do at most $x$ iterations of full pedigree reconstruction  
-
-The maximum number of iterations was always only intended as a safety net in case the total likelihood did not stabilise, but this has not been an issue since sequoia version 1.0 (as far as I am aware). Even for large, complex datasets (several thousand individuals with considerable close inbreeding) the total likelihood plateaus in 10--15 iterations. From version 2.1 onward, `MaxSibIter`$=42$; if this number of iterations is reached it is a strong sign of problems with the data, e.g. that the SNPs are not informative enough to reconstruct the pedigree. 
-
+[^m]: `Module` is the successor of the rather confusing `MaxSibIter` that was used up to version 2.0).
 
 
 ## Input check
@@ -905,16 +999,22 @@ The total likelihood provides a measure of how well the observed genotype data i
 
 ## Save output
 
-There are various ways in which the output can be stored. This includes saving the seqoia list object, and optionally various other objects, in an `.RData` compressed file 
+There are various ways in which the output can be stored. For a single R object
+you can use `saveRDS` & `readRDS`:
 ```{r, eval=FALSE, purl=FALSE}
-save(SeqList, LHdata, Geno, file="Sequoia_output_date.RData")
+saveRDS(SeqList, 'Sequoia_output_date.RDS')
+# and later:
+SeqList_B <- readRDS('Sequoia_output_date.RDS')
 ```
 
-which can be read back into R at a later point 
+For multiple objects you can use `save` & `load`:
 ```{r, eval=FALSE, purl=FALSE}
+save(SeqList, LHdata, Geno, file="Sequoia_output_date.RData")
+# and later:
 load("Sequoia_output_date.RData")
-# 'SeqList' and 'LHdata' will appear in R environment
+# 'SeqList', 'LHdata' & Geno will appear in R environment
 ```
+
 The advantage is that all data is stored and can easily be manipulated when recalled. The disadvantage is that the file is not human-readable, and (to my knowledge) can only be opened by R.
 
 Alternatively, the various dataframes and list elements can each be written to a text file in a designated folder. This can be done using `write.table` or `write.csv`, or using the wrapper `writeSeq()`: 
@@ -922,17 +1022,19 @@ Alternatively, the various dataframes and list elements can each be written to a
 writeSeq(SeqList, GenoM = Geno, folder=paste("Sequoia_OUT", Sys.Date()))
 ```
 
-The same function can also write the dataframes and list elements to an excel file (.xls or .xlsx), each to a separate sheet, using package `xlsx`: 
+The same function can also write the dataframes and list elements to an excel file (.xls or .xlsx), each to a separate sheet, using package `openxlsx`: 
 ```{r, eval=FALSE, purl=FALSE}
 writeSeq(SeqList, OutFormat="xls", file="Sequoia_OUT.xlsx")
 ```
-Note that 'GenoM' is ignored, as a very large genotype matrix may result in a file that is too large for excel to open. If you have a genotype matrix of modest size, you can add it to the same excel file; see the example in `?writeSeq`. 
+Note that 'GenoM' is ignored, as a very large genotype matrix may result in a file that is too large for excel to open. If you have a genotype matrix of modest size, you can add it to the same excel file: 
 ```{r, eval=FALSE, purl=FALSE }
-library(xlsx)
-write.xlsx(Geno, file = "Sequoia_OUT.xlsx", sheetName="Genotypes",
-      col.names=FALSE, row.names=TRUE, append=TRUE, showNA=FALSE)
+library(openxlsx)
+wb <- loadWorkbook("MyFile.xlsx")
+addWorksheet(wb, sheetName = "Genotypes")
+writeData(wb, sheet = "Genotypes", GenoM, rowNames=TRUE)
+saveWorkbook(wb, "MyFile.xlsx", overwrite=TRUE, returnValue=TRUE)
 ```
-The option `append=TRUE` ensures that the sheet is appended to the file, rather than the file entirely overwritten.
+
 
 
 

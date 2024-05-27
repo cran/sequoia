@@ -206,7 +206,7 @@ CalcPairLL <- function(Pairs = NULL,
                        Complex = "full",
                        Herm = "no",
                        Err = 1e-4,
-                       ErrFlavour = "version2.0",
+                       ErrFlavour = "version2.9",
                        Tassign = 0.5,
                        Tfilter = -2.0,
                        quiet = FALSE,
@@ -229,7 +229,7 @@ CalcPairLL <- function(Pairs = NULL,
       if (x %in% names(SeqList)) {
         if (x == "PedigreePar" & "Pedigree" %in% names(SeqList))  next
         if (x == "AgePriors" & AgePrior == FALSE)  next
-        if (!quiet)  message("using ", x, " in SeqList")
+        if (!quiet)  cli::cli_alert_info("using {x} in SeqList")
         assign(NewName[x], SeqList[[x]])
       }
     }
@@ -237,6 +237,14 @@ CalcPairLL <- function(Pairs = NULL,
 
   Ped <- PedPolish(Pedigree, gID, DropNonSNPd=FALSE, NullOK = TRUE)
   # Ped=NULL if Pedigree=NULL & gID=NULL
+  if (!quiet) {
+    if (is.null(Ped)) {
+      cli::cli_alert_info("Not conditioning on any pedigree")
+    } else {
+      N <- c(i=nrow(Ped), d=sum(!is.na(Ped$dam)), s=sum(!is.na(Ped$sire)))
+      cli::cli_alert_info("Conditioning on pedigree with {N['i']} individuals, {N['d']} dams and {N['s']} sires")
+    }
+  }
 
   LHF <- CheckLH(LifeHistData, rownames(GenoM), sorted=TRUE)
   LHF$Sex[LHF$Sex==4] <- 3
@@ -278,7 +286,7 @@ CalcPairLL <- function(Pairs = NULL,
 
   # Specs / param ----
   if ("Specs" %in% names(SeqList)) {
-    if(!quiet)  message("settings in SeqList$Specs will overrule input parameters")
+    if(!quiet)  cli::cli_alert_info("settings in SeqList$Specs will overrule input parameters")
     PARAM <- SpecsToParam(SeqList$Specs,
                           ErrM=SeqList$ErrM, ErrFlavour=ErrFlavour,
                           dimGeno = dim(GenoM), quiet, Plot)  # overrule values in SeqList
@@ -370,7 +378,7 @@ CalcPairLL <- function(Pairs = NULL,
   # plot ----
   if (Plot) {
     if (nrow(Pairs) > 1e4) {
-      message("Plot not shown when >10.000 pairs")
+      cli::cli_alert_info("Plot not shown when >10.000 pairs")
     } else {
       PlotPairLL(Pairs.OUT)
     }
@@ -410,7 +418,7 @@ FortifyPairs <- function(Pairs,   # pairs with character IDs etc
   if (ncol(Pairs)==2) {
     colnames(Pairs) <- c("ID1", "ID2")
   } else if (!all(c("ID1", "ID2") %in% names(Pairs))) {
-    warning("Assuming columns 1 and 2 of Pairs are 'ID1' and 'ID2'")
+    cli::cli_alert_warning("Assuming columns 1 and 2 of Pairs are 'ID1' and 'ID2'")
     colnames(Pairs)[1:2] <- c("ID1", "ID2")
   }
   for (x in c("ID1", "ID2"))   Pairs[,x] <- as.character(Pairs[,x])

@@ -96,7 +96,7 @@ writeSeq <- function(SeqList,
                  SeqList$Specs$NumberSnps, "vs", ncol(GenoM), ")"))
     }
   } else if (OutFormat == "txt") {
-    warning("No GenoM specified")
+    cli::cli_alert_warning("No `GenoM` specified")
   }
 
   # write excel file ----
@@ -217,7 +217,7 @@ writeSeq <- function(SeqList,
 
   options(OPT)
   setwd(curdir)
-  if(!quiet) message(paste("Output written to", normalizePath(folder, winslash="/")))
+  if(!quiet) cli::cli_alert_info("Output written to {normalizePath(folder, winslash='/')}")
   } else {
     stop("OutFormat not supported.")
   }
@@ -337,7 +337,7 @@ write.seq.xls <- function(SeqList, file, PedComp=NULL, quiet) {
                                returnValue=TRUE)
 
   if (isTRUE(WriteSuccess)) {
-    if(!quiet) message(paste("Output written to", file))
+    if(!quiet) cli::cli_alert_info("Output written to {file}")
   } else {
     stop(WriteSuccess$message, call.=FALSE)
   }

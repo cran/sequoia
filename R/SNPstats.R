@@ -21,6 +21,7 @@
 #'   Mendelian errors per SNP and (poorly) estimate the error rate.
 #' @param Duplicates  dataframe with pairs of duplicated samples
 #' @param Plot  show histograms of the results?
+#' @param quiet  suppress messages
 #' @param ErrFlavour DEPRECATED AND IGNORED. Was used to estimate \code{Err.hat}
 #'
 #' @return A matrix with a number of rows equal to the number of SNPs
@@ -59,8 +60,10 @@ SnpStats <- function(GenoM,
                      Pedigree = NULL,
                      Duplicates = NULL,
                      Plot = TRUE,
+                     quiet = TRUE,
                      ErrFlavour)
 {
+  GenoM[is.na(GenoM)] <- -9
   # missingness
   Mis <- apply(GenoM, 2, function(x) sum(x < 0))/nrow(GenoM)
   # allele frequency
@@ -92,8 +95,14 @@ SnpStats <- function(GenoM,
     Par <- PedPolish(Pedigree, gID = rownames(GenoM), DropNonSNPd=TRUE,
                      KeepAllColumns=FALSE)
     Par <- Par[!(is.na(Par[,'dam']) & is.na(Par[,'sire'])), ]
-    if (nrow(Par)==0)  warning('Cannot count OH, because pedigree ',
-                            'does not have any genotyped parent-offspring pairs')
+    if (nrow(Par)==0) {
+      cli::cli_alert_warning('Cannot count OH, because pedigree does not have any genotyped parent-offspring pairs')
+    } else if (!quiet) {
+      N <- c(i=nrow(Par), d=sum(Par$dam %in% rownames(GenoM)), s=sum(Par$sire %in% rownames(GenoM)))
+      cli::cli_alert_info("Conditioning on genotyped-only pedigree with {N['i']} individuals, {N['d']} dams and {N['s']} sires")
+    }
+  } else {
+    if (!quiet)  cli::cli_alert_info("Not conditioning on any pedigree")
   }
 
   if (!is.null(Pedigree) | !is.null(Duplicates)) {
@@ -111,9 +120,13 @@ SnpStats <- function(GenoM,
       })
   }
 
-  rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT),
+  if (is.null(colnames(GenoM)) | all(colnames(GenoM) == paste0('V', seq_len(ncol(GenoM))))) {
+    rownames(OUT) <- paste0("SNP", formatC(1:nrow(OUT),
                                          width=ifelse(nrow(OUT)<1000, 3, 4),
                                          flag="0"))
+  } else {
+    rownames(OUT) <- colnames(GenoM)  # SNP names
+  }
   invisible( OUT )
 }
 

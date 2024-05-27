@@ -53,7 +53,7 @@ PedToNum <- function(Pedigree = NULL,
   }
   if (is.null(gID))  stop("Please provide 'gID'")
   if (length(DumPrefix) > 2 & DoDummies=="old" & !all(Pedigree$id %in% gID))
-    warning(">2 DumPrefixes not supported by PedToNum", immediate.=TRUE)
+    cli::cli_alert_warning(">2 DumPrefixes not supported by `PedToNum()`")
 
   if (!DoDummies %in% c("old", "new", "no"))
     stop("'DoDummies' must be 'old', 'new', or 'no'")
@@ -193,8 +193,8 @@ NumToID <- function(x, k=0, gID=NULL, DumPrefix = c("F", "M"))
 
   if (Nd.k > 9999)  stop("\nMore than 9999 dummies! Cannot parse output.")
   if (Nd.k > 999 && any(nchar(DumPrefix)==1))
-    warning("\nMore than 999 dummies! Please use DummyPrefix of >1 character to avoid ambiguity",
-            immediate. = TRUE)
+    cli::cli_alert_warning(c("More than 999 dummies! Please use `DummyPrefix` of >1 character to avoid ambiguity,",
+                             "default is `F0` & `M0`"), wrap=TRUE)
 
   if (length(k)==1)  k <- rep(k, length(x))
   if (!all(k[x<0] %in% 1:2))  stop("Invalid k")

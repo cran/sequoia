@@ -4,7 +4,7 @@
 \alias{CalcMaxMismatch}
 \title{Maximum Number of Mismatches}
 \usage{
-CalcMaxMismatch(Err, MAF, ErrFlavour = "version2.0", qntl = 1 - 1e-05)
+CalcMaxMismatch(Err, MAF, ErrFlavour = "version2.9", qntl = 1 - 1e-05)
 }
 \arguments{
 \item{Err}{estimated genotyping error rate, as a single number or 3x3 matrix

@@ -38,7 +38,8 @@ perform, i.e. number of simulated datasets.}
 \item{nCores}{number of computer cores to use. If \code{>1}, package
 \pkg{parallel} is used. Set to NULL to use all but one of the available
 cores, as detected by \code{parallel::detectCores()} (using all cores tends
-to freeze up your computer).}
+to freeze up your computer). With large datasets, the amount of computer
+memory may be the limiting factor for the number of cores you can use.}
 
 \item{quiet}{suppress messages. \code{TRUE} runs \code{SimGeno} and
 \code{sequoia} quietly, \code{'very'} also suppresses other messages and

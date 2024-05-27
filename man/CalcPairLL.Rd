@@ -14,7 +14,7 @@ CalcPairLL(
   Complex = "full",
   Herm = "no",
   Err = 1e-04,
-  ErrFlavour = "version2.0",
+  ErrFlavour = "version2.9",
   Tassign = 0.5,
   Tfilter = -2,
   quiet = FALSE,
@@ -48,9 +48,10 @@ of ID1 were unknown.}
 \item{dropPar2}{as \code{dropPar1}, for \code{ID2}}
 }}
 
-\item{GenoM}{numeric matrix with genotype data: One row per individual, and
-one column per SNP, coded as 0, 1, 2 or -9 (missing). See also
-\code{\link{GenoConvert}}.}
+\item{GenoM}{numeric matrix with genotype data: One row per individual,
+one column per SNP, coded as 0, 1, 2, missing values as a negative number
+or NA. You can reformat data with \code{\link{GenoConvert}}, or use other
+packages to get it into a genlight object and then use \code{as.matrix}.}
 
 \item{Pedigree}{dataframe with columns id-dam-sire; likelihoods will be
 calculated conditional on the pedigree. May include non-genotyped

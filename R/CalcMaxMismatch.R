@@ -50,7 +50,7 @@
 #'
 #' @export
 
-CalcMaxMismatch <- function(Err, MAF, ErrFlavour = "version2.0", qntl=1-1e-5) {
+CalcMaxMismatch <- function(Err, MAF, ErrFlavour = "version2.9", qntl=1-1e-5) {
 
   nSnp <- length(MAF)
   # ErrM: observed (columns) conditional on actual (rows)

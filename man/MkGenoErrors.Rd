@@ -31,7 +31,8 @@ actual) hom|other hom, het|hom, and hom|het; OR a vector or 3XnSnp matrix
 with the genotyping error rate(s) for each SNP.}
 
 \item{ErrorFV}{function taking the error rate (scalar) as argument and
-returning a length 3 vector with hom->other hom, hom->het, het->hom.}
+returning a length 3 vector with hom->other hom, hom->het, het->hom. May be
+an 'ErrFlavour', e.g. 'version2.9'.}
 
 \item{ErrorFM}{function taking the error rate (scalar) as argument and
 returning a 3x3 matrix with probabilities that actual genotype i (rows) is

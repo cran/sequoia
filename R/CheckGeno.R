@@ -110,11 +110,6 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     }
   }
 
-  warn <- function(...)
-    warning(paste(strwrap(paste(...), prefix=" "), "\n"),    # strwrap() destroys whitespace
-            call. = FALSE, immediate.=TRUE)
-
-
   # Exclude low quality SNPs ----
   Excl <- list()
   sstats <- SnpStats(GenoM, Plot = Plot)
@@ -125,8 +120,8 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     SNPs.TooMuchMissing <- sstats[,"Mis"] >= 1 - 1/nrow(GenoM)  # genotyped for 0 or 1 indiv --> no use
   }
   if (any(SNPs.TooMuchMissing)) {
-    warn("There are ", sum(SNPs.TooMuchMissing),
-         " SNPs scored for ", ifelse(Strict, "<5% of", "0 or 1"), " individuals, these will be excluded")
+    cli::cli_alert_warning(c("There are {sum(SNPs.TooMuchMissing)}",
+         " SNPs scored for {ifelse(Strict, '<5% of', '0 or 1')} individuals, these will be excluded"))
     GenoM <- GenoM[, !SNPs.TooMuchMissing]
     Excl[["ExcludedSnps"]] <- which(SNPs.TooMuchMissing)
     sstats <- SnpStats(GenoM, Plot = FALSE)   # update SnpStats
@@ -134,15 +129,15 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
 
   SNPs.mono <- sstats[,"AF"] <= 1/(2*nrow(GenoM)) | sstats[,"AF"] >= 1 - 1/(2*nrow(GenoM))
   if (any(SNPs.mono)) {
-    warn("There are ", sum(SNPs.mono)," monomorphic (fixed) SNPs, these will be excluded")
+    cli::cli_alert_warning("There are {sum(SNPs.mono)} monomorphic (fixed) SNPs, these will be excluded")
     GenoM <- GenoM[, !SNPs.mono]
     Excl[["ExcludedSnps-mono"]] <- which(SNPs.mono)
   }
 
   SNPs.LotMissing <- apply(GenoM, 2, function(x) sum(x>=0)) < nrow(GenoM)/2
   if (any(SNPs.LotMissing)) {
-    warn(ifelse("ExcludedSnps" %in% names(Excl), "In addition, there", "There"),
-         " are ", sum(SNPs.LotMissing)," SNPs scored for <50% of individuals")
+    cli::cli_alert_warning(c('{ifelse("ExcludedSnps" %in% names(Excl), "In addition, there", "There")}',
+         " are {sum(SNPs.LotMissing)} SNPs scored for <50% of individuals"))
     Excl[["Snps-LowCallRate"]] <- which(SNPs.LotMissing)
   }
 
@@ -155,18 +150,18 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
     Indiv.TooMuchMissing <- Lscored <= 1  # genotyped for 0 or 1 SNPs --> no point
   }
   if (any(Indiv.TooMuchMissing)) {
-    warn("\n *********** \n There are ", sum(Indiv.TooMuchMissing),
-         " individuals scored for ", ifelse(Strict, "<5% of", "0 or 1"), " SNPs, ",
-         "these WILL BE IGNORED \n ***********")
+    cli::cli_alert_danger(c("There are {.strong {sum(Indiv.TooMuchMissing)} individuals}",
+         ' scored for {ifelse(Strict, "<5% of", "0 or 1")} SNPs, ',
+         "these {.strong WILL BE IGNORED}"))
     Excl[["ExcludedIndiv"]] <- rownames(GenoM)[which(Indiv.TooMuchMissing)]
     GenoM <- GenoM[!Indiv.TooMuchMissing, ]
   }
 
   Indiv.LotMissing <- apply(GenoM, 1, function(x) sum(x>=0)) < ncol(GenoM)/5
   if (any(Indiv.LotMissing)) {
-    warn(ifelse("ExcludedIndiv" %in% names(Excl), "In addition, there", "There"),
-         " are ", sum(Indiv.LotMissing)," individuals scored for <20% of SNPs,",
-         "it is advised to treat their assignments with caution")
+     cli::cli_alert_danger(c('{ifelse("ExcludedIndiv" %in% names(Excl), "In addition, there", "There")}',
+         " are {sum(Indiv.LotMissing)} individuals scored for <20% of SNPs,",
+         "it is advised to treat their assignments with caution"))
     Excl[["Indiv-LowCallRate"]] <- rownames(GenoM)[Indiv.LotMissing]
   }
 
@@ -174,11 +169,11 @@ CheckGeno <- function(GenoM, quiet=FALSE, Plot=FALSE,
   if (!quiet) {
     MSG <- paste("There are ", nrow(GenoM), " individuals and ", ncol(GenoM), " SNPs.\n")
     if (any(c("ExcludedSnps", "ExcludedSnps-mono", "ExcludedIndiv") %in% names(Excl))) {
-      message("After exclusion, ", MSG)
+      cli::cli_alert_info(c("After exclusion, ", MSG))
     } else if (length(Excl)>0) {
-      message(MSG)
+      cli::cli_alert_info(MSG)
     } else {
-      message("Genotype matrix looks OK! ", MSG)
+      cli::cli_alert_success(c("Genotype matrix looks OK! ", MSG))
     }
   }
 

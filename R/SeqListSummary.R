@@ -314,7 +314,7 @@ PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
 
   PanelsIN <- Panels
   AllPanels <- c('G.parents', 'D.parents', 'O.parents', 'sibships', 'LLR', 'OH')
-  if (Panels[1]=="all") {
+  if (any(Panels=="all")) {
     Panels <- AllPanels
   } else if (!all(Panels %in% AllPanels)) {
     stop("Invalid value for 'Panels'")
@@ -348,10 +348,11 @@ PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
   Nx <- sapply(ParCounts, sum)/2  # each indiv has entry for both dam & sire (incl. 'None')
   if (Nx['G'] + Nx['D'] == 0)  barTitle[['O']] <- "No. parents assigned to \n 'observed' individuals"
   for (z in c('G', 'D', 'O')) {
+    if (!paste0(z,'.parents') %in% Panels)  next
     if (Nx[z] == 0) {
       Panels <- setdiff(Panels, paste0(z,'.parents'))
-      if (!all(PanelsIN %in% 'all')) warning('No ', z,'.parents panel because no ',
-                                             typenames[z], ' individuals', immediate.=TRUE)
+      if (!all(PanelsIN %in% 'all')) {
+        cli::cli_alert_info('No {z}.parents panel because no {typenames[z]} individuals')  }
     }
   }
 
@@ -515,10 +516,10 @@ PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
                 space=0, las=1, col="grey", main=Mainz.OH[i], xlab="Count")
       }
     } else if (length(Panels) < length(AllPanels)) {
-      warning("No 'OH' panel, because OH columns are all NA", immediate.=TRUE)
+      cli::cli_alert_info("No `OH` panel, because OH columns are all `<NA>`")
     }
   } else if ('OH' %in% Panels & length(Panels) < length(AllPanels)) {
-    warning("No 'OH' panel, because no OH columns", immediate.=TRUE)
+    cli::cli_alert_info("No `OH` panel, because no OH columns")
   }
 
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -545,10 +546,10 @@ PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
              main=Mainz.LLR[i], xlab="Log10 likelihood ratio", ylab="")
       }
     } else if (length(Panels) < length(AllPanels)) {
-      warning("No 'LLR' panel, because LLR columns are all NA", immediate.=TRUE)
+      cli::cli_alert_info("No `LLR` panel, because LLR columns are all `<NA>`")
     }
   } else if ('LLR' %in% Panels & length(Panels) < length(AllPanels)) {
-    warning("No 'LLR' panel, because no LLR columns", immediate.=TRUE)
+   cli::cli_alert_info("No `LLR` panel, because no LLR columns", immediate.=TRUE)
   }
 
 

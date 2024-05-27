@@ -42,22 +42,29 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
          call.=FALSE)
 
   if (ncol(LifeHistData) < 3)
-    stop("LifeHistData must have at least 3 columns: ID - Sex - BirthYear")
+    stop("LifeHistData must have at least 3 columns: ID - Sex - BirthYear (or be NULL)")
 
 
   # check IDs (column 1) ---
   colnames(LifeHistData)[1] <- 'ID'
   LifeHistData$ID <- as.character(LifeHistData$ID)
   if (any(grepl(" ", LifeHistData$ID))) {
-    stop("LifeHistData IDs (column 1) must not include spaces", call.=FALSE)
+    NotOK <- LifeHistData$ID[grepl(" ", LifeHistData$ID)]
+    cli::cli_alert_danger(c("LifeHistData IDs (column 1) contains {length(NotOK)}",
+                                " IDs that include spaces:"))
+    cli::cli_li(paste0("'", NotOK[1:min(length(NotOK), 3)], "'"))   # quotation marks to see leading/trailing blanks
+    if (length(NotOK) > 3)  cli::cli_li("...")
+    stop("IDs may only contain alphanumerical characters and underscore", call.=FALSE)
   }
   if (!all(is.na(gID))) {
     gID <- as.character(gID)
-    if (length(intersect(LifeHistData$ID, gID))==0)
+    if (length(intersect(LifeHistData$ID, gID))==0) {
+      cli::cli_alert_danger("Incorrect LifeHistData object, or incorrect format")
       stop("None of the IDs in LifeHistData column 1 match the rownames of GenoM",
            call.=FALSE)
+    }
   } else {
-    if (sorted)  stop("if sorted=TRUE, gID cannot be NA", call.=FALSE)
+    if (sorted)  stop("if sorted=TRUE, gID (ordered IDs in GenoM) must be provided", call.=FALSE)
   }
 
 
@@ -75,8 +82,9 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
                                       grepl('max', LH_colnames), 5),
               'Year.last' = which_else(grepl('last', LH_colnames), 6) )
   if (any(duplicated(colnum))) {
-    stop("Confused about LifeHistData column order; Please provide data as ",
-         "ID - Sex - BirthYear - BY.min - BY.max - Year.last", call.=FALSE)
+    cli::cli_alert_danger("Column order and/or column names in LifeHistData is unclear")
+    stop("Please provide LifeHistData as ",
+         "ID - Sex - BirthYear (- BY.min - BY.max - Year.last)", call.=FALSE)
   }
 
   # optional columns
@@ -85,7 +93,6 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
       LifeHistData[, x] <- -999
     }
   }
-
 
   # column renaming & order ---
   for (x in seq_along(colnum)) {
@@ -96,16 +103,26 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
 
   # check Sex ----
   if (!all(LifeHistData$Sex %in% 1:4)) {
+    prop_sex_OK <- sum(LifeHistData$Sex %in% c(1:4,NA)) / nrow(LifeHistData)
     sex_msg <- "LifeHistData column 'Sex' should be coded as 1=female, 2=male, 3/<NA>=unknown, 4=hermaphrodite"
-    if (sum(LifeHistData$Sex %in% 1:4) < nrow(LifeHistData)/10) {   # <10% valid non-missing coding
-      stop(sex_msg, call.=FALSE)
-    } else {
-      if (!all(LifeHistData$Sex %in% c(1,2,3,4,NA))) {
-        warning(sex_msg, "\n These values are converted to <NA>/3: ", setdiff(LifeHistData$Sex, 1:4),
-                call.=FALSE, immediate.=TRUE)
+    if (prop_sex_OK < 0.1) {
+      # recode from F/M/.. to 1/2/3?
+      if (sum(LifeHistData$Sex %in% c('f','F','m','M'))/nrow(LifeHistData) > 0.1) {
+        cli::cli_alert_warning("Recoding `LifeHistData` column `Sex` from F/M/.. to 1=female, 2=male, 3=unknown")
+        LifeHistData$Sex[LifeHistData$Sex %in% c('f','F')] <- 1
+        LifeHistData$Sex[LifeHistData$Sex %in% c('m','M')] <- 2
+      } else {
+        cli::cli_alert_danger(c('{(round((1-prop_sex_OK)*100)}% of entries',
+        " in `LifeHistData` column `Sex` have an unrecognised coding"))
+        stop(sex_msg, call.=FALSE)
       }
-      LifeHistData$Sex[!LifeHistData$Sex %in% c(1:4)] <- 3
+    } else {
+      if (!all(LifeHistData$Sex %in% c(1:4,NA))) {
+        cli::cli_alert_warning(c(sex_msg, "\nThe following values are converted to 3=unknown:"))
+        cli::cli_li(setdiff(LifeHistData$Sex, c(1:4,NA)))
+      }
     }
+    LifeHistData$Sex[!LifeHistData$Sex %in% c(1:4)] <- 3
   }
 
 
@@ -118,8 +135,8 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
   for (x in c("BirthYear", "BY.min", "BY.max", 'Year.last')) {
     IsInt <- check.integer(LifeHistData[,x])
     if (any(!IsInt, na.rm=TRUE)) {
-      warning("In LifeHistData column ", x, ", these values are converted to <NA>/-999: ",
-              unique(LifeHistData[,x][IsInt %in% FALSE]), immediate.=TRUE, call.=FALSE)
+      cli::cli_alert_warning("In `LifeHistData` column `{x}`, the following values are converted to <NA>/-999: ")
+      cli::cli_li(unique(LifeHistData[,x][IsInt %in% FALSE]))
     }
     LifeHistData[, x] <- ifelse(IsInt, suppressWarnings(as.integer(as.character(LifeHistData[, x]))), NA)
     LifeHistData[is.na(LifeHistData[,x]), x] <- -999
@@ -142,7 +159,7 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
                                       LHdup[, c('ID', intersect(col_order, colnames(LHdup)))],
                                       stringsAsFactors = FALSE)
     }
-    message("duplicate IDs found in lifehistory data, first entry will be used")
+    cli::cli_alert_warning("duplicate IDs found in `LifeHistData`, first entry will be used")
     LifeHistData <- LifeHistData[!duplicated(LifeHistData$ID), ]
   }
   if (returnDups & !all(is.na(gID))) {

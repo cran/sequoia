@@ -10,7 +10,7 @@ GenoConvert(
   InFormat = "raw",
   OutFile = NA,
   OutFormat = "seq",
-  Missing = c("-9", "??", "?", "NA", "NULL", "-1", c("0")[InFormat \%in\% c("col",
+  Missing = c("-9", "NA", "??", "?", "NULL", "-1", c("0")[InFormat \%in\% c("col",
     "ped")]),
   sep = c(" ", "\\t", ",", ";"),
   header = NA,
@@ -22,12 +22,15 @@ GenoConvert(
 )
 }
 \arguments{
-\item{InData}{dataframe or matrix with genotypes to be converted.}
+\item{InData}{dataframe, matrix or
+\code{\link[adegenet:genlight-class]{genlight}} object with genotypes to be
+converted.}
 
 \item{InFile}{character string with name of genotype file to be converted.}
 
-\item{InFormat}{One of 'single', 'double', 'col', 'ped', 'raw', or 'seq', see
-Details.}
+\item{InFormat}{One of 'seq' (sequoia), 'ped' (PLINK .ped file), 'col'
+(COLONY), 'raw' (PLINK --recodeA), 'vcf' (requires library \code{{vcfR}}),
+'single' (1 column per SNP), or 'double' (2 columns per SNP); see Details.}
 
 \item{OutFile}{character string with name of converted file. If NA, return
 matrix with genotypes in console (default); if NULL, write to
@@ -39,10 +42,11 @@ can be read by PLINK. Only for 'ped' are extensions .ped & .map added to
 the specified OutFile filename.}
 
 \item{Missing}{vector with symbols interpreted as missing data. '0' is
-missing data for InFormats 'col' and 'ped' only.}
+missing data for \code{InFormat}s 'col' and 'ped' only.}
 
 \item{sep}{vector with field separator strings that will be tried on
-\code{InFile}. The \code{OutFile} separator uses the
+\code{InFile}. Ignored if package \pkg{data.table} is present or if
+\code{InFormat='vcf'}. The \code{OutFile} separator uses the
 \code{\link[utils]{write.table}} default, i.e. one blank space.}
 
 \item{header}{a logical value indicating whether the file contains a header
@@ -70,36 +74,48 @@ below on how to do this for the 2-columns-per-SNP input formats.}
 \item{quiet}{suppress messages and warnings.}
 }
 \value{
-A genotype matrix in the specified output format. If 'OutFile' is
-  specified, the matrix is written to this file and nothing is returned
-  inside R. When converting to 0/1/2 format, 2 is the homozygote for the
-  minor allele, and 0 the homozygote for the major allele.
+A genotype matrix in the specified output format; the default sequoia
+  format ('seq') has 1 column per SNP coded in 0/1/2 format (major homozygote
+  /heterozygote /minor homozygote) with -9 for missing values, sample IDs in
+  row names and SNP names in column names. If 'OutFile' is specified, the
+  matrix is written to this file and nothing is returned inside R.
 }
 \description{
 Convert genotype data in various formats to sequoia's
-  1-column-per-marker format or Colony's 2-columns-per-marker format.
+  1-column-per-marker format, PLINK's ped format, or Colony's
+  2-columns-per-marker format.
 }
 \details{
 The first two arguments are interchangeable, and can be given
   unnamed. The first argument is assumed to be a file name if it is of class
   'character' and length 1, and to be the genetic data if it is a matrix or
   dataframe.
+
+  If package \pkg{data.table} is detected, \code{\link[data.table]{fread}}
+  is used to read in the data from file. Otherwise, a combination of
+  \code{\link{readLines}} and \code{\link{strsplit}} is used.
 }
 \section{Input formats}{
 
 The following formats can be specified by \code{InFormat}:
 \describe{
-  \item{seq}{(sequoia) genotypes are coded as 0, 1, 2, missing as \eqn{-9},
+  \item{seq}{(sequoia) genotypes are coded as 0, 1, 2, missing as \eqn{-9} (in input
+ any negative number or NA are OK),
   in 1 column per marker. Column 1 contains IDs, there is no header row.}
+  \item{ped}{(PLINK) genotypes are coded as A, C, T, G, missing as 0, in 2
+  columns per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
+  6 ignored). If an associated .map file exists, SNP names will be read from
+  there.}
   \item{raw}{(PLINK) genotypes are coded as 0, 1, 2, missing as NA, in 1
   column per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
   6 ignored), and there is a header row. This is produced by PLINK's option
   --recodeA}
-  \item{ped}{(PLINK) genotypes are coded as A, C, T, G, missing as 0, in 2
-  columns per marker. The first 6 columns are descriptive (1:FID, 2:IID, 3 to
-  6 ignored). }
   \item{col}{(Colony) genotypes are coded as numeric values, missing as 0, in
   2 columns per marker. Column 1 contains IDs.}
+  \item{vcf}{(VCF) genotypes are coded as '0/0','0/1','1/1', variable number
+    of header rows followed by 1 row per SNP, with various columns of
+    metadata followed by 1 column per individual. Requires package
+    \pkg{vcfR}.}
   \item{single}{1 column per marker, otherwise unspecified}
   \item{double}{2 columns per marker, otherwise unspecified}
   }
@@ -111,7 +127,7 @@ The following formats can be specified by \code{InFormat}:
 \section{Error messages}{
 
   Occasionally when reading in a file \code{GenoConvert} may give an error
-  that 'rows have unequal length'. GenoConvert makes use of
+  that 'rows have unequal length'. \code{GenoConvert} makes use of
   \code{\link{readLines}} and \code{\link{strsplit}}, which is much faster
   than \code{\link{read.table}} for large datafiles, but also more sensitive
   to unusual line endings, unusual end-of-file characters, or invisible
@@ -130,7 +146,12 @@ system("cmd", input = "plink --file mydata --indep 50 5 2")
 system("cmd", input = "plink --file mydata --extract plink.prune.in
   --recodeA --out PlinkOUT")
 
-GenoM <- GenoConvert(InFile = "PlinkOUT.raw")
+GenoM <- GenoConvert(InFile = "PlinkOUT.raw", InFormat='raw')
+# which is the same as
+GenoM <- GenoConvert(PlinkOUT.raw, InFormat='single',
+                    IDcol=2, dropcol=c(1,3:6), header=TRUE)
+# (but it will complain that InFormat='single' is not consistent with .raw
+# file extension)
 
 # save time on file conversion next time:
 write.table(GenoM, file="Geno_sequoia.txt", quote=FALSE, col.names=FALSE)

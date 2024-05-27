@@ -97,11 +97,11 @@ PlotRelPairs <- function(RelM = NULL,
 
 
   # check if RelM valid ----
-  if (nrow(RelM) != ncol(RelM))  stop("RelM must be a square matrix")
+  if (nrow(RelM) != ncol(RelM))  stop("`RelM` must be a square matrix")
   if (length(intersect(rownames(RelM), colnames(RelM))) != nrow(RelM))
-    stop("RelM must have same IDs on rows and columns")
+    stop("`RelM` must have same IDs on rows and columns")
   if (any(rownames(RelM) != colnames(RelM)))
-    stop("rows and columns of RelM must be in the same order")
+    stop("rows and columns of `RelM` must be in the same order")
 
   RCM <- RelM
   RCM[is.na(RCM)] <- "X"
@@ -113,18 +113,18 @@ PlotRelPairs <- function(RelM = NULL,
     stop("Unknown value(s) in RelM : ", Rel.invalid)
   }
   if (!any(unique(c(RCM)) %in% Rel.valid)) {
-    warning("No recognised relationship abbreviations in RelM", immediate.=TRUE)
+    cli::cli_alert_danger("No recognised relationship abbreviations in `RelM`")
     return()
   }
 
   PedBased <- any(RCM %in% c("M", "P", "MP"))   # RelM derived from pedigree, rather than Pairs
 
   if (!is.null(subset.x) & !is.null(subset.y))
-    stop("Specify either subset.x or subset.y, not both")
+    stop("Please specify either `subset.x` or `subset.y`, not both")
   if (!is.null(subset.x) && !all(subset.x %in% rownames(RelM)))
-    stop("All IDs in subset.x must occur as rownames in RelM")
+    stop("All IDs in `subset.x` must occur as rownames in `RelM`")
   if (!is.null(subset.y) && !all(subset.y %in% rownames(RelM)))
-    stop("All IDs in subset.y must occur as rownames in RelM")
+    stop("All IDs in `subset.y` must occur as rownames in `RelM`")
 
   if (!is.null(subset.x) | !is.null(subset.y))  drop.U <- FALSE
 

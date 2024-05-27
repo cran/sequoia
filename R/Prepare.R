@@ -322,14 +322,13 @@ CheckParams <- function(PARAM)
   if ("DummyPrefix" %in% names(PARAM)) {
     if (!length(PARAM$DummyPrefix) %in% c(2,3) |
         any(make.names(PARAM$DummyPrefix) != PARAM$DummyPrefix))
-      stop("'DummyPrefix' should be a length-2 character vector with syntactically valid names",
+      stop("`DummyPrefix` should be a length-2 character vector with syntactically valid names",
            call.=FALSE)
   }
   if ("MaxMismatch" %in% names(PARAM)) {
     if (!is.null(PARAM$MaxMismatch) && !is.na(PARAM$MaxMismatch))
-      warning("NOTE: 'MaxMismatch' is deprecated & ignored;",
-              "now calculated internally by 'CalcMaxMismatch()'",
-              immediate.=TRUE)
+      cli::cli_alert_info("NOTE: `MaxMismatch` is deprecated & ignored;",
+              "now calculated internally by `CalcMaxMismatch()`")
   }
 }
 

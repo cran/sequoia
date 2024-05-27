@@ -195,9 +195,10 @@ SeqParSib <- function(ParSib,
 
   if (!quiet) {
     nAss <- apply(Pedigree[,c("dam", "sire")], 2, function(x) sum(!is.na(x)))
-    message("assigned ", nAss[1], " dams and ", nAss[2], " sires to ",
-            nrow(unique(GenoM)), ifelse(ParSib=="sib", paste(" +", sum(TMP$nd)), ""),
-            " individuals", ifelse(ParSib=="sib", " (real + dummy)\n", "\n"))
+    cli::cli_alert_success(cli::col_green(
+      c("assigned {nAss[1]} dams and {nAss[2]} sires to {nrow(unique(GenoM))}",
+        '{ifelse(ParSib=="sib", paste(" +", sum(TMP$nd)), "")} individuals',
+        '{ifelse(ParSib=="sib", " (real + dummy)", "")} \n')))
   }
 
   rownames(Pedigree) <- 1:nrow(Pedigree)

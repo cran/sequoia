@@ -178,7 +178,7 @@ GetAncestors <- function(id, Pedigree) {
   Anc <- GetAnc(row_i, Ped)
   if (any(unlist(Anc) == id)) {
     loopsize <- min(which(sapply(Anc, function(v) id %in% v)))
-    warning('Individual ', id , ' is its own ancestor ', loopsize, ' generations back')
+    cli::cli_alert_warning('Individual {id} is its own ancestor {loopsize} generations back')
   }
   c(list('id' = id,
          'parents' = Anc[[1]],
@@ -222,7 +222,7 @@ GetDescendants <- function(id, Pedigree) {
   Desc <- GetDesc(row_i, Ped)
   if (any(unlist(Desc) == id)) {
     loopsize <- min(which(sapply(Desc, function(v) id %in% v)))
-    warning('Individual ', id , ' is its own ancestor ', loopsize, ' generations back')
+    cli::cli_alert_warning('Individual {id} is its own ancestor {loopsize} generations back')
   }
   c(list('id' = id,
          'offspring' = Desc[[1]],

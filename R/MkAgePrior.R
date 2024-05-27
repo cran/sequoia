@@ -311,9 +311,9 @@ MakeAgePrior <- function(Pedigree = NULL,
   # functions to generate & return default ageprior ----
   ReturnDefault <- function(MinP=MinAgePO, MaxP=MaxAgePO, rtrn=Return, Disc=Discrete, quietR=quiet) {
     if (is.null(Disc))  Disc <- all(MaxP == 1)
-		if (!quietR)  message("Ageprior: Flat 0/1, ",
+		if (!quietR)  cli::cli_alert_info(paste0("Ageprior: Flat 0/1, ",
                           ifelse(Disc, "discrete","overlapping"),
-                          " generations, MaxAgeParent = ", MaxP[1],",",MaxP[2])
+                          " generations, MaxAgeParent = ", MaxP[1],",",MaxP[2]))
     LR.RU.A.default <- MkAPdefault(MinP, MaxP, Disc)
     if (Plot)  PlotAgePrior(LR.RU.A.default)
   	if (rtrn == "all") {
@@ -404,11 +404,11 @@ MakeAgePrior <- function(Pedigree = NULL,
   }
 
   if (any(!is.na(MaxAgeParent) & MaxAgePO > MaxAgeParent) & !quiet)
-    warning("Some pedigree parents older than MaxAgeParent, using new estimate")
+    cli::cli_alert_warning(c("In the pedigree some parents are older than `MaxAgeParent` ({MaxAgeParent}),",
+                             "using new pedigree-based estimate of {MaxAgePO}"), wrap=TRUE)
   if (DoMinWarning & !quiet)
-    warning("Minimum age of parents in pedigree are ", ParAgeMn, " while MinAgeParent = ", MinAgeParent,
-      ", using pedigree-based estimate.")
-
+    cli::cli_alert_warning(c("In the pedigree some parents are younger than `MinAgeParent` ({MinAgeParent}),",
+                             "using new pedigree-based estimate of {ParAgeMn}"), wrap=TRUE)
 
 	# check/set Discrete ----
   if (MaxAgePO[1] == MaxAgePO[2] & all(tblA.R[- (MaxAgePO[1]+1), c("M", "P")] == 0) &  # all parents have same age
@@ -424,7 +424,7 @@ MakeAgePrior <- function(Pedigree = NULL,
     }
   } else {  # evidence for overlapping generations
     if (!is.null(Discrete) && Discrete) {
-      stop("Discrete=TRUE, but some parents have age >1 or some siblings have age difference >0")
+      stop("`Discrete=TRUE`, but some parents have age >1 or some siblings have age difference >0")
     }
     Discrete <- FALSE
   }
@@ -438,8 +438,8 @@ MakeAgePrior <- function(Pedigree = NULL,
   # set Flatten ----
   if (!Discrete && any(MaxAgeParent > ParAgeMx, na.rm=TRUE)) {
     if (!quiet && !is.null(Flatten) && !Flatten) {
-          warning("All pedigree parents younger than MaxAgeParent, ",
-         "I changed to Flatten=TRUE to adjust ageprior to specified MaxAgeParent")
+          cli::cli_alert_info(c("All pedigree parents younger than `MaxAgeParent`, ",
+         "changed to `Flatten=TRUE` to adjust ageprior to specified `MaxAgeParent`"))
       }
       Flatten <- TRUE
   }
@@ -450,11 +450,11 @@ MakeAgePrior <- function(Pedigree = NULL,
     } else if (!Flatten) {
       if (any(NAK.R[c("M","P", "MS", "PS")] < 5)) {
         Flatten <- TRUE   # overrule user-specified
-        warning("Fewer than 5 mother-offspring and/or father-offspring pairs with ",
-          "known age difference, changing to Flatten=TRUE", immediate.=TRUE)
+        cli::cli_alert_info(c("Fewer than 5 mother-offspring and/or father-offspring pairs with ",
+          "known age difference, changing to `Flatten=TRUE`"))
       } else {
-        message("Fewer than ", MinPairs.AgeKnown , "  mother-offspring and/or ",
-        "father-offspring pair with known age difference, please consider Flatten=TRUE")
+        cli::cli_alert_warning(c("Fewer than {MinPairs.AgeKnown} mother-offspring and/or ",
+        "father-offspring pair with known age difference, please consider `Flatten=TRUE`}"))
       }
     }
   } else if (is.null(Flatten)) {
@@ -565,11 +565,11 @@ MakeAgePrior <- function(Pedigree = NULL,
   if (Plot) {
     PlotAgePrior( AP = OUT[["LR.RU.A"]] )
   }
-	if (!quiet)  message("Ageprior: Pedigree-based, ",
+	if (!quiet)  cli::cli_alert_info(paste0("Ageprior: Pedigree-based, ",
 	                     ifelse(Discrete, "discrete ","overlapping "), "generations",
 	                     ifelse(Flatten, ", flattened",""),
 	                     ifelse(Smooth, ", smoothed",""),
-	                     ", MaxAgeParent = ", MaxAgePO[1], ",", MaxAgePO[2])
+	                     ", MaxAgeParent = ", MaxAgePO[1], ",", MaxAgePO[2]))
   utils::flush.console()
   if (Return == "all") {
     return( OUT )

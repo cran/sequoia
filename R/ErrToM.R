@@ -21,9 +21,12 @@
 #' structures, which have changed with sequoia versions. The most appropriate
 #' error structure will depend on the genotyping platform; 'version0.9' and
 #' 'version1.1' were inspired by SNP array genotyping while 'version1.3' and
-#' 'version2.0' are intended to be more general. All the flavours assume that
-#' the two alleles $A$ and $a$ are equivalent, i.e. that $P(AA|aa) = P(aa|AA)$,
-#' $P(aa|Aa)=P(AA|Aa)$, and $P(aA|aa)=P(aA|AA)$.
+#' 'version2.0' are intended to be more general.
+#'
+#' This function, and throughout the package, it is assumed that the two alleles
+#' \eqn{A} and \eqn{a} are equivalent. Thus, using notation \eqn{P}(observed
+#' genotype |actual genotype), that \eqn{P(AA|aa) = P(aa|AA)},
+#' \eqn{P(aa|Aa)=P(AA|Aa)}, and \eqn{P(aA|aa)=P(aA|AA)}.
 #'
 #' \tabular{lccc}{
 #'  \strong{version} \tab \strong{hom|hom} \tab \strong{het|hom} \tab
@@ -81,8 +84,9 @@
 #'  are the following probabilities:
 #' \itemize{
 #'  \item hom|hom: an actual homozygote is observed as the other homozygote
-#'  \item het|hom: an actual homozygote is observed as heterozygote
-#'  \item hom|het: an actual heterozygote is observed as homozygote
+#'   (\eqn{E_1})
+#'  \item het|hom: an actual homozygote is observed as heterozygote (\eqn{E_2})
+#'  \item hom|het: an actual heterozygote is observed as homozygote (\eqn{E_3})
 #'  }
 #'
 #'  and Pr(observed genotype (columns) | actual genotype (rows)) is then:
@@ -92,10 +96,6 @@
 #'  \strong{1} \tab \eqn{E_3}        \tab \eqn{1-2E_3} \tab \eqn{E_3}   \cr
 #'  \strong{2} \tab \eqn{E_1}       \tab \eqn{E_2}    \tab \eqn{1-E_1-E_2} \cr
 #' }
-#'
-#'  The only assumption made is that the two alleles can be treated equally,
-#'  i.e. observing actual allele $A$ as $a$ is as likely as observing actual $a$
-#'  as $A$, and so e.g. P(obs=1|act=0) = P(obs=1|act=2).
 #'
 #'  When the SNPs are scored via sequencing (e.g. RADseq or DArTseq), the 3rd
 #'  error rate (hom|het) is typically considerably higher than the other two,
