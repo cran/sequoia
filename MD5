@@ -1,4 +1,4 @@
-69aad4ceab83ef697c16b2ae25a7dd0c *DESCRIPTION
+c611f0695e26443cd040985d65d49412 *DESCRIPTION
 6115b99828d4aebb88df611d357321d1 *NAMESPACE
 cafe617b82f3f6593805bb4d866c6fd3 *NEWS.md
 84c5861f949aa813f2d6e335389e9699 *R/CalcBYprobs.R
@@ -60,15 +60,15 @@ b08b6d462043a875a506a28eb7e3ea42 *inst/CITATION
 7c911b78b30c100c473ce52c6b5e812c *inst/doc/flowchart.pdf
 2c81d920bd89b80f651b81515cc27527 *inst/doc/flowchart.pdf.asis
 20500b4d4669a6273a1c2237ff0776ad *inst/doc/quick_start_example1.R
-7e8f4fb66a1f446e15f0e48f7b8c83c6 *inst/doc/quick_start_example1.html
+7852551dfd08f9602bf60f21afd709f0 *inst/doc/quick_start_example1.html
 a3087f1cddff3e316125d78de33ceb74 *inst/doc/quick_start_example1.rmd
 3db092319abbc41acd17536ea791424c *inst/doc/vignette-age.R
 1645092adf1061078ae7fd556992237b *inst/doc/vignette-age.Rmd
-73c597874bed057a7edc7bceab0b352d *inst/doc/vignette-age.pdf
+b440cadeac673cf7b349ae12f342b835 *inst/doc/vignette-age.pdf
 959a3457119022e098d5e76a3f0415db *inst/doc/vignette-main.R
 b67dfebe734e3369a26412d0d8b32259 *inst/doc/vignette-main.Rmd
-0b8b9d8e1565c827372693783df99239 *inst/doc/vignette-main.pdf
-344cf8e93d8f3ee58dc41f356576d6f9 *inst/doc/vignette_mtDNA.pdf
+f90d374b729a8fd38d5e6fd21934798e *inst/doc/vignette-main.pdf
+6924bb6a83f595e5beccc98472c82750 *inst/doc/vignette_mtDNA.pdf
 8457d50f00176a1545a9003cb852033e *inst/doc/vignette_mtDNA.pdf.asis
 ecbe7375c3dc2684af41d4edf5f16a63 *inst/extdata/Inherit_patterns.csv
 549b1102d45295072bfb550ca9c9a064 *inst/extdata/Inherit_patterns.xlsx
@@ -154,7 +154,7 @@ adbe060a0323bf53e221a030e4458dae *man/orderLH.Rd
 47141a7b200e3ee1e7480f3efdb9cb0a *man/writeColumns.Rd
 da6fc349959902f48ffe46a79f5a0c36 *man/writeSeq.Rd
 05f78f70aeceba329e060a77e3f106cf *src/MkRelA.f90
-15fdab8d128b0fab327eea6e420a51e5 *src/Sequoia.f90
+4f814941f3c417d11256d2e9ed114b59 *src/Sequoia.f90
 a39c849ad7a555eca6afd371f614a873 *src/SimGenoErrors.f90
 5a03bfed63790fa28d256ffca9164e42 *src/ester.f90
 c9a831d5a02a20054e78e414e755fc19 *src/init.c
