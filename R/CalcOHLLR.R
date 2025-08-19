@@ -21,7 +21,7 @@
 #'   compared to the \code{\link{sequoia}} default, resulting in somewhat lower
 #'   \code{LLR} values.
 #'
-#'   A negative LLR for A's parent B indicates either that B is not truely the
+#'   A negative LLR for A's parent B indicates either that B is not truly the
 #'   parent of A, or that B's parents are incorrect. The latter may cause B's
 #'   presumed true, unobserved genotype to divert from its observed genotype,
 #'   with downstream consequences for its offspring. In rare cases it may also
@@ -111,12 +111,18 @@
 #' SummarySeq(Ped.OH, Panels="OH")
 #'
 #' # Parent likelihood ratios in an existing pedigree, including for
-#' # non-genotyped parents
-#' Ped.LLR <- CalcOHLLR(Pedigree = Ped_HSg5, GenoM = SimGeno_example,
-#'                     CalcLLR = TRUE, LifeHistData=LH_HSg5, AgePrior=TRUE)
-#' SummarySeq(Ped.LLR, Panels="LLR")
+#' # non-genotyped parents. Incorrect parents will have negative LLR.
+#' PedZ <- Ped_HSg5[41:50, ]   # small example subset
+#' PedZ$dam[1] <- PedZ$dam[10]
+#' CalcOHLLR(PedZ, GenoM = SimGeno_example, CalcLLR = TRUE)
 #'
 #' \dontrun{
+#' # with age data: makes some alternative relationships impossible, and thereby
+#' # changes LLR(parent/not-parent)
+#' Ped.LLR <- CalcOHLLR(PedZ, GenoM = SimGeno_example, CalcLLR = TRUE,
+#'                  LifeHistData=LH_HSg5, AgePrior=TRUE)
+#' SummarySeq(Ped.LLR, Panels="LLR")
+#'
 #' # likelihood ratios change with presumed genotyping error rate:
 #' Ped.LLR.B <- CalcOHLLR(Pedigree = Ped_HSg5, GenoM = SimGeno_example,
 #'                     CalcLLR = TRUE, LifeHistData=LH_HSg5, AgePrior=TRUE,

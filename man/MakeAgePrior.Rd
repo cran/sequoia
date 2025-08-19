@@ -111,7 +111,7 @@ A matrix with the probability ratio of the age difference between two
      and smoothing}
    \item{Weights}{vector length 4, the weights used to flatten the
     distributions}
-    \item{LR.RU.A}{the ageprior, flattend and/or smoothed}
+    \item{LR.RU.A}{the ageprior, flattened and/or smoothed}
    \item{Specs.AP}{the names of the input \code{Pedigree} and
    \code{LifeHistData} (or \code{NULL}), \code{lambdaNW}, and the 'effective'
      settings (i.e. after any automatic update) of \code{Discrete},
@@ -149,6 +149,9 @@ Estimate probability ratios \eqn{P(R|A) / P(R)} for age
   datasets is impossible. Please do inspect the matrix, e.g. with
   \code{PlotAgePrior}, and adjust the input parameters and/or the output
   matrix as necessary.
+
+  A few outlier birth years can heavily influence the output; these may be
+  easiest to spot with \code{Smooth=FALSE, Flatten=FALSE}.
 }
 
 \section{Single cohort}{

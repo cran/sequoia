@@ -157,7 +157,7 @@ The comparison is divided into different classes of `assignable'
   assigned, and ageprior inconclusive).
 }
 
-\section{Dummifiable}{
+\section{dummifiable}{
 
   Considered as potential dummy individuals are all non-genotyped individuals
   in Pedigree 1 who have, according to either pedigree, at least 2 genotyped

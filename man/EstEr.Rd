@@ -71,3 +71,4 @@ GenoX <- SimGeno(Ped_griffin, nSnp=400, SnpError=c(0.01,0.07, 0.1),
 # EstEr(GenoM=GenoX, Pedigree=Ped_griffin)
 
 }
+\keyword{internal}

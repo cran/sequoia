@@ -39,7 +39,7 @@
 #'     \item offspringCat: Genotyped, Dummy, or Observed* (*: only when
 #'     \code{Pedigree} is provided rather than \code{SeqList}, for ids which
 #'     are not listed in \code{SNPd} and do not conform to \code{DumPrefix} +
-#'     number (i.e. (almost) al individuals when \code{SNPd = NULL}, the
+#'     number (i.e. (almost) all individuals when \code{SNPd = NULL}, the
 #'     default).
 #'     \item offspringSex: Female, Male, Unknown, or Herm* (*: hermaphrodite,
 #'     only if any individuals occur as both dam and sire). Based only on
@@ -324,7 +324,7 @@ PlotSeqSum <- function(SeqSum, Pedigree=NULL, Panels="all", ask=TRUE)
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~
   # plotting specs
   oldpar <- par(no.readonly = TRUE)
-  oldpar <- oldpar[!names(oldpar) %in% c("pin", "fig")]   # current plot dimensions, not setable. bug?
+  oldpar <- oldpar[!names(oldpar) %in% c("pin", "fig",'plt')]   # current plot dimensions, not setable. bug?
   par(mai=c(.9, 1.8, 1.4,.3), mfrow=c(1,1))
 
   col.damsire <- matrix(c("darkred", "firebrick2", "pink", "lightgrey",

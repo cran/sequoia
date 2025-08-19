@@ -30,6 +30,7 @@ CalcRped <- function(Pedigree, OUT="DF")
                                              sex=Sex))
   Ped.k <- with(Ped.fix, kinship2::pedigree(id, dadid, momid, sex, missid=0))
   kin.M <- kinship2::kinship(Ped.k)
+  kin.M <- kin.M[Pedigree$id, Pedigree$id]   # drop dummies created by FillParents=TRUE
   if (OUT == "M") {
     return( 2*kin.M )
 

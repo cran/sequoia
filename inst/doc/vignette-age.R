@@ -62,7 +62,7 @@ table(LH_HSg5$BirthYear)
 
 ## ----APdiscrete, fig.cap="Discrete generations"-------------------------------
 # running sequoia to also get the extra ageprior columns: 
-Seq_HSg5 <- sequoia(SimGeno_example, LH_HSg5, Module="par",
+Seq_HSg5 <- sequoia(SimGeno_example, LH_HSg5, Module="ped",
                     args.AP=list(Discrete = TRUE),
                     CalcLLR=FALSE, Plot=FALSE, quiet=TRUE)
 PlotAgePrior(Seq_HSg5$AgePriorExtra) 
