@@ -12,7 +12,7 @@
 #'   \code{ParamToSpecs}.
 #' @param GenoM matrix with genotype data, size nInd x nSnp.
 #' @param LhIN  life history data: ID - sex - birth year.
-#' @param AgePriors matrix with agepriors, size `FortPARAM["nAgeClasses"]` by 8.
+#' @param AgePriors matrix with agepriors, 5 columns (M/P/FS/MHS/PHS)
 #' @param Parents  matrix with rownumbers of assigned parents, size nInd by 2.
 #' @param mtDif matrix indicating whether individuals have definitely a
 #'   different mitochondrial haplotype (1), or (possibly) the same (0). Size
@@ -52,7 +52,7 @@ SeqParSib <- function(ParSib,
   gID <- rownames(GenoM)
   LHF <- orderLH(LhIN, gID)
   PedN <- PedToNum(Parents, gID, DoDummies = "no")
-  MaxMaxAgePO <- 100  # if changed, change in Fortran too!
+  Ny <- nrow(AgePriors)
 
   SpecsIntMkPed <- c(switch(ParSib,
                             par = 1,
@@ -62,6 +62,8 @@ SeqParSib <- function(ParSib,
   TMP <- .Fortran(makeped,
                   # IN:
                   ng = as.integer(Ng),   # no. genotyped individuals
+                  nm = as.integer(ncol(GenoM)),
+                  ny = as.integer(Ny),
                   specsintglb = as.integer(FortPARAM$SpecsInt),
                   specsintmkped = as.integer(SpecsIntMkPed),
                   specsdbl = as.double(FortPARAM$SpecsDbl),
@@ -82,7 +84,7 @@ SeqParSib <- function(ParSib,
                   dumlrrf = double(3*Ng),
                   dumbyrf = integer(3*Ng),
                   totll = double(42),
-                  apout = double((3*MaxMaxAgePO)*5*3))
+                  apout = double((3*Ny+1)*5*3))
   #                  PACKAGE = "sequoia")
 
   TMP$lrrf[abs(TMP$lrrf - 999) < 0.1] <- NA

@@ -4,8 +4,15 @@
 #'   log10-likelihoods of being PO, FS, HS, GP, FA, HA, U (see Details).
 #'   Individuals must be genotyped or have at least one genotyped offspring.
 #'
-#'   \strong{NOTE} values \eqn{>0} are various \code{NA} types, see 'Likelihood
+#'   \strong{NOTE:} values \eqn{>0} are various \code{NA} types, see 'Likelihood
 #'   special codes' in 'Value' section below.
+#'
+#'   \strong{NOTE 2:} Relationship between a dummy/non-genotyped individual
+#'   and another are expressed as relationships with \emph{that dummies
+#'   offspring}. So, if e.g. ID1=F0001 and ID2=i003_2001_M, and TopRel=FA, that
+#'   means that dummy female F0001 is likely a full sibling of i003_2001_M.
+#'   For further details see below.
+#'
 #'
 #' @details The same pair may be included multiple times, e.g. with different
 #'   sex, age difference, or focal relationship, to explore their effect on the
@@ -320,7 +327,7 @@ CalcPairLL <- function(Pairs = NULL,
     PARAM <- SpecsToParam(SeqList$Specs,
                           ErrM=SeqList$ErrM, ErrFlavour=ErrFlavour,
                           dimGeno = dim(GenoM), quiet, Plot)  # overrule values in SeqList
-    PARAM$nAgeClasses <- nrow(AP)
+    #PARAM$nAgeClasses <- nrow(AP)
   } else {
     PARAM <- namedlist(dimGeno = dim(GenoM),
 #                       dropPar,
@@ -328,7 +335,7 @@ CalcPairLL <- function(Pairs = NULL,
                        ErrFlavour,
                        Tfilter = -999.0,   # else some LL not calculated if PO among them/created secondarily is unlikely
                        Tassign = 0.0,
-                       nAgeClasses = nrow(AP),
+                       #nAgeClasses = nrow(AP),
                        MaxSibshipSize = max(table(Ped$dam), table(Ped$sire), 90,
                                             na.rm=TRUE) +10,
                        Complex,
@@ -338,9 +345,11 @@ CalcPairLL <- function(Pairs = NULL,
     PARAM$ErrM <- ErrToM(Err, flavour = ErrFlavour, Return = "matrix")
   }
 
+
   # MaxMismatch ----
   # from version 2.12 onwards: always calc LL, even with high OH
   PARAM$MaxMismatchV <- setNames(rep(ncol(GenoM),3), c("DUP", "OH", "ME"))
+
 
   # check parameter values ----
   CheckParams(PARAM)
@@ -354,6 +363,8 @@ CalcPairLL <- function(Pairs = NULL,
 
   TMP <- .Fortran(getpairll,
                   ng = as.integer(nrow(GenoM)),   # no. genotyped indiv
+                  nm = as.integer(ncol(GenoM)),
+                  ny = as.integer(nrow(AP)),
                   np = as.integer(Np),   # no. pairs
                   specsint = as.integer(FortPARAM$SpecsInt),
                   specsdbl = as.double(FortPARAM$SpecsDbl),
@@ -374,7 +385,7 @@ CalcPairLL <- function(Pairs = NULL,
                   parentsrf = as.integer(PedN$PedPar),
                   dumparrf = as.integer(PedN$DumPar),
                   llrf = double(nrels*Np)
-  ) 
+  )
 
   # wrap output ----
   RelNames <- c("PO", "FS", "HS", "GP", "FA", "HA", "U")
@@ -550,8 +561,8 @@ FortifyPairs <- function(Pairs,   # pairs with character IDs etc
   if (!all(Pairs$patmat %in% c(1,2,NA)))
     stop("'patmat' in 'Pairs' must be 1, 2, or NA")
   Pairs$patmat <- with(Pairs, ifelse(!is.na(patmat), patmat,
-                                     ifelse(focal == "PO" & Sex2 != 3, Sex2,
-                                            ifelse(Sex1 != 3, Sex1, 1))))
+         # ifelse(focal == "PO" & Sex2 != 3, Sex2,  ifelse(Sex1 != 3, Sex1, 1))))  up to v3.0
+         ifelse(Sex2 != 3, Sex2,  ifelse(Sex1 != 3, Sex1, 1))))
 
 
   # output list, for Fortran ----

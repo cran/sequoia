@@ -166,15 +166,6 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
     if (length(NoLH)>0)  OUT$NoLH <- NoLH
   }
 
-
-  # check: compliance with hard coded max. age difference of 100 ----
-  # (can be adjusted)
-  MaxAgeDif <- with(LifeHistData, suppressWarnings(
-    diff(range(BirthYear[BirthYear >= 0 & (ID %in% gID | is.na(gID))], na.rm = TRUE))))
-  if (MaxAgeDif > 100) stop("Cannot handle age difference of >100 years!",
-                            "\n Please email the package maintainer for a version that does allow longer time spans", call.=FALSE)
-
-
   # return results ----
   if (sorted)
     LifeHistData <- orderLH(LifeHistData, gID)

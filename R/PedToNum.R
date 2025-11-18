@@ -38,20 +38,19 @@ PedToNum <- function(Pedigree = NULL,
                      DoDummies = "new",
                      DumPrefix = c("F0", "M0"))
 {
+  if (is.null(gID))  stop("PedToNum requires gID")
   if (is.null(Pedigree)) {
-    if (is.null(gID))  stop("PedToNum needs Pedigree and/or gID")
     return( list(PedPar = rep(0, 2*length(gID)),
                  DumPar = rep(0, 4*as.integer(length(gID)/2)),
-                 Renamed = NA,
-                 Nd = 0) )
-
-  } else if (!is.null(gID) && !all(gID %in% Pedigree$id)) {
+                 Renamed =  list(dam = data.frame(), sire=data.frame()),
+                 Nd = 0) ) 
+  } else if (!all(gID %in% Pedigree$id)) {  # including Pedigree=NULL
     Pedigree <- rbind(Pedigree,
                       data.frame(id = gID[!gID %in% Pedigree$id],
                                  dam = NA,
                                  sire = NA))
   }
-  if (is.null(gID))  stop("Please provide 'gID'")
+  
   if (length(DumPrefix) > 2 & DoDummies=="old" & !all(Pedigree$id %in% gID))
     cli::cli_alert_warning(">2 DumPrefixes not supported by `PedToNum()`")
 

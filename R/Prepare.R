@@ -49,7 +49,7 @@ SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
                              Err = GenotypingErrorRate,
                              Tfilter,
                              Tassign,
-                             nAgeClasses,
+                             #nAgeClasses,
                              MaxSibshipSize,
                              Module,
                              DummyPrefix = c(DummyPrefixFemale,
@@ -121,7 +121,7 @@ ParamToSpecs <- function(PARAM, TimeStart, ErrFlavour)
                         MaxMismatchME = MaxMismatchV["ME"],
                         Tfilter = Tfilter,
                         Tassign = Tassign,
-                        nAgeClasses = nAgeClasses,
+                        #nAgeClasses = nAgeClasses,
                         MaxSibshipSize = MaxSibshipSize,
                         Module = as.character(Module),
                         DummyPrefixFemale = DummyPrefix[1],
@@ -196,24 +196,25 @@ MkFortParams <- function(PARAM, fun="main")
 {
   FP <- list()
   FP$Ng = as.integer(PARAM$dimGeno[1])
+  FP$Nm = as.integer(PARAM$dimGeno[2])
+  #FP$Ny = as.integer(PARAM$nAgeClasses)
   FP$SpecsInt <- with(PARAM,
-                      c(nSnp = dimGeno[2],      # 1
-                        MaxMismatchV,           # 2 - 4
-                        MaxSibshipSize = ifelse(exists("MaxSibshipSize"),
-                                                MaxSibshipSize,
-                                                100),  # 5
-                        Complx = switch(as.character(Complex),       # 6
+                      c(Complx = switch(as.character(Complex),    # 1
                                         mono = 0,
                                         simp = 1,
                                         full = 2),
-                        quiet = ifelse(quiet == "verbose", -1,     # 7 FALSE=0, TRUE=1
-                                       ifelse(quiet == "very", 1,
-                                              as.integer(as.logical(quiet)))),
-                        nAgeCl = nAgeClasses,      # 8
-                        Herm = switch(as.character(Herm),   # 9
+                        Herm = switch(as.character(Herm),         # 2
                                       no = 0,
                                       A = 1,
-                                      B = 2) ))
+                                      B = 2),
+                       quiet = ifelse(quiet == "verbose", -1,     # 3 FALSE=0, TRUE=1
+                                 ifelse(quiet == "very", 1,
+                                    as.integer(as.logical(quiet)))),
+                       MaxSibshipSize = ifelse(exists("MaxSibshipSize"),
+                                                MaxSibshipSize,
+                                                100),             # 4
+                       MaxMismatchV))                             # 5 - 7
+
   FP$SpecsDbl <- as.double(c(PARAM$Tfilter,
                              PARAM$Tassign))
   FP$ErrM <- as.double(PARAM$ErrM)
@@ -300,7 +301,7 @@ CheckParams <- function(PARAM)
 
   chk("MaxMismatchV", "int", n=3)
   chk("MaxSibshipSize", "int")
-  chk("nAgeClasses", "int")
+  #chk("nAgeClasses", "int")
   chk("MaxPairs", "int")
 
   chk("Tfilter", "dbl", allowNeg = TRUE)

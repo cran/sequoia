@@ -27,7 +27,7 @@ rest of the algorithm.}
 
 \item{LhIN}{life history data: ID - sex - birth year.}
 
-\item{AgePriors}{matrix with agepriors, size `FortPARAM["nAgeClasses"]` by 8.}
+\item{AgePriors}{matrix with agepriors, 5 columns (M/P/FS/MHS/PHS)}
 
 \item{Parents}{matrix with rownumbers of assigned parents, size nInd by 2.}
 

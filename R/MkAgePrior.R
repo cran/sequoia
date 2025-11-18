@@ -93,8 +93,9 @@
 #'   being a random draw.
 #'
 #
-#'   The matrix has one row per age difference (0 - nAgeClasses) and five
-#'   columns, one for each relationship type, with abbreviations:
+#'   The matrix has one row per age difference (from zero up to
+#'   max(\code{MaxAgeParent})+1) and five columns, one for each relationship
+#'   type, with abbreviations:
 #'   \item{M}{Mothers}
 #'   \item{P}{Fathers}
 #'   \item{FS}{Full siblings}
@@ -290,7 +291,7 @@ MakeAgePrior <- function(Pedigree = NULL,
       stop("Must provide MaxAgeParent and/or birth years in LifeHistData when Discrete=FALSE")
     }
   }
-  if (max(MaxAgePO) > 100)  stop("MaxAgePO must be smaller than 100; consider a different time unit")
+  #if (max(MaxAgePO) > 100)  stop("MaxAgePO must be smaller than 100; consider a different time unit")
 	names(MaxAgePO) <- c("M", "P")
 
   # Check MinAgeParent
