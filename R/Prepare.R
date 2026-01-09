@@ -13,17 +13,23 @@
 #' @return  A named list.
 #'
 #' @keywords internal
+#' @noRd
 
 SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
                          dimGeno=NULL, ...)
 {
   other_args <- list(...)
+
+  if (!"Complexity" %in% names(Specs))
+    stop('Names of SeqList$Specs not recognised', call.=FALSE)
+
   if ("Module" %in% names(other_args)) {
     Specs$Module <- other_args$Module
   } else if (!"Module" %in% names(Specs)) {
     Specs$Module <- 'ped'  # default
   }
-  if (!"Herm" %in% names(Specs)) {
+
+  if (!"Herm" %in% names(Specs)) {   # backwards compatability
     Specs$Herm <- switch(as.character(Specs$Complexity),
                          mono = "no",
                          simp = "no",
@@ -105,6 +111,7 @@ SpecsToParam <- function(Specs, ErrM = NULL, ErrFlavour = NULL,
 #' @return  The 1-row \code{Specs} dataframe.
 #'
 #' @keywords internal
+#' @noRd
 
 ParamToSpecs <- function(PARAM, TimeStart, ErrFlavour)
 {
@@ -191,6 +198,7 @@ ParamToSpecs <- function(PARAM, TimeStart, ErrFlavour)
 #'   }
 #'
 #' @keywords internal
+#' @noRd
 
 MkFortParams <- function(PARAM, fun="main")
 {
@@ -256,6 +264,7 @@ MkFortParams <- function(PARAM, fun="main")
 #' @return  Nothing except errors, warnings, and messages
 #'
 #' @keywords internal
+#' @noRd
 
 CheckParams <- function(PARAM)
 {
@@ -334,6 +343,7 @@ CheckParams <- function(PARAM)
 #' @return AgePrior in corrected format, if necessary
 #'
 #' @keywords internal
+#' @noRd
 
 CheckAP <- function(AgePrior) {
   if (is.null(AgePrior)) {
@@ -386,6 +396,7 @@ CheckAP <- function(AgePrior) {
 #'   (0).
 #'
 #' @keywords internal
+#' @noRd
 
 mtSame2Dif <- function(mtSame = NULL, gID = NULL)
 {

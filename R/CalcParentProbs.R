@@ -68,6 +68,11 @@
 #' \item{Probdam_alt, Probsire_alt}{Probability of most likely alternative
 #'  relationship}
 #'
+#' @section Warning:
+#' The probabilities will be less reliable with close inbreeding and double
+#' relationships. This function has not been tested yet with hermaphrodites, and
+#' is unlikely to give reliable results without further code updates.
+#'
 #' @seealso  \code{\link{CalcPairLL}}, \code{\link{LLtoProb}}
 #'
 #' @examples
@@ -95,7 +100,7 @@ CalcParentProbs <- function(Pedigree = NULL, GenoM = NULL, quiet = FALSE, nCores
 {
   #=========================
   # input checks ----
-  if (!quiet %in% c(TRUE, FALSE))  stop("'quiet' must be TRUE or FALSE")
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
 
   ## check genotype data ----
   GenoM <- CheckGeno(GenoM, quiet=TRUE, Plot=FALSE)
@@ -350,7 +355,8 @@ LLtoProb <- function(LLv)   # vector with likelihoods
 #'   \item{.}{U \eqn{\rightarrow} U}
 #'   \item{.}{PO \eqn{\rightarrow} DUP (only if 'DUP' already among column names)}
 #'
-#' @keywords internal
+#' @keywords internal  
+#' @noRd
 
 ReOrderDums <- function(LLM, Complex='full')
 {

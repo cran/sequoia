@@ -32,6 +32,7 @@
 #'   non-genotyped individuals are ignored.
 #'
 #' @keywords internal
+#' @noRd
 
 PedToNum <- function(Pedigree = NULL,
                      gID = NULL,
@@ -43,14 +44,14 @@ PedToNum <- function(Pedigree = NULL,
     return( list(PedPar = rep(0, 2*length(gID)),
                  DumPar = rep(0, 4*as.integer(length(gID)/2)),
                  Renamed =  list(dam = data.frame(), sire=data.frame()),
-                 Nd = 0) ) 
+                 Nd = 0) )
   } else if (!all(gID %in% Pedigree$id)) {  # including Pedigree=NULL
     Pedigree <- rbind(Pedigree,
                       data.frame(id = gID[!gID %in% Pedigree$id],
                                  dam = NA,
                                  sire = NA))
   }
-  
+
   if (length(DumPrefix) > 2 & DoDummies=="old" & !all(Pedigree$id %in% gID))
     cli::cli_alert_warning(">2 DumPrefixes not supported by `PedToNum()`")
 
@@ -140,6 +141,7 @@ PedToNum <- function(Pedigree = NULL,
 #' @return An integer vector, with missing values as 0.
 #'
 #' @keywords internal
+#' @noRd
 
 FoldSibGPs <- function(PedNum, Ng, Nd)
 {
@@ -183,6 +185,7 @@ FoldSibGPs <- function(PedNum, Ng, Nd)
 #' @return A character vector with IDs.
 #'
 #' @keywords internal
+#' @noRd
 
 NumToID <- function(x, k=0, gID=NULL, DumPrefix = c("F", "M"))
 {
@@ -199,7 +202,7 @@ NumToID <- function(x, k=0, gID=NULL, DumPrefix = c("F", "M"))
                              "default is `F0` & `M0`"), wrap=TRUE)
 
   if (length(k)==1)  k <- rep(k, length(x))
-  if (!all(k[x<0] %in% 1:2))  stop("Invalid k")
+  if (!all(k[x<0] %in% c(1,2,4)))  stop("Invalid k")
 
   ID <- sapply(seq_along(x), function(i) {
     ifelse(x[i] > 0,

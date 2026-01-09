@@ -55,6 +55,7 @@ CountOH <- function(x = NULL,
                     max_OH = -1,
                     quiet = FALSE)
 {
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
   if (length(dim(x)) == 2) {  # x is matrix or dataframe  or similar
     OutFormat = 'Dataframe'
     ID1 <- as.character(x[[1]])

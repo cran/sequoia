@@ -1,3 +1,11 @@
+# sequoia 3.2
+- allow .vcf.gz as input for `GenoConvert`
+- fix `which.min` applied to data.frame rows (no longer allowed) by adding `as.matrix`
+- fix various issues affecting performance with hermaphrodites
+- fix SeqOUT$DummyIDs output for hermaphrodite dummies
+- hide documentation of internal functions
+
+
 # sequoia 3.1.3
 - add function `PlotPropAssigned`
 

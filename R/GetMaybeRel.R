@@ -150,6 +150,7 @@ GetMaybeRel <- function(GenoM = NULL,
   on.exit(.Fortran(deallocall), add=TRUE)
 
   if (!Module %in% c("par", "ped"))  stop("'Module' must be 'par' or 'ped'")
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
   if(!quiet)  cli::cli_alert_info(paste0("Searching for non-assigned ",
                       c(par="parent-offspring", ped="relative")[Module], " pairs ...",
                       " (Module = ", Module, ")"))

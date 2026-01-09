@@ -223,6 +223,7 @@ MakeAgePrior <- function(Pedigree = NULL,
 												 quiet = FALSE)
 {
   call.AP <- as.list(match.call()[-1L])
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
 
   # Input check ----
 
@@ -595,7 +596,8 @@ MakeAgePrior <- function(Pedigree = NULL,
 #' @param MaxP  Maximum age of dams, sires
 #' @param Disc  Discrete generations? TRUE/FALSE/NULL
 #'
-#' @keywords internal
+#' @keywords internal 
+#' @noRd
 
 MkAPdefault <- function(MinP, MaxP, Disc) {
   RR <- c("M", "P", "FS", "MS", "PS")
@@ -635,7 +637,8 @@ MkAPdefault <- function(MinP, MaxP, Disc) {
 #'   as these are less likely to cause problems than dips, and are more likely
 #'   to be genuine characteristics of the species.
 #'
-#' @keywords internal
+#' @keywords internal 
+#' @noRd
 
 SmoothAP <- function(V, tiny=0.001) {
   Front <- max(1, min(which(V > tiny)), na.rm=TRUE)

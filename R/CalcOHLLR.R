@@ -161,6 +161,7 @@ CalcOHLLR <- function(Pedigree = NULL,
 {
 
   on.exit(.Fortran(deallocall), add=TRUE)
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
 
   # check genotype data ----
   GenoM <- CheckGeno(GenoM, quiet=TRUE, Plot=FALSE)

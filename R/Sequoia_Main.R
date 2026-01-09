@@ -381,7 +381,7 @@ sequoia <- function(GenoM = NULL,
   TimeStart <- Sys.time()
 
   # set quiet & Plot ----
-  if (!quiet %in% c(TRUE, FALSE, "verbose"))
+  if (!(isTRUE(quiet) | isFALSE(quiet) | quiet=='verbose'))
     stop("'quiet' must be TRUE or FALSE or 'verbose'")
   quietR <- ifelse(quiet == "verbose", FALSE, quiet)  # 'verbose' determines chattiness of Fortran only
   if (is.null(Plot))   # default
@@ -394,7 +394,8 @@ sequoia <- function(GenoM = NULL,
     stop("`SeqList` must be a list or `NULL`")
 
   if (!is.null(SeqList)) {
-    SeqList_names <- c("Specs", "ErrM", "args.AP", "AgePriors", "LifeHist","PedigreePar")
+    SeqList_names <- c("Specs", "ErrM", "args.AP", "AgePriors", "LifeHist",
+                       "PedigreePar", "DupGenotype")
     if (!any(names(SeqList) %in% SeqList_names) | any(is.na(names(SeqList))) ) {
       cli::cli_alert_danger("You seem to have misspelled one or more names of elements of `SeqList`:")
       cli::cli_li(setdiff(names(SeqList), SeqList_names))

@@ -29,7 +29,8 @@
 #' @useDynLib sequoia, .registration = TRUE
 # @useDynLib sequoia duplicates
 #'
-#' @keywords internal
+#' @keywords internal 
+#' @noRd
 
 DuplicateCheck <- function(GenoM = NULL,
                            FortPARAM,

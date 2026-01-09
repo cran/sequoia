@@ -159,11 +159,11 @@
 #' @section Dummy individuals:
 #'   For historical reasons, the relationships between a dummy ID1 and ID2 are
 #'   reported *between the sibship and ID2*. So,
-#'   \describe{
-#'  \item{PO}{ID2 replaces dummy ID1; or merge dummy ID2 with dummy ID1}
-#'  \item{FS, HS}{ID1 parent of ID2}
-#'  \item{GP}{ID2 parent of ID1}
-#'  \item{FA,HA}{ID2 FS resp. HS of ID1} }
+#'  \itemize{
+#'  \item{\code{PO}: ID2 replaces dummy ID1; or merge dummy ID2 with dummy ID1}
+#'  \item{\code{FS, HS}: ID1 parent of ID2}
+#'  \item{\code{GP}: ID2 parent of ID1}
+#'  \item{\code{FA,HA}: ID2 FS resp. HS of ID1} }
 #'  If ID1 is genotyped and ID2 is a dummy, the relationships are as when ID2 is
 #'  genotyped.
 #'
@@ -247,6 +247,7 @@ CalcPairLL <- function(Pairs = NULL,
                        Plot = TRUE)
 {
   on.exit(.Fortran(deallocall), add=TRUE)
+  if (!(isTRUE(quiet) | isFALSE(quiet)))  stop("'quiet' must be TRUE or FALSE")
 
   # check genotype data ----
   GenoM <- CheckGeno(GenoM, quiet=TRUE, Plot=FALSE)
@@ -406,7 +407,7 @@ CalcPairLL <- function(Pairs = NULL,
   } else {
     LLM <- setNames(as.data.frame(VtoM(TMP$llrf, nc=7)), RelNames)
   }
-  toprel <- plyr::adply(LLM, 1, find_bestrel)
+  toprel <- plyr::adply(as.matrix(LLM), 1, find_bestrel)
 
   Pairs.OUT <- cbind(Pairs.OUT,
                      round(LLM[,RelNames], 2),
@@ -447,6 +448,7 @@ CalcPairLL <- function(Pairs = NULL,
 #'   two have length 1*nrow(Pairs).
 #'
 #' @keywords internal
+#' @noRd
 
 FortifyPairs <- function(Pairs,   # pairs with character IDs etc
                          gID,

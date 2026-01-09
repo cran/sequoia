@@ -263,11 +263,11 @@ The same pair may be included multiple times, e.g. with different
 
   For historical reasons, the relationships between a dummy ID1 and ID2 are
   reported *between the sibship and ID2*. So,
-  \describe{
- \item{PO}{ID2 replaces dummy ID1; or merge dummy ID2 with dummy ID1}
- \item{FS, HS}{ID1 parent of ID2}
- \item{GP}{ID2 parent of ID1}
- \item{FA,HA}{ID2 FS resp. HS of ID1} }
+ \itemize{
+ \item{\code{PO}: ID2 replaces dummy ID1; or merge dummy ID2 with dummy ID1}
+ \item{\code{FS, HS}: ID1 parent of ID2}
+ \item{\code{GP}: ID2 parent of ID1}
+ \item{\code{FA,HA}: ID2 FS resp. HS of ID1} }
  If ID1 is genotyped and ID2 is a dummy, the relationships are as when ID2 is
  genotyped.
 

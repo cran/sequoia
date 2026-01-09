@@ -18,6 +18,7 @@
 #'    part of the program, or a list with duplicate and missing entries.
 #'
 #' @keywords internal
+#' @noRd
 
 CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
 {
@@ -201,7 +202,8 @@ CheckLH <- function(LifeHistData, gID = NA, sorted=TRUE, returnDups = FALSE)
 #'   in gID was not in the input-LH. Missing values are recoded to 3 for the
 #'   'Sex' column, and -999 for the birth year columns.
 #'
-#' @keywords internal
+#' @keywords internal 
+#' @noRd
 
 orderLH <- function(LH=NULL, gID=NULL) {
   if (!all(gID %in% LH$ID)) {
